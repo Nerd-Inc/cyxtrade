@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/trade_provider.dart';
 import '../../providers/trader_provider.dart';
 import '../../services/api_service.dart';
+import '../../utils/error_utils.dart';
 
 class TraderDashboardScreen extends StatefulWidget {
   const TraderDashboardScreen({super.key});
@@ -53,9 +54,7 @@ class _TraderDashboardScreenState extends State<TraderDashboardScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        showErrorSnackBar(context, e, onRetry: _toggleOnlineStatus);
       }
     } finally {
       if (mounted) setState(() => _isUpdatingStatus = false);
@@ -398,16 +397,12 @@ class _TraderTradeCard extends StatelessWidget {
     try {
       await ApiService().acceptTrade(trade['id']);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Trade accepted!')),
-        );
+        showSuccessSnackBar(context, 'Trade accepted!');
         context.read<TradeProvider>().getMyTrades();
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        showErrorSnackBar(context, e, onRetry: () => _acceptTrade(context));
       }
     }
   }
@@ -437,16 +432,12 @@ class _TraderTradeCard extends StatelessWidget {
     try {
       await ApiService().declineTrade(trade['id']);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Trade declined')),
-        );
+        showSuccessSnackBar(context, 'Trade declined');
         context.read<TradeProvider>().getMyTrades();
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        showErrorSnackBar(context, e, onRetry: () => _declineTrade(context));
       }
     }
   }
@@ -478,16 +469,12 @@ class _TraderTradeCard extends StatelessWidget {
     try {
       await ApiService().markTradeDelivered(trade['id']);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Marked as delivered!')),
-        );
+        showSuccessSnackBar(context, 'Marked as delivered!');
         context.read<TradeProvider>().getMyTrades();
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        showErrorSnackBar(context, e, onRetry: () => _markDelivered(context));
       }
     }
   }

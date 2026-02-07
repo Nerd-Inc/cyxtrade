@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/trade_provider.dart';
+import '../../utils/error_utils.dart';
 
 class ConfirmScreen extends StatefulWidget {
   final Map<String, dynamic> trader;
@@ -63,12 +64,7 @@ class _ConfirmScreenState extends State<ConfirmScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to create trade: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        showErrorSnackBar(context, e, onRetry: _submitTrade);
       }
     } finally {
       if (mounted) {

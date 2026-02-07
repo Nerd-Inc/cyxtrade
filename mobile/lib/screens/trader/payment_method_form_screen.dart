@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/trader_provider.dart';
+import '../../utils/error_utils.dart';
 
 class PaymentMethodFormScreen extends StatefulWidget {
   final String? methodId;
@@ -330,18 +331,12 @@ class _PaymentMethodFormScreenState extends State<PaymentMethodFormScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isEditing ? 'Payment method updated' : 'Payment method added'),
-          ),
-        );
+        showSuccessSnackBar(context, isEditing ? 'Payment method updated' : 'Payment method added');
         context.pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        showErrorSnackBar(context, e, onRetry: _submit);
       }
     } finally {
       if (mounted) {

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/trade_provider.dart';
+import '../../utils/error_utils.dart';
 
 class TradeDetailScreen extends StatefulWidget {
   final String tradeId;
@@ -63,15 +64,11 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
     try {
       await context.read<TradeProvider>().markPaid(widget.tradeId);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment marked as sent')),
-        );
+        showSuccessSnackBar(context, 'Payment marked as sent');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        showErrorSnackBar(context, e, onRetry: _markAsPaid);
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -106,17 +103,13 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
     try {
       await context.read<TradeProvider>().completeTrade(widget.tradeId);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Trade completed successfully!')),
-        );
+        showSuccessSnackBar(context, 'Trade completed successfully!');
         // Show rating dialog
         _showRatingDialog();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        showErrorSnackBar(context, e, onRetry: _confirmReceipt);
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -231,15 +224,11 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
         controller.text.trim(),
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Dispute opened. Admin will review.')),
-        );
+        showSuccessSnackBar(context, 'Dispute opened. Admin will review.');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        showErrorSnackBar(context, e, onRetry: _openDispute);
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);

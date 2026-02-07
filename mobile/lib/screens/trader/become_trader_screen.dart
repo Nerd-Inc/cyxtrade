@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/error_utils.dart';
 
 class BecomeTraderScreen extends StatefulWidget {
   const BecomeTraderScreen({super.key});
@@ -54,23 +55,12 @@ class _BecomeTraderScreenState extends State<BecomeTraderScreen> {
           'displayName': _displayNameController.text.trim(),
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Congratulations! You are now a trader.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
+        showSuccessSnackBar(context, 'Congratulations! You are now a trader.');
         context.go('/trader-dashboard');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to register: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        showErrorSnackBar(context, e, onRetry: _submitApplication);
       }
     } finally {
       if (mounted) {

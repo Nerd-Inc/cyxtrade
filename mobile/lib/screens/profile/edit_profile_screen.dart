@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../../utils/error_utils.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -54,16 +55,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       // Update local auth state
       if (mounted) {
         context.read<AuthProvider>().updateUser({'avatarUrl': newAvatarUrl});
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Avatar updated')),
-        );
+        showSuccessSnackBar(context, 'Avatar updated');
       }
     } catch (e) {
       setState(() => _isUploadingAvatar = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to upload avatar: $e')),
-        );
+        showErrorSnackBar(context, e, onRetry: _pickAndUploadAvatar);
       }
     }
   }
@@ -90,16 +87,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           'displayName': _displayNameController.text.trim(),
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully')),
-        );
+        showSuccessSnackBar(context, 'Profile updated successfully');
         context.pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update profile: $e')),
-        );
+        showErrorSnackBar(context, e, onRetry: _saveProfile);
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

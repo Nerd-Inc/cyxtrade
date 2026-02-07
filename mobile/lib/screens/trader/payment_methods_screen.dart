@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/trader_provider.dart';
+import '../../utils/error_utils.dart';
 
 class PaymentMethodsScreen extends StatefulWidget {
   const PaymentMethodsScreen({super.key});
@@ -102,15 +103,11 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
     try {
       await context.read<TraderProvider>().setPaymentMethodPrimary(method.id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${method.displayName} is now your primary payment method')),
-        );
+        showSuccessSnackBar(context, '${method.displayName} is now your primary payment method');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        showErrorSnackBar(context, e, onRetry: () => _setAsPrimary(method));
       }
     }
   }
@@ -139,15 +136,11 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
       try {
         await context.read<TraderProvider>().deletePaymentMethod(method.id);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Payment method deleted')),
-          );
+          showSuccessSnackBar(context, 'Payment method deleted');
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
+          showErrorSnackBar(context, e, onRetry: () => _confirmDelete(method));
         }
       }
     }

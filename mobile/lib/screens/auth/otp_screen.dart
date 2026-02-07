@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/error_utils.dart';
 
 class OtpScreen extends StatefulWidget {
   final String phone;
@@ -15,6 +16,7 @@ class OtpScreen extends StatefulWidget {
 class _OtpScreenState extends State<OtpScreen> {
   final _otpController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _isResending = false;
 
   @override
   void dispose() {
@@ -34,9 +36,28 @@ class _OtpScreenState extends State<OtpScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Invalid OTP: $e')),
-        );
+        showErrorSnackBar(context, e, onRetry: _verifyOtp);
+      }
+    }
+  }
+
+  Future<void> _resendOtp() async {
+    if (_isResending) return;
+
+    setState(() => _isResending = true);
+
+    try {
+      await context.read<AuthProvider>().requestOtp(widget.phone);
+      if (mounted) {
+        showSuccessSnackBar(context, 'Verification code sent');
+      }
+    } catch (e) {
+      if (mounted) {
+        showErrorSnackBar(context, e, onRetry: _resendOtp);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isResending = false);
       }
     }
   }
@@ -104,13 +125,14 @@ class _OtpScreenState extends State<OtpScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextButton(
-                  onPressed: () {
-                    context.read<AuthProvider>().requestOtp(widget.phone);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('OTP resent!')),
-                    );
-                  },
-                  child: const Text("Didn't receive code? Resend"),
+                  onPressed: _isResending ? null : _resendOtp,
+                  child: _isResending
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text("Didn't receive code? Resend"),
                 ),
               ],
             ),
