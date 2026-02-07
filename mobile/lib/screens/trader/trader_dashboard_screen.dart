@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/trade_provider.dart';
+import '../../providers/trader_provider.dart';
 import '../../services/api_service.dart';
 
 class TraderDashboardScreen extends StatefulWidget {
@@ -40,13 +41,20 @@ class _TraderDashboardScreenState extends State<TraderDashboardScreen>
   Future<void> _toggleOnlineStatus() async {
     setState(() => _isUpdatingStatus = true);
     try {
-      // TODO: Call API to update status
-      setState(() => _isOnline = !_isOnline);
+      final newStatus = !_isOnline;
+      await context.read<TraderProvider>().updateOnlineStatus(newStatus);
+      setState(() => _isOnline = newStatus);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_isOnline ? 'You are now online' : 'You are now offline'),
           ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
         );
       }
     } finally {
@@ -88,7 +96,11 @@ class _TraderDashboardScreenState extends State<TraderDashboardScreen>
               onChanged: (_) => _toggleOnlineStatus(),
               activeColor: Colors.green,
             ),
-          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.account_balance_wallet_outlined),
+            tooltip: 'Payment Methods',
+            onPressed: () => context.push('/trader/payment-methods'),
+          ),
         ],
         bottom: TabBar(
           controller: _tabController,

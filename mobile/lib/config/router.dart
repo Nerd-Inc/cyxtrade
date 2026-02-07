@@ -12,6 +12,8 @@ import '../screens/history/history_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/trader/trader_dashboard_screen.dart';
 import '../screens/trader/become_trader_screen.dart';
+import '../screens/trader/payment_methods_screen.dart';
+import '../screens/trader/payment_method_form_screen.dart';
 import '../screens/trade/trade_success_screen.dart';
 import '../screens/trade/payment_instructions_screen.dart';
 import '../screens/trade/rate_trade_screen.dart';
@@ -120,6 +122,23 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/become-trader',
       builder: (context, state) => const BecomeTraderScreen(),
+    ),
+
+    // Payment methods management
+    GoRoute(
+      path: '/trader/payment-methods',
+      builder: (context, state) => const PaymentMethodsScreen(),
+    ),
+    GoRoute(
+      path: '/trader/payment-methods/add',
+      builder: (context, state) => const PaymentMethodFormScreen(),
+    ),
+    GoRoute(
+      path: '/trader/payment-methods/:id/edit',
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return PaymentMethodFormScreen(methodId: id);
+      },
     ),
 
     // Payment instructions

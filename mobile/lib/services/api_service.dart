@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 import '../config/api.dart';
 
@@ -171,5 +172,75 @@ class ApiService {
       'content': content,
     });
     return response.data;
+  }
+
+  // ============================================
+  // Image Uploads
+  // ============================================
+
+  Future<String> uploadAvatar(File image) async {
+    final formData = FormData.fromMap({
+      'image': await MultipartFile.fromFile(
+        image.path,
+        filename: 'avatar.jpg',
+      ),
+    });
+
+    final response = await _dio.post(
+      ApiConfig.uploadAvatar,
+      data: formData,
+      options: Options(contentType: 'multipart/form-data'),
+    );
+
+    return response.data['avatarUrl'];
+  }
+
+  Future<String> uploadPaymentProof(String tradeId, File image) async {
+    final formData = FormData.fromMap({
+      'image': await MultipartFile.fromFile(
+        image.path,
+        filename: 'payment_proof.jpg',
+      ),
+    });
+
+    final response = await _dio.post(
+      ApiConfig.uploadPaymentProof(tradeId),
+      data: formData,
+      options: Options(contentType: 'multipart/form-data'),
+    );
+
+    return response.data['proofUrl'];
+  }
+
+  // ============================================
+  // Payment Methods
+  // ============================================
+
+  Future<List<Map<String, dynamic>>> getPaymentMethods() async {
+    final response = await _dio.get(ApiConfig.tradersMePaymentMethods);
+    return List<Map<String, dynamic>>.from(response.data['paymentMethods'] ?? []);
+  }
+
+  Future<Map<String, dynamic>> addPaymentMethod(Map<String, dynamic> data) async {
+    final response = await _dio.post(ApiConfig.tradersMePaymentMethods, data: data);
+    return response.data['paymentMethod'];
+  }
+
+  Future<Map<String, dynamic>> updatePaymentMethod(String id, Map<String, dynamic> data) async {
+    final response = await _dio.put(ApiConfig.tradersPaymentMethodById(id), data: data);
+    return response.data['paymentMethod'];
+  }
+
+  Future<void> deletePaymentMethod(String id) async {
+    await _dio.delete(ApiConfig.tradersPaymentMethodById(id));
+  }
+
+  Future<void> setPaymentMethodPrimary(String id) async {
+    await _dio.put(ApiConfig.tradersPaymentMethodPrimary(id));
+  }
+
+  Future<Map<String, dynamic>> getTraderPaymentDetails(String traderId) async {
+    final response = await _dio.get(ApiConfig.traderPaymentDetails(traderId));
+    return response.data['paymentMethod'];
   }
 }

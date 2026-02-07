@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
@@ -15,6 +17,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _displayNameController;
   bool _isSaving = false;
+  bool _isUploadingAvatar = false;
+  String? _avatarUrl;
+  final _picker = ImagePicker();
 
   @override
   void initState() {
@@ -23,6 +28,44 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _displayNameController = TextEditingController(
       text: user?['displayName'] ?? '',
     );
+    _avatarUrl = user?['avatarUrl'];
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 80,
+      );
+
+      if (image == null) return;
+
+      setState(() => _isUploadingAvatar = true);
+
+      final newAvatarUrl = await ApiService().uploadAvatar(File(image.path));
+
+      setState(() {
+        _avatarUrl = newAvatarUrl;
+        _isUploadingAvatar = false;
+      });
+
+      // Update local auth state
+      if (mounted) {
+        context.read<AuthProvider>().updateUser({'avatarUrl': newAvatarUrl});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Avatar updated')),
+        );
+      }
+    } catch (e) {
+      setState(() => _isUploadingAvatar = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload avatar: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -97,20 +140,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               Center(
                 child: Stack(
                   children: [
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                      child: Text(
-                        (_displayNameController.text.isNotEmpty
-                                ? _displayNameController.text[0]
-                                : '?')
-                            .toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 36,
-                          color: Theme.of(context).primaryColor,
+                    if (_isUploadingAvatar)
+                      const CircleAvatar(
+                        radius: 50,
+                        child: CircularProgressIndicator(),
+                      )
+                    else if (_avatarUrl != null && _avatarUrl!.isNotEmpty)
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundImage: NetworkImage(_avatarUrl!),
+                      )
+                    else
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                        child: Text(
+                          (_displayNameController.text.isNotEmpty
+                                  ? _displayNameController.text[0]
+                                  : '?')
+                              .toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 36,
+                            color: Theme.of(context).primaryColor,
+                          ),
                         ),
                       ),
-                    ),
                     Positioned(
                       bottom: 0,
                       right: 0,
@@ -120,13 +174,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         child: IconButton(
                           icon: const Icon(Icons.camera_alt, size: 18),
                           color: Colors.white,
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Photo upload coming soon'),
-                              ),
-                            );
-                          },
+                          onPressed: _isUploadingAvatar ? null : _pickAndUploadAvatar,
                         ),
                       ),
                     ),

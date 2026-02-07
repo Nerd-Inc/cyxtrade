@@ -35,6 +35,32 @@ CREATE TABLE traders (
     UNIQUE(user_id)
 );
 
+-- Trader payment methods
+CREATE TABLE trader_payment_methods (
+    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    trader_id           UUID NOT NULL REFERENCES traders(id) ON DELETE CASCADE,
+    method_type         VARCHAR(20) NOT NULL, -- 'bank', 'mobile_money'
+    provider            VARCHAR(50),          -- 'orange_money', 'mtn_momo', 'mpesa', 'airtel', 'wave', 'emirates_nbd', etc.
+    account_holder_name VARCHAR(100) NOT NULL,
+
+    -- Mobile money fields
+    phone_number        VARCHAR(20),
+    phone_country_code  VARCHAR(5),
+
+    -- Bank fields
+    bank_name           VARCHAR(100),
+    account_number      VARCHAR(50),
+    iban                VARCHAR(34),
+    swift_code          VARCHAR(11),
+
+    -- Common
+    currency            VARCHAR(3),
+    is_primary          BOOLEAN DEFAULT FALSE,
+    is_active           BOOLEAN DEFAULT TRUE,
+    created_at          TIMESTAMP DEFAULT NOW(),
+    updated_at          TIMESTAMP DEFAULT NOW()
+);
+
 -- Trades
 CREATE TABLE trades (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -67,7 +93,10 @@ CREATE TABLE trades (
 
     -- Payment details
     payment_reference VARCHAR(100),
-    payment_proof_url VARCHAR(500)
+    payment_proof_url VARCHAR(500),
+
+    -- Trader's payment method used for this trade
+    trader_payment_method_id UUID REFERENCES trader_payment_methods(id)
 );
 
 -- Chat messages
@@ -158,3 +187,5 @@ CREATE INDEX idx_disputes_trade_id ON disputes(trade_id);
 CREATE INDEX idx_disputes_status ON disputes(status);
 CREATE INDEX idx_ratings_to_trader_id ON ratings(to_trader_id);
 CREATE INDEX idx_bond_transactions_trader_id ON bond_transactions(trader_id);
+CREATE INDEX idx_trader_payment_methods_trader_id ON trader_payment_methods(trader_id);
+CREATE INDEX idx_trader_payment_methods_is_primary ON trader_payment_methods(trader_id, is_primary) WHERE is_primary = TRUE;

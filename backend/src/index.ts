@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import path from 'path';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
@@ -16,6 +17,7 @@ import traderRoutes from './routes/traders';
 import tradeRoutes from './routes/trades';
 import chatRoutes from './routes/chat';
 import adminRoutes from './routes/admin';
+import uploadRoutes from './routes/uploads';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -48,6 +50,10 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Serve uploaded files
+const uploadDir = process.env.UPLOAD_DIR || './uploads';
+app.use('/uploads', express.static(path.resolve(uploadDir)));
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', authMiddleware, userRoutes);
@@ -55,6 +61,7 @@ app.use('/api/traders', traderRoutes);
 app.use('/api/trades', authMiddleware, tradeRoutes);
 app.use('/api/chat', authMiddleware, chatRoutes);
 app.use('/api/admin', authMiddleware, adminRoutes);
+app.use('/api/uploads', authMiddleware, uploadRoutes);
 
 // Error handling
 app.use(errorHandler);

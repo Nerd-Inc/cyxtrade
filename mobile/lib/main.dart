@@ -4,6 +4,7 @@ import 'config/theme.dart';
 import 'config/router.dart';
 import 'providers/auth_provider.dart';
 import 'providers/trade_provider.dart';
+import 'providers/trader_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +20,7 @@ class CyxTradeApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => TradeProvider()),
+        ChangeNotifierProvider(create: (_) => TraderProvider()),
       ],
       child: MaterialApp.router(
         title: 'CyxTrade',

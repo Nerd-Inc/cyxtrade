@@ -16,6 +16,14 @@ class ApiConfig {
   static const String tradersApply = '/traders/apply';
   static const String tradersMe = '/traders/me';
   static const String tradersMeStatus = '/traders/me/status';
+  static const String tradersMePaymentMethods = '/traders/me/payment-methods';
+  static String tradersPaymentMethodById(String id) => '/traders/me/payment-methods/$id';
+  static String tradersPaymentMethodPrimary(String id) => '/traders/me/payment-methods/$id/primary';
+  static String traderPaymentDetails(String traderId) => '/traders/$traderId/payment-details';
+
+  // Uploads
+  static const String uploadAvatar = '/uploads/avatar';
+  static String uploadPaymentProof(String tradeId) => '/uploads/payment-proof/$tradeId';
 
   static const String trades = '/trades';
   static String tradesById(String id) => '/trades/$id';

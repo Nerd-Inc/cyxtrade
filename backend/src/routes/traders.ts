@@ -9,6 +9,7 @@ import {
   updateTraderCorridors,
   Corridor
 } from '../services/traderService';
+import { paymentMethodService } from '../services/paymentMethodService';
 
 const router = Router();
 
@@ -241,6 +242,190 @@ router.put('/me/status', authMiddleware, traderMiddleware, async (req: AuthReque
   } catch (error) {
     console.error('Update status error:', error);
     res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// ============================================
+// Payment Methods Routes
+// ============================================
+
+// GET /api/traders/me/payment-methods - List payment methods
+router.get('/me/payment-methods', authMiddleware, traderMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const trader = await findTraderByUserId(userId);
+    if (!trader) {
+      return res.status(404).json({ error: 'Trader not found' });
+    }
+
+    const methods = await paymentMethodService.getPaymentMethods(trader.id);
+
+    // Mask sensitive data for response
+    const maskedMethods = methods.map(m => paymentMethodService.maskPaymentMethod(m));
+
+    res.json({ paymentMethods: maskedMethods });
+  } catch (error) {
+    console.error('Get payment methods error:', error);
+    res.status(500).json({ error: 'Failed to get payment methods' });
+  }
+});
+
+// POST /api/traders/me/payment-methods - Add payment method
+router.post('/me/payment-methods', authMiddleware, traderMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const trader = await findTraderByUserId(userId);
+    if (!trader) {
+      return res.status(404).json({ error: 'Trader not found' });
+    }
+
+    const method = await paymentMethodService.addPaymentMethod(trader.id, req.body);
+
+    res.status(201).json({
+      message: 'Payment method added',
+      paymentMethod: paymentMethodService.maskPaymentMethod(method)
+    });
+  } catch (error: any) {
+    console.error('Add payment method error:', error);
+    res.status(400).json({ error: error.message || 'Failed to add payment method' });
+  }
+});
+
+// GET /api/traders/me/payment-methods/:id - Get single payment method
+router.get('/me/payment-methods/:id', authMiddleware, traderMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const trader = await findTraderByUserId(userId);
+    if (!trader) {
+      return res.status(404).json({ error: 'Trader not found' });
+    }
+
+    const method = await paymentMethodService.getPaymentMethod(req.params.id);
+    if (!method || method.trader_id !== trader.id) {
+      return res.status(404).json({ error: 'Payment method not found' });
+    }
+
+    res.json({ paymentMethod: paymentMethodService.maskPaymentMethod(method) });
+  } catch (error) {
+    console.error('Get payment method error:', error);
+    res.status(500).json({ error: 'Failed to get payment method' });
+  }
+});
+
+// PUT /api/traders/me/payment-methods/:id - Update payment method
+router.put('/me/payment-methods/:id', authMiddleware, traderMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const trader = await findTraderByUserId(userId);
+    if (!trader) {
+      return res.status(404).json({ error: 'Trader not found' });
+    }
+
+    const method = await paymentMethodService.updatePaymentMethod(
+      req.params.id,
+      trader.id,
+      req.body
+    );
+
+    res.json({
+      message: 'Payment method updated',
+      paymentMethod: paymentMethodService.maskPaymentMethod(method)
+    });
+  } catch (error: any) {
+    console.error('Update payment method error:', error);
+    res.status(400).json({ error: error.message || 'Failed to update payment method' });
+  }
+});
+
+// DELETE /api/traders/me/payment-methods/:id - Delete payment method
+router.delete('/me/payment-methods/:id', authMiddleware, traderMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const trader = await findTraderByUserId(userId);
+    if (!trader) {
+      return res.status(404).json({ error: 'Trader not found' });
+    }
+
+    await paymentMethodService.deletePaymentMethod(req.params.id, trader.id);
+
+    res.json({ message: 'Payment method deleted' });
+  } catch (error: any) {
+    console.error('Delete payment method error:', error);
+    res.status(400).json({ error: error.message || 'Failed to delete payment method' });
+  }
+});
+
+// PUT /api/traders/me/payment-methods/:id/primary - Set as primary
+router.put('/me/payment-methods/:id/primary', authMiddleware, traderMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const trader = await findTraderByUserId(userId);
+    if (!trader) {
+      return res.status(404).json({ error: 'Trader not found' });
+    }
+
+    await paymentMethodService.setPrimary(trader.id, req.params.id);
+
+    res.json({ message: 'Primary payment method updated' });
+  } catch (error: any) {
+    console.error('Set primary payment method error:', error);
+    res.status(400).json({ error: error.message || 'Failed to set primary payment method' });
+  }
+});
+
+// GET /api/traders/:id/payment-details - Get trader's payment details for a trade (public for trade parties)
+router.get('/:id/payment-details', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const traderId = req.params.id;
+
+    // Get trader's primary payment method
+    const method = await paymentMethodService.getPrimaryPaymentMethod(traderId);
+    if (!method) {
+      return res.status(404).json({ error: 'Trader has no payment methods configured' });
+    }
+
+    // Return full details (not masked) for trade counterparty
+    res.json({
+      paymentMethod: {
+        id: method.id,
+        methodType: method.method_type,
+        provider: method.provider,
+        accountHolderName: method.account_holder_name,
+        phoneNumber: method.phone_number,
+        bankName: method.bank_name,
+        accountNumber: method.account_number,
+        iban: method.iban,
+        swiftCode: method.swift_code,
+        currency: method.currency
+      }
+    });
+  } catch (error) {
+    console.error('Get trader payment details error:', error);
+    res.status(500).json({ error: 'Failed to get payment details' });
   }
 });
 
