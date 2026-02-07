@@ -1,0 +1,59 @@
+{
+  "app": {
+    "name": "CyxTrade",
+    "version": "0.1.0",
+    "description": "P2P Fiat Exchange for Trusted Networks"
+  },
+  "api": {
+    "baseUrl": {
+      "development": "http://localhost:3000/api",
+      "staging": "https://staging-api.cyxtrade.com/api",
+      "production": "https://api.cyxtrade.com/api"
+    },
+    "wsUrl": {
+      "development": "http://localhost:3000",
+      "staging": "https://staging-api.cyxtrade.com",
+      "production": "https://api.cyxtrade.com"
+    }
+  },
+  "currencies": {
+    "AED": { "name": "UAE Dirham", "symbol": "د.إ", "flag": "🇦🇪", "country": "UAE" },
+    "XAF": { "name": "CFA Franc", "symbol": "FCFA", "flag": "🇨🇲", "country": "Cameroon" },
+    "NGN": { "name": "Nigerian Naira", "symbol": "₦", "flag": "🇳🇬", "country": "Nigeria" },
+    "GHS": { "name": "Ghanaian Cedi", "symbol": "₵", "flag": "🇬🇭", "country": "Ghana" },
+    "KES": { "name": "Kenyan Shilling", "symbol": "KSh", "flag": "🇰🇪", "country": "Kenya" },
+    "XOF": { "name": "CFA Franc BCEAO", "symbol": "FCFA", "flag": "🇸🇳", "country": "Senegal" },
+    "SAR": { "name": "Saudi Riyal", "symbol": "﷼", "flag": "🇸🇦", "country": "Saudi Arabia" },
+    "GBP": { "name": "British Pound", "symbol": "£", "flag": "🇬🇧", "country": "UK" },
+    "EUR": { "name": "Euro", "symbol": "€", "flag": "🇪🇺", "country": "EU" },
+    "USD": { "name": "US Dollar", "symbol": "$", "flag": "🇺🇸", "country": "USA" }
+  },
+  "corridors": {
+    "mvp": [
+      { "from": "AED", "to": "XAF", "name": "UAE → Cameroon" }
+    ],
+    "phase2": [
+      { "from": "AED", "to": "NGN", "name": "UAE → Nigeria" },
+      { "from": "SAR", "to": "XAF", "name": "Saudi → Cameroon" },
+      { "from": "SAR", "to": "NGN", "name": "Saudi → Nigeria" }
+    ]
+  },
+  "paymentMethods": {
+    "XAF": ["orange_money", "mtn_momo", "bank_transfer"],
+    "NGN": ["bank_transfer", "opay"],
+    "AED": ["bank_transfer"],
+    "SAR": ["bank_transfer"]
+  },
+  "tradeConfig": {
+    "minTradeAmount": 50,
+    "maxTradeAmount": 5000,
+    "tradeTimeoutMinutes": 60,
+    "paymentWindowMinutes": 30,
+    "deliveryWindowMinutes": 30
+  },
+  "bondConfig": {
+    "minBondAmount": 500,
+    "maxTradePercentOfBond": 80,
+    "withdrawalHoldDays": 7
+  }
+}

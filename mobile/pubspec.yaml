@@ -1,0 +1,74 @@
+name: cyxtrade
+description: "CyxTrade - P2P Fiat Exchange for Trusted Networks"
+publish_to: 'none'
+
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.10.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State Management
+  provider: ^6.1.2
+
+  # HTTP & API
+  http: ^1.2.2
+  dio: ^5.4.3+1
+
+  # WebSocket
+  socket_io_client: ^2.0.3+1
+
+  # Local Storage
+  shared_preferences: ^2.2.3
+  flutter_secure_storage: ^9.2.2
+
+  # Navigation
+  go_router: ^14.2.3
+
+  # UI Components
+  flutter_svg: ^2.0.10+1
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+
+  # Image Picker
+  image_picker: ^1.1.2
+
+  # Utils
+  timeago: ^3.6.1
+  url_launcher: ^6.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/images/logo.png"
+    background_color: "#0D9488"
+    theme_color: "#0D9488"
+  windows:
+    generate: true
+    image_path: "assets/images/logo.png"
+    icon_size: 256
+  macos:
+    generate: true
+    image_path: "assets/images/logo.png"
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
