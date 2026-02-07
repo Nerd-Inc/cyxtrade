@@ -111,7 +111,19 @@ cyxtrade/
 │   └── EXPANSION_ROADMAP.md  # Future corridors and growth plan
 │
 ├── backend/               # Node.js coordination API
+│   └── src/
+│       ├── routes/        # API routes (auth, trades, traders, uploads)
+│       ├── middleware/    # Auth, error handling
+│       └── utils/         # errors.ts, response.ts
+│
 ├── mobile/                # Flutter app (iOS + Android)
+│   └── lib/
+│       ├── screens/       # UI screens
+│       ├── providers/     # State management
+│       ├── services/      # API, socket, connectivity, storage
+│       ├── utils/         # Error utilities
+│       └── widgets/       # Reusable widgets (error_display, offline_banner)
+│
 ├── web/                   # React web app
 └── admin/                 # React admin panel
 ```
@@ -143,12 +155,18 @@ cyxtrade/
 - [x] Dispute resolution flow (commit-reveal voting)
 - [x] MVP scope defined (UAE ↔ Cameroon corridor)
 
+### Completed (Implementation)
+- [x] Backend API with structured error handling
+- [x] Mobile app screens (auth, send, trade, trader dashboard)
+- [x] Real-time chat with Socket.IO
+- [x] Trader payment methods and image uploads
+- [x] Comprehensive error handling and recovery system
+
 ### Ready for Implementation
 - [ ] Smart contracts (Solidity)
-- [ ] Backend coordination API (Node.js)
-- [ ] Mobile app (Flutter)
 - [ ] Arbitrator registry contract
 - [ ] IPFS evidence storage
+- [ ] Push notifications
 
 ### Future Phases
 - [ ] CyxWiz protocol integration (E2E encrypted chat)
@@ -264,6 +282,65 @@ cmake --build build
 
 ---
 
+## Error Handling Architecture
+
+### Backend Error Codes
+
+Structured error codes for programmatic handling:
+
+| Range | Category | Examples |
+|-------|----------|----------|
+| 1xxx | Validation | `1001` VALIDATION_ERROR, `1002` INVALID_PHONE, `1004` MISSING_FIELD |
+| 2xxx | Auth | `2001` INVALID_TOKEN, `2002` EXPIRED_TOKEN, `2003` UNAUTHORIZED |
+| 3xxx | Trade | `3001` TRADE_NOT_FOUND, `3002` INVALID_TRADE_STATE, `3003` INSUFFICIENT_BOND |
+| 4xxx | Trader | `4001` TRADER_NOT_FOUND, `4002` TRADER_OFFLINE, `4003` NO_PAYMENT_METHOD |
+| 5xxx | Upload | `5001` FILE_TOO_LARGE, `5002` INVALID_FILE_TYPE, `5003` UPLOAD_FAILED |
+| 9xxx | Server | `9001` DATABASE_ERROR, `9002` EXTERNAL_SERVICE_ERROR, `9999` INTERNAL_ERROR |
+
+### Key Files
+
+**Backend:**
+- `backend/src/utils/errors.ts` - ErrorCode enum and AppError class
+- `backend/src/utils/response.ts` - sendSuccess/sendAppError helpers
+- `backend/src/middleware/errorHandler.ts` - Global error handler + asyncHandler
+
+**Mobile:**
+- `mobile/lib/services/api_error.dart` - ApiError class with user-friendly messages
+- `mobile/lib/services/connectivity_service.dart` - Offline detection
+- `mobile/lib/utils/error_utils.dart` - showErrorSnackBar/showSuccessSnackBar
+- `mobile/lib/widgets/error_display.dart` - ErrorDisplay widget
+- `mobile/lib/widgets/offline_banner.dart` - OfflineBanner widget
+
+### Usage Pattern
+
+**Backend routes:**
+```typescript
+import { AppError, ErrorCode } from '../utils/errors';
+import { sendSuccess } from '../utils/response';
+import { asyncHandler } from '../middleware/errorHandler';
+
+router.post('/example', asyncHandler(async (req, res) => {
+  if (!req.body.field) {
+    throw new AppError(ErrorCode.MISSING_FIELD, 'Field is required', { field: 'field' });
+  }
+  sendSuccess(res, { result: 'ok' });
+}));
+```
+
+**Mobile screens:**
+```dart
+import '../../utils/error_utils.dart';
+
+try {
+  await someApiCall();
+  showSuccessSnackBar(context, 'Action completed');
+} catch (e) {
+  showErrorSnackBar(context, e, onRetry: _retryMethod);
+}
+```
+
+---
+
 ## Related Projects
 
 - **CyxWiz Protocol** - Base mesh networking protocol (`../`)
@@ -271,4 +348,4 @@ cmake --build build
 
 ---
 
-*Last updated: 2025-02*
+*Last updated: 2026-02*
