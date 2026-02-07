@@ -110,23 +110,29 @@ Example tiers:
 
 ## Escrow Model
 
-### MVP Escrow
+### Non-Custodial Smart Contract Escrow
 
-* **2-of-3 multisig**
-* Keys held by:
+* **No humans hold funds** - Smart contract only
+* Contract deployed on Tron/Ethereum/Polygon
+* Open source, audited, immutable (no admin keys)
 
-  * Trader A
-  * Trader B
-  * Neutral protocol node
+### How It Works
 
-### Rationale
+```
+Trader deposits bond -> Smart contract holds it
+Trade created -> Portion locked in contract
+Both confirm fiat -> Contract releases
+Dispute? -> Community arbitrators vote
+```
 
-* Lower coordination risk
-* Clear recovery path
-* Easier audits
-* Reduced implementation complexity
+### Why Smart Contracts?
 
-Advanced MPC schemes are deferred to later phases.
+* **Team can't steal** - We have no access
+* **Arbitrators are staked** - They lose money if corrupt
+* **Transparent** - All activity on-chain
+* **No trust required** - Verify the code yourself
+
+See [BOND_ESCROW.md](docs/BOND_ESCROW.md) for full technical design.
 
 ---
 
@@ -139,6 +145,22 @@ Advanced MPC schemes are deferred to later phases.
 
 CyxTrade does not attempt to be compliance-friendly everywhere.
 It minimizes custodial and censorship risk by design.
+
+---
+
+## Why Trust CyxTrade?
+
+**You don't have to.** That's the point.
+
+| Question | Answer |
+|----------|--------|
+| Can the team steal funds? | NO - Team never has access |
+| Can arbitrators steal? | NO - They can only vote on disputes |
+| What if backend goes down? | Funds safe in smart contract |
+| What if team disappears? | Protocol keeps working |
+| How do I verify? | All contracts open source, on-chain |
+
+**Custody is non-custodial by design.** Disputes are resolved by staked community arbitrators - not trustless, but economically accountable.
 
 ---
 
@@ -200,15 +222,17 @@ As new traders join, **new corridors appear automatically**, without protocol ch
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Protocol** | C (CyxWiz - mesh networking, crypto, DHT) |
-| **Backend** | Node.js / TypeScript |
-| **Mobile** | Flutter (iOS + Android) |
-| **Database** | PostgreSQL + Redis |
-| **Escrow** | 2-of-3 multisig |
-| **Crypto** | libsodium |
-| **Storage** | SQLite (local) + DHT (distributed) |
+| Layer | Technology | Custody? |
+|-------|------------|----------|
+| **Smart Contracts** | Solidity (Tron/Ethereum/Polygon) | YES - non-custodial |
+| **Protocol** | C (CyxWiz - mesh networking, crypto) | NO |
+| **Coordination API** | Node.js / TypeScript | NO - never touches funds |
+| **Mobile** | Flutter (iOS + Android) | NO |
+| **Database** | PostgreSQL + Redis | NO - profiles only |
+| **Evidence** | IPFS | NO - dispute evidence |
+| **Crypto** | libsodium | - |
+
+**Key insight:** Only smart contracts hold funds. Everything else is coordination.
 
 ---
 
@@ -373,11 +397,13 @@ cyxtrade exit
 | [VALIDATION.md](docs/VALIDATION.md) | Value proposition, target users, trade flows |
 | [PLATFORM_MODEL.md](docs/PLATFORM_MODEL.md) | User types, no-crypto MVP design |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, database, API, UI |
-| [TRUST_MODEL.md](docs/TRUST_MODEL.md) | Reputation system, vouching, disputes |
+| [TRUST_MODEL.md](docs/TRUST_MODEL.md) | Reputation system, vouching, arbitrators |
+| [DISPUTE_RESOLUTION.md](docs/DISPUTE_RESOLUTION.md) | How disputes are resolved (detailed) |
+| [TRADER_ONBOARDING.md](docs/TRADER_ONBOARDING.md) | Becoming a trader, tiers, verification |
 | [TECHNICAL_DESIGN.md](docs/TECHNICAL_DESIGN.md) | Data structures, protocols |
 | [MVP_USER_STORIES.md](docs/MVP_USER_STORIES.md) | User flows, acceptance criteria |
 | [SECURITY_MODEL.md](docs/SECURITY_MODEL.md) | Bonds, rules, fraud prevention |
-| [BOND_ESCROW.md](docs/BOND_ESCROW.md) | MPC custody design |
+| [BOND_ESCROW.md](docs/BOND_ESCROW.md) | Smart contract escrow design |
 | [UX_DESIGN.md](docs/UX_DESIGN.md) | Interface patterns, onboarding |
 | [EXPANSION_ROADMAP.md](docs/EXPANSION_ROADMAP.md) | Future corridors and growth plan |
 
