@@ -26,59 +26,64 @@
 
 ## Our Solution
 
-**Non-custodial smart contract escrow with community arbitration.**
+**Users don't need crypto. Traders stake bonds. Backend handles on-chain.**
 
 Key components:
-1. **Smart Contract Escrow** - Code holds funds, no human custody
-2. **Security Bonds** - Traders stake deposit, forfeited if they scam
-3. **Community Arbitrators** - Staked humans resolve disputes (not trustless)
-4. **Trusted Networks** - Invite-only trading circles with vouching
-5. **Tiered Verification** - Reputation gates trading limits
+1. **Users** - Just use the app, no wallet needed
+2. **Traders** - Deposit USDT bonds to smart contract
+3. **Backend** - Creates trades on-chain on behalf of users
+4. **Smart Contract** - Holds trader bonds, locks per trade
+5. **Arbitrators** - Staked humans resolve disputes
 
 Trade flow:
 ```
-Ali (UAE)                                Marie (Cameroon)
-    | Pays AED locally                      ^ Receives XAF locally
-    v                                       |
-+---------+       USDT escrow      +---------+
-| Trader  | <-------------------> | Trader  |
-| (UAE)   |   via Smart Contract   | (CAM)   |
-+---------+                        +---------+
+Ali (UAE)                      Trader                      Marie (Cameroon)
+    │                             │                              │
+    │ 1. Send AED to trader       │                              │
+    └────────────────────────────►│                              │
+                                  │ 2. Send XAF to Marie         │
+                                  │─────────────────────────────►│
+    │ 3. Marie confirms           │                              │
+    │◄─────────────────────────────────────────────────────────────
+    │ 4. Ali closes trade         │                              │
+    └────────────────────────────►│                              │
 ```
 
 ---
 
 ## Critical Design Distinction
 
-**What's Non-Custodial (Code-Enforced):**
-- Bond custody (smart contract holds funds)
-- Trade escrow (locked until both confirm)
-- Withdrawal (no approval needed when clean)
-- Vote execution (contract enforces arbitrator decision)
+**Users don't need crypto:**
+- Users just use the app - no wallet, no gas fees
+- Backend creates trades on-chain on their behalf
+- Backend has signing key but CAN'T withdraw trader bonds
 
-**What's Socially Enforced (Humans Judge):**
-- Fiat verification (someone must attest)
-- Dispute resolution (arbitrators vote)
-- Evidence evaluation (humans decide truth)
+**Traders stake bonds:**
+- Traders deposit USDT to smart contract
+- Bond locked when accepting a trade
+- If trader scams → bond slashed, user compensated
 
-We do NOT claim fully trustless disputes. Fiat is off-chain. Someone must judge.
-We make cheating economically irrational, not impossible.
+**Disputes are human:**
+- Fiat can't be verified on-chain
+- Arbitrators review evidence and vote
+- Smart contract executes the result automatically
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Has Custody? |
-|-------|------------|--------------|
-| **Smart Contracts** | Solidity (Tron/Ethereum/Polygon) | YES - non-custodial |
-| **Protocol** | C (CyxWiz - mesh networking, crypto) | NO |
-| **Coordination API** | Node.js / TypeScript | NO - never touches funds |
-| **Mobile** | Flutter (iOS + Android) | NO |
-| **Database** | PostgreSQL + Redis | NO - profiles only |
-| **Evidence** | IPFS | NO - dispute evidence |
-| **Crypto** | libsodium | - |
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Smart Contracts** | Solidity (Tron) | Holds trader bonds |
+| **Backend API** | Node.js / TypeScript | Trade coordination, on-chain interactions |
+| **Mobile App** | Flutter | User interface (no wallet needed) |
+| **Database** | PostgreSQL + Redis | Profiles, trades, chat |
+| **Evidence** | IPFS | Dispute evidence storage |
 
-**Key insight:** Only smart contracts hold funds. Everything else is coordination.
+**Key insight:**
+- Users = App only, no crypto
+- Traders = Have wallets, deposit bonds
+- Backend = Creates trades, can't steal bonds
 
 ---
 

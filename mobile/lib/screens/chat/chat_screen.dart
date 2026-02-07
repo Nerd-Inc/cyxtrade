@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../../services/socket_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String tradeId;
@@ -22,21 +24,93 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<Map<String, dynamic>> _messages = [];
+  final SocketService _socketService = SocketService();
+
   bool _isLoading = true;
   bool _isSending = false;
+  bool _isTyping = false;
+  String? _typingUser;
+  Timer? _typingTimer;
 
   @override
   void initState() {
     super.initState();
+    _initSocket();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadMessages();
     });
+  }
+
+  void _initSocket() {
+    // Connect and join trade room
+    _socketService.connect().then((_) {
+      _socketService.joinTradeRoom(widget.tradeId);
+    });
+
+    // Listen for incoming messages
+    _socketService.addMessageListener(_onMessageReceived);
+    _socketService.addTypingListener(_onTypingReceived);
+    _socketService.addReadListener(_onReadReceived);
+  }
+
+  void _onMessageReceived(Map<String, dynamic> message) {
+    if (message['tradeId'] != widget.tradeId) return;
+
+    final userId = context.read<AuthProvider>().user?['id'];
+    // Don't add our own messages (already added optimistically)
+    if (message['senderId'] == userId) return;
+
+    setState(() {
+      _messages.add(message);
+      _isTyping = false;
+      _typingUser = null;
+    });
+    _scrollToBottom();
+
+    // Send read receipt
+    _socketService.sendRead(widget.tradeId);
+  }
+
+  void _onTypingReceived(Map<String, dynamic> data) {
+    if (data['tradeId'] != widget.tradeId) return;
+
+    final userId = context.read<AuthProvider>().user?['id'];
+    if (data['userId'] == userId) return;
+
+    setState(() {
+      _isTyping = true;
+      _typingUser = data['userId'];
+    });
+
+    // Clear typing after 3 seconds
+    _typingTimer?.cancel();
+    _typingTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _isTyping = false;
+          _typingUser = null;
+        });
+      }
+    });
+  }
+
+  void _onReadReceived(Map<String, dynamic> data) {
+    // Could update message read status here
+    debugPrint('Read receipt: $data');
   }
 
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _typingTimer?.cancel();
+
+    // Leave room and remove listeners
+    _socketService.leaveTradeRoom(widget.tradeId);
+    _socketService.removeMessageListener(_onMessageReceived);
+    _socketService.removeTypingListener(_onTypingReceived);
+    _socketService.removeReadListener(_onReadReceived);
+
     super.dispose();
   }
 
@@ -49,6 +123,9 @@ class _ChatScreenState extends State<ChatScreen> {
         _messages.addAll(List<Map<String, dynamic>>.from(response['messages'] ?? []));
       });
       _scrollToBottom();
+
+      // Send read receipt for loaded messages
+      _socketService.sendRead(widget.tradeId);
     } catch (e) {
       // Use mock messages for development
       setState(() {
@@ -57,18 +134,25 @@ class _ChatScreenState extends State<ChatScreen> {
             'id': '1',
             'senderId': 'trader',
             'content': 'Hello! I\'ve received your trade request.',
-            'timestamp': DateTime.now().subtract(const Duration(minutes: 5)).toIso8601String(),
+            'createdAt': DateTime.now().subtract(const Duration(minutes: 5)).toIso8601String(),
           },
           {
             'id': '2',
             'senderId': 'trader',
             'content': 'Please send payment to my bank account and share the receipt here.',
-            'timestamp': DateTime.now().subtract(const Duration(minutes: 4)).toIso8601String(),
+            'createdAt': DateTime.now().subtract(const Duration(minutes: 4)).toIso8601String(),
           },
         ]);
       });
     } finally {
       setState(() => _isLoading = false);
+    }
+  }
+
+  void _onTextChanged(String text) {
+    // Send typing indicator (debounced)
+    if (text.isNotEmpty) {
+      _socketService.sendTyping(widget.tradeId);
     }
   }
 
@@ -83,10 +167,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // Add message optimistically
     final newMessage = {
-      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'id': 'msg_${DateTime.now().millisecondsSinceEpoch}',
       'senderId': userId,
       'content': text,
-      'timestamp': DateTime.now().toIso8601String(),
+      'createdAt': DateTime.now().toIso8601String(),
     };
 
     setState(() {
@@ -94,11 +178,14 @@ class _ChatScreenState extends State<ChatScreen> {
     });
     _scrollToBottom();
 
+    // Send via socket (real-time)
+    _socketService.sendMessage(widget.tradeId, text);
+
+    // Also send via API (persistence)
     try {
       await ApiService().sendMessage(widget.tradeId, text);
     } catch (e) {
-      // Message already added optimistically, just log error
-      debugPrint('Failed to send message: $e');
+      debugPrint('Failed to persist message: $e');
     } finally {
       setState(() => _isSending = false);
     }
@@ -153,17 +240,18 @@ class _ChatScreenState extends State<ChatScreen> {
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: const BoxDecoration(
-                          color: Colors.green,
+                        decoration: BoxDecoration(
+                          color: _socketService.isConnected ? Colors.green : Colors.grey,
                           shape: BoxShape.circle,
                         ),
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        'Online',
+                        _isTyping ? 'typing...' : (_socketService.isConnected ? 'Online' : 'Connecting...'),
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey.shade600,
+                          color: _isTyping ? Theme.of(context).primaryColor : Colors.grey.shade600,
+                          fontStyle: _isTyping ? FontStyle.italic : FontStyle.normal,
                         ),
                       ),
                     ],
@@ -197,7 +285,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Trade #${widget.tradeId.substring(0, 8)}...',
+                    'Trade #${widget.tradeId.substring(0, 8).toUpperCase()}',
                     style: TextStyle(color: Colors.blue.shade700, fontSize: 13),
                   ),
                 ),
@@ -232,8 +320,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     : ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.all(16),
-                        itemCount: _messages.length,
+                        itemCount: _messages.length + (_isTyping ? 1 : 0),
                         itemBuilder: (context, index) {
+                          if (_isTyping && index == _messages.length) {
+                            return _TypingIndicator(traderName: widget.traderName);
+                          }
                           final message = _messages[index];
                           final isMe = message['senderId'] == userId;
                           return _MessageBubble(
@@ -271,6 +362,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: _messageController,
+                      onChanged: _onTextChanged,
                       decoration: InputDecoration(
                         hintText: 'Type a message...',
                         border: OutlineInputBorder(
@@ -315,6 +407,97 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
+class _TypingIndicator extends StatelessWidget {
+  final String traderName;
+
+  const _TypingIndicator({required this.traderName});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _DotAnimation(),
+            const SizedBox(width: 4),
+            _DotAnimation(delay: 150),
+            const SizedBox(width: 4),
+            _DotAnimation(delay: 300),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DotAnimation extends StatefulWidget {
+  final int delay;
+
+  const _DotAnimation({this.delay = 0});
+
+  @override
+  State<_DotAnimation> createState() => _DotAnimationState();
+}
+
+class _DotAnimationState extends State<_DotAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _animation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+
+    Future.delayed(Duration(milliseconds: widget.delay), () {
+      if (mounted) {
+        _controller.repeat(reverse: true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, -4 * _animation.value),
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade500,
+              shape: BoxShape.circle,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _MessageBubble extends StatelessWidget {
   final Map<String, dynamic> message;
   final bool isMe;
@@ -328,7 +511,7 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timestamp = DateTime.tryParse(message['timestamp'] ?? '') ?? DateTime.now();
+    final timestamp = DateTime.tryParse(message['createdAt'] ?? message['timestamp'] ?? '') ?? DateTime.now();
     final timeStr = '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
 
     return Align(
@@ -373,12 +556,25 @@ class _MessageBubble extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
-              child: Text(
-                timeStr,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey.shade500,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    timeStr,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                  if (isMe) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.done_all,
+                      size: 14,
+                      color: Colors.grey.shade400,
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
@@ -412,9 +608,7 @@ class _ChatOptionsSheet extends StatelessWidget {
             title: const Text('Report Issue'),
             onTap: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Report feature coming soon')),
-              );
+              context.push('/dispute/$tradeId');
             },
           ),
           ListTile(

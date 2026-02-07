@@ -1,49 +1,41 @@
 # Bond Escrow: Smart Contract Design
 
-> Non-custodial escrow via smart contracts. No team access. No human custody.
+> Traders deposit bonds. Users don't need crypto. Backend creates trades on-chain.
 
 ---
 
-## The Core Problem
-
-Who holds the money?
-
-| Option | Problem |
-|--------|---------|
-| CyxTrade team holds it | Team can steal everything and disappear |
-| Trusted escrow nodes | Nodes can collude (3-of-5 = only need 3 corrupt) |
-| Single smart contract | Need blockchain, but **no human can steal** |
-| User keeps it (honor) | No actual security |
-
-**The honest answer:** If humans hold the money, humans can steal it.
-
-**The solution:** Code holds the money. Smart contracts on public blockchains.
-
----
-
-## Pure Protocol Model
+## The Model
 
 ```
-OLD MODEL (Risky):
-User deposits → Team/Nodes hold funds → "Trust us"
-                      ↓
-              They could run away
-
-NEW MODEL (Non-Custodial):
-User deposits → Smart Contract → Code enforces custody
-                      ↓
-              No human can steal (if code is correct)
-              Disputes still require human judgment
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              HOW IT WORKS                                    │
+│                                                                             │
+│   TRADERS deposit USDT bonds to smart contract                              │
+│   USERS create trades via app (no wallet needed)                            │
+│   BACKEND locks portion of trader's bond when trade starts                  │
+│   If trader delivers → bond unlocked                                        │
+│   If trader scams → bond slashed, user compensated                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Who Has What
+
+| Actor | Has Wallet? | Interacts with Contract? |
+|-------|-------------|--------------------------|
+| **User** | NO | No - uses app only |
+| **Trader** | YES | Yes - deposits/withdraws bond |
+| **Backend** | YES (system key) | Yes - creates trades, locks bonds |
+| **Arbitrator** | YES | Yes - votes on disputes |
 
 ### Who Can Steal?
 
-| Actor | Old Model | New Model |
-|-------|-----------|-----------|
-| CyxTrade team | YES (has access) | NO (never has access) |
-| Escrow nodes | YES (3-of-5 collude) | NO (no nodes) |
-| Hackers | Maybe (server breach) | Only if contract bug |
-| Government | Can force team | No one to force |
+| Actor | Can Steal Trader Bonds? | Why? |
+|-------|-------------------------|------|
+| CyxTrade team | NO | Contract has no admin functions |
+| Backend | NO | Can lock bonds, can't withdraw them |
+| Hackers | Only if contract bug | No server holds funds |
+| Traders | Only their own | Each trader controls their wallet |
 
 ---
 
@@ -64,92 +56,123 @@ contract CyxTradeEscrow {
 
     struct Trade {
         bytes32 tradeId;
-        address traderA;
-        address traderB;
-        uint256 amount;
+        address trader;           // The trader handling this trade
+        bytes32 oderId;          // Reference to off-chain user
+        uint256 sendAmount;       // Fiat amount user sends (e.g., 1000 AED)
+        uint256 receiveAmount;    // Fiat amount recipient gets (e.g., 163000 XAF)
+        uint256 bondLocked;       // USDT locked from trader's bond
         TradeState state;
         uint256 createdAt;
         uint256 timeout;
     }
 
     enum TradeState {
-        CREATED,
-        LOCKED,
-        AWAITING_FIAT_A,
-        AWAITING_FIAT_B,
-        COMPLETED,
-        DISPUTED,
-        CANCELLED
+        CREATED,        // Trade initiated, bond locked
+        ACCEPTED,       // Trader accepted
+        USER_PAID,      // User confirms sent fiat to trader
+        DELIVERING,     // Trader confirms received, sending to recipient
+        COMPLETED,      // User confirms recipient received
+        DISPUTED,       // Dispute opened
+        RESOLVED,       // Dispute resolved
+        CANCELLED       // Cancelled before USER_PAID
     }
 
     mapping(address => Bond) public bonds;
     mapping(bytes32 => Trade) public trades;
 
-    // Deposit bond (trader calls this)
+    address public backend;  // Backend address that can create trades
+
+    // === TRADER FUNCTIONS ===
+
+    // Deposit bond (trader calls this directly)
     function depositBond() external payable;
 
     // Withdraw bond (only when no active trades)
     function withdrawBond(uint256 amount) external;
 
-    // Create trade (locks portion of bond)
-    function createTrade(bytes32 tradeId, address counterparty, uint256 amount) external;
+    // === BACKEND FUNCTIONS ===
 
-    // Confirm fiat received (both parties must call)
-    function confirmFiat(bytes32 tradeId) external;
+    // Create trade on behalf of user (backend calls this)
+    function createTrade(
+        bytes32 tradeId,
+        address trader,
+        bytes32 userId,
+        uint256 sendAmount,
+        uint256 receiveAmount,
+        uint256 bondToLock
+    ) external onlyBackend;
 
-    // Complete trade (auto-completes if both confirm OR timeout)
-    function completeTrade(bytes32 tradeId) external;
+    // Update trade state (backend calls this)
+    function updateTradeState(bytes32 tradeId, TradeState newState) external onlyBackend;
 
-    // Open dispute
-    function openDispute(bytes32 tradeId) external;
+    // Complete trade - unlocks bond (backend calls this)
+    function completeTrade(bytes32 tradeId) external onlyBackend;
 
-    // Resolve dispute (arbitrators call this)
-    function resolveDispute(bytes32 tradeId, address winner) external;
+    // Open dispute (backend calls this)
+    function openDispute(bytes32 tradeId) external onlyBackend;
+
+    // === ARBITRATOR FUNCTIONS ===
+
+    // Resolve dispute (arbitrators vote, then this executes)
+    function resolveDispute(bytes32 tradeId, bool favorUser) external;
 }
 ```
 
+### Key Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| Backend can create trades | Users don't have wallets |
+| Backend CAN'T withdraw bonds | Only trader's wallet can withdraw |
+| Bond locked per trade | Protects user for that specific trade |
+| Arbitrators resolve disputes | Fiat can't be verified on-chain |
+
 ### Contract Deployment
 
-Deployed on:
-- **Tron** (for USDT-TRC20) - Low fees, fast confirmation
-- **Ethereum** (for USDT-ERC20) - Higher trust, higher fees
-- **Polygon** (for USDC) - Low fees, Ethereum security
+**MVP: Tron only** (USDT-TRC20)
+- Low fees (~$1 per transaction)
+- Fast confirmation (~3 seconds)
+- High USDT liquidity
 
 Contract is:
 - Open source (anyone can audit)
-- Verified on block explorer
+- Verified on TronScan
 - Immutable (no admin keys, no upgrades)
+- Backend address set at deployment (can't be changed)
 
 ---
 
-## Trade Flow (Non-Custodial)
+## Trade Flow
 
-### Step 1: Deposit Bond
-
-```
-Trader deposits 1000 USDT to smart contract
-
-1. Trader approves USDT spending: approve(escrowContract, 1000)
-2. Trader calls: escrow.depositBond(1000)
-3. Contract transfers USDT from trader to itself
-4. Contract records: bonds[trader] = {amount: 1000, locked: 0, active: true}
-
-Trader now has 1000 USDT bond capacity.
-No human ever touched the funds.
-```
-
-### Step 2: Create Trade
+### Step 1: Trader Deposits Bond
 
 ```
-Trader A wants to trade 500 USDT with Trader B
+Trader deposits 5000 USDT to smart contract
 
-1. Trader A calls: escrow.createTrade(tradeId, traderB, 500)
-2. Contract checks: bonds[traderA].amount - bonds[traderA].locked >= 500
-3. Contract locks: bonds[traderA].locked += 500
-4. Contract creates trade: trades[tradeId] = {...}
-5. Trade state: LOCKED
+1. Trader connects wallet (TronLink, etc.)
+2. Trader approves USDT spending: approve(escrowContract, 5000)
+3. Trader calls: escrow.depositBond(5000)
+4. Contract transfers USDT from trader to itself
+5. Contract records: bonds[trader] = {amount: 5000, locked: 0, active: true}
 
-Trader A's bond: 1000 total, 500 locked, 500 available.
+Trader now has 5000 USDT bond capacity.
+Can accept trades up to their available bond.
+```
+
+### Step 2: User Creates Trade (Via App)
+
+```
+Ali wants to send 1000 AED to Marie in Cameroon
+
+1. Ali opens app, enters: 1000 AED → Marie (Cameroon)
+2. App shows available traders, Ali selects one
+3. Ali confirms trade
+4. Backend calls: escrow.createTrade(tradeId, traderAddr, oderId, 1000, 163000, 165)
+5. Contract locks 165 USDT from trader's bond
+6. Trade state: CREATED
+
+Trader's bond: 5000 total, 165 locked, 4835 available.
+Ali doesn't need a wallet - backend handled it.
 ```
 
 ### Step 3: Fiat Exchange (Off-Chain)
@@ -157,47 +180,41 @@ Trader A's bond: 1000 total, 500 locked, 500 available.
 ```
 This happens OUTSIDE the blockchain:
 
-1. Trader A sends fiat to Trader B (bank transfer, mobile money, cash)
-2. Trader B receives fiat
-3. Trader B sends fiat to end recipient
+1. Trader accepts trade in app
+   └── Backend updates state to ACCEPTED
 
-The contract CANNOT verify this happened.
-We rely on:
-- Both parties confirming
-- Timeout with default behavior
-- Arbitration for disputes
+2. Ali sends 1000 AED to trader's bank account
+   └── Ali clicks "I Paid" in app
+   └── Backend updates state to USER_PAID
+
+3. Trader receives AED, sends 163,000 XAF to Marie
+   └── Trader clicks "Delivered" in app
+   └── Backend updates state to DELIVERING
+
+4. Ali confirms with Marie she received money
+   └── Ali clicks "Confirm Receipt" in app
+   └── Backend calls: escrow.completeTrade(tradeId)
+   └── Contract unlocks trader's bond
+   └── Trade state: COMPLETED
+
+The contract CANNOT verify fiat transfers.
+It relies on user confirmation or dispute resolution.
 ```
 
-### Step 4: Confirm and Complete
+### Step 4: Dispute (If Needed)
 
 ```
-Happy path: Both traders confirm
+Ali claims Marie never received money
 
-1. Trader A calls: escrow.confirmFiat(tradeId)
-2. Trader B calls: escrow.confirmFiat(tradeId)
-3. Contract sees both confirmed
-4. Contract unlocks: bonds[traderA].locked -= 500
-5. Trade state: COMPLETED
-
-Alternative: Timeout
-
-1. Trade created with 48h timeout
-2. Neither party disputes within 48h
-3. Contract auto-completes: escrow.completeTrade(tradeId)
-4. Funds unlocked
-```
-
-### Step 5: Dispute (If Needed)
-
-```
-Trader B claims fiat never received
-
-1. Trader B calls: escrow.openDispute(tradeId)
-2. Trade state: DISPUTED
-3. Funds remain locked
-4. Arbitration process begins (see below)
-5. Arbitrators vote
-6. Winner gets funds / loser loses bond portion
+1. Ali clicks "Open Dispute" in app
+2. Backend calls: escrow.openDispute(tradeId)
+3. Trade state: DISPUTED
+4. Trader's bond remains locked
+5. Both parties submit evidence (screenshots, receipts)
+6. Arbitrators review and vote
+7. Contract executes result:
+   - If Ali wins: Trader's locked bond sent to compensation address
+   - If Trader wins: Bond unlocked, trade cancelled
 ```
 
 ---
@@ -421,32 +438,41 @@ All contracts will be:
 
 ```
                     ┌─────────────┐
-                    │   CREATED   │
+                    │   CREATED   │ User creates trade, bond locked
                     └──────┬──────┘
-                           │ Both parties lock bond
+                           │ Trader accepts
                            ▼
                     ┌─────────────┐
-                    │   LOCKED    │
+                    │  ACCEPTED   │ Trader sends payment details
                     └──────┬──────┘
-                           │ Fiat exchange begins
+                           │ User sends fiat to trader
                            ▼
                     ┌─────────────┐
-                    │ AWAITING    │
-                    │ FIAT        │
+                    │  USER_PAID  │ User confirms sent payment
+                    └──────┬──────┘
+                           │ Trader receives, sends to recipient
+                           ▼
+                    ┌─────────────┐
+                    │ DELIVERING  │ Trader confirms sending to recipient
                     └──────┬──────┘
                            │
-              ┌────────────┼────────────┐
-              │            │            │
-              ▼            ▼            ▼
-       ┌──────────┐ ┌──────────┐ ┌──────────┐
-       │ COMPLETED│ │ DISPUTED │ │ TIMEOUT  │
-       └──────────┘ └────┬─────┘ └────┬─────┘
-                         │            │
-                         ▼            ▼
-                  ┌──────────┐ ┌──────────┐
-                  │ RESOLVED │ │ AUTO     │
-                  │ (winner) │ │ COMPLETE │
-                  └──────────┘ └──────────┘
+              ┌────────────┴────────────┐
+              │                         │
+              ▼                         ▼
+       ┌─────────────┐          ┌─────────────┐
+       │  COMPLETED  │          │  DISPUTED   │
+       │ Bond unlock │          │ Bond frozen │
+       └─────────────┘          └──────┬──────┘
+                                       │
+                                       ▼
+                                ┌─────────────┐
+                                │  RESOLVED   │
+                                │ Winner gets │
+                                │    bond     │
+                                └─────────────┘
+
+    CANCELLED: Can happen before USER_PAID
+    TIMEOUT: Auto-dispute after 24h inactivity in any state
 ```
 
 ---
@@ -476,17 +502,26 @@ CyxTrade follows the same model, adapted for stablecoins.
 
 | Principle | Implementation |
 |-----------|----------------|
-| **No custody** | Smart contract holds all funds |
-| **No custody trust** | Code enforces custody rules |
-| **Transparent** | Contract is open source, verified |
-| **Immutable** | No admin keys, no upgrades |
-| **Arbitration** | Community arbitrators with stake |
+| **Users don't need crypto** | Backend creates trades on their behalf |
+| **Traders stake bonds** | USDT deposited to smart contract |
+| **Users protected** | Trader's bond locked per trade |
+| **Backend can't steal** | Contract has no admin withdrawal |
+| **Disputes are human** | Arbitrators judge fiat (not trustless) |
 
-**The CyxTrade team never touches your money.**
+### Who Can Do What
 
-Not because we're trustworthy.
+| Actor | Deposit Bond | Withdraw Bond | Create Trade | Complete Trade | Resolve Dispute |
+|-------|--------------|---------------|--------------|----------------|-----------------|
+| User | - | - | Via app | Via app | Via app |
+| Trader | YES | YES (own only) | - | - | - |
+| Backend | - | NO | YES | YES | YES (trigger) |
+| Arbitrator | - | - | - | - | YES (vote) |
 
-Because we literally can't.
+**Key insight:**
+- Users are protected by trader bonds
+- Traders are protected by dispute resolution
+- Backend facilitates but can't steal
+- Contract enforces rules automatically
 
 ---
 

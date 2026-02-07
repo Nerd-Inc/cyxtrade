@@ -53,21 +53,34 @@ A worker sending $300/month can lose **$600-900 per year**.
 
 ## The Solution
 
-CyxTrade enables **direct fiat-to-fiat exchange**, using stablecoins **only as escrow**, not as money.
+CyxTrade enables **direct fiat-to-fiat exchange**, using stablecoins **only as trader bonds**, not as money users touch.
 
 ```
-Ali (UAE)                                Marie (Cameroon)
-    | Pays AED locally                      ^ Receives XAF locally
-    v                                       |
-+---------+       USDT escrow      +---------+
-| Trader  | <-------------------> | Trader  |
-| (UAE)   |     via CyxTrade       | (CAM)   |
-+---------+                        +---------+
+Ali (UAE)                      Trader                      Marie (Cameroon)
+    │                             │                              │
+    │ 1. Send 1000 AED            │                              │
+    │    to Trader's bank         │                              │
+    └────────────────────────────►│                              │
+                                  │ 2. Trader sends              │
+                                  │    163,000 XAF               │
+                                  │    to Marie                  │
+                                  │─────────────────────────────►│
+                                  │                              │
+    │ 3. Marie confirms           │                              │
+    │    to Ali                   │                              │
+    │◄─────────────────────────────────────────────────────────────
+    │                             │                              │
+    │ 4. Ali closes trade         │                              │
+    └────────────────────────────►│                              │
+                                  │                              │
+                            TRADE COMPLETE
 ```
 
-* End users never touch crypto
-* Fiat movement stays local on both ends
-* Crypto exists only as neutral escrow between traders
+**How it works:**
+* **Users** (Ali, Marie) only use the app - no crypto wallet needed
+* **Traders** deposit USDT bonds to smart contract as collateral
+* **If trader scams**: Bond slashed, user compensated automatically
+* Fiat moves off-chain, crypto exists only as trader protection
 
 Result: **2-3% total cost**, no fund freezing, no intermediaries.
 
@@ -110,27 +123,30 @@ Example tiers:
 
 ## Escrow Model
 
-### Non-Custodial Smart Contract Escrow
+### Trader Bonds (Non-Custodial)
 
-* **No humans hold funds** - Smart contract only
-* Contract deployed on Tron/Ethereum/Polygon
-* Open source, audited, immutable (no admin keys)
+* **Traders deposit USDT bonds** to smart contract
+* **Users don't need crypto** - just use the app
+* Bond = trader's "skin in the game"
+* Contract is immutable (no admin keys)
 
 ### How It Works
 
 ```
-Trader deposits bond -> Smart contract holds it
-Trade created -> Portion locked in contract
-Both confirm fiat -> Contract releases
-Dispute? -> Community arbitrators vote
+1. Trader deposits bond      → Smart contract holds 5000 USDT
+2. Ali creates trade (1000 AED) → 165 USDT locked from trader's bond
+3. Ali sends fiat to trader  → Off-chain bank transfer
+4. Trader sends to Marie     → Off-chain mobile money
+5. Ali confirms receipt      → Bond unlocked
+6. If trader scams           → Bond slashed, Ali compensated
 ```
 
-### Why Smart Contracts?
+### Why This Works
 
-* **Team can't steal** - We have no access
-* **Arbitrators are staked** - They lose money if corrupt
-* **Transparent** - All activity on-chain
-* **No trust required** - Verify the code yourself
+* **Users protected** - Trader's bond covers their trade
+* **No crypto for users** - App handles everything
+* **Traders accountable** - Scam = lose bond
+* **Transparent** - All bonds visible on-chain
 
 See [BOND_ESCROW.md](docs/BOND_ESCROW.md) for full technical design.
 
@@ -150,17 +166,21 @@ It minimizes custodial and censorship risk by design.
 
 ## Why Trust CyxTrade?
 
-**You don't have to.** That's the point.
+**Traders have skin in the game.** Their bond protects you.
 
 | Question | Answer |
 |----------|--------|
-| Can the team steal funds? | NO - Team never has access |
-| Can arbitrators steal? | NO - They can only vote on disputes |
-| What if backend goes down? | Funds safe in smart contract |
-| What if team disappears? | Protocol keeps working |
-| How do I verify? | All contracts open source, on-chain |
+| What if trader takes my money and disappears? | Their bond is slashed, you get compensated |
+| Do I need crypto/wallet? | NO - Just use the app |
+| Can the team steal trader bonds? | NO - Smart contract has no admin keys |
+| What if trader and I disagree? | Arbitrators review evidence and decide |
+| How are arbitrators accountable? | They stake 500+ USDT, lose it if corrupt |
 
-**Custody is non-custodial by design.** Disputes are resolved by staked community arbitrators - not trustless, but economically accountable.
+**How you're protected:**
+- Trader's bond is locked when you create trade
+- If trader doesn't deliver, you dispute
+- Arbitrators vote, winner gets the locked bond
+- All on-chain, transparent, auditable
 
 ---
 
@@ -222,45 +242,50 @@ As new traders join, **new corridors appear automatically**, without protocol ch
 
 ## Tech Stack
 
-| Layer | Technology | Custody? |
-|-------|------------|----------|
-| **Smart Contracts** | Solidity (Tron/Ethereum/Polygon) | YES - non-custodial |
-| **Protocol** | C (CyxWiz - mesh networking, crypto) | NO |
-| **Coordination API** | Node.js / TypeScript | NO - never touches funds |
-| **Mobile** | Flutter (iOS + Android) | NO |
-| **Database** | PostgreSQL + Redis | NO - profiles only |
-| **Evidence** | IPFS | NO - dispute evidence |
-| **Crypto** | libsodium | - |
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Smart Contracts** | Solidity (Tron) | Holds trader bonds (USDT) |
+| **Backend API** | Node.js / TypeScript | Trade coordination, on-chain interactions |
+| **Mobile App** | Flutter (iOS + Android) | User interface (no wallet needed) |
+| **Database** | PostgreSQL + Redis | Profiles, trades, chat |
+| **Evidence** | IPFS | Dispute evidence storage |
+| **Protocol** | C (CyxWiz) | Future: mesh networking, E2E chat |
 
-**Key insight:** Only smart contracts hold funds. Everything else is coordination.
+**Key insight:**
+- **Users** = App only, no crypto knowledge needed
+- **Traders** = Have wallets, deposit bonds to smart contract
+- **Backend** = Creates trades on-chain on behalf of users
 
 ---
 
-## Protocol State Machine (Formal)
+## Trade State Machine
 
-All trades in CyxTrade follow a deterministic state machine.
+All trades follow this flow:
 
 ```
-INIT
- -> JOINED
- -> BONDED
- -> OFFER_CREATED
- -> ESCROW_LOCKED
- -> AWAITING_FIAT_A
- -> AWAITING_FIAT_B
- -> SETTLED
+CREATED          User initiates trade, trader's bond locked
+    ↓
+ACCEPTED         Trader accepts, sends payment details
+    ↓
+USER_PAID        User confirms sent fiat to trader
+    ↓
+DELIVERING       Trader confirms received, sending to recipient
+    ↓
+COMPLETED        User confirms recipient received funds
+                 Trader's bond unlocked
 
 Exceptional paths:
- -> CANCELLED
- -> DISPUTED
- -> SLASHED
+CANCELLED        Trade cancelled before USER_PAID
+DISPUTED         Either party opens dispute
+RESOLVED         Arbitrators decided, bond distributed
 ```
 
-### State Invariants
+### State Rules
 
-* No fiat transfer occurs before `ESCROW_LOCKED`
-* No escrow release occurs outside `SETTLED` or `SLASHED`
-* A trader may only be in one active settlement state per trade
+* Bond locked at `CREATED`, unlocked at `COMPLETED` or `RESOLVED`
+* User can dispute after `USER_PAID` if trader doesn't deliver
+* Trader can dispute if user falsely claims non-delivery
+* Timeout auto-escalates to dispute after 24h of inactivity
 
 ---
 

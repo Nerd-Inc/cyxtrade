@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart';
 import '../services/api_service.dart';
+import '../services/socket_service.dart';
 
 class TradeProvider extends ChangeNotifier {
   bool _isLoading = false;
   List<Map<String, dynamic>> _traders = [];
   List<Map<String, dynamic>> _trades = [];
   Map<String, dynamic>? _currentTrade;
+  bool _socketInitialized = false;
 
   bool get isLoading => _isLoading;
   List<Map<String, dynamic>> get traders => _traders;
@@ -13,6 +15,56 @@ class TradeProvider extends ChangeNotifier {
   Map<String, dynamic>? get currentTrade => _currentTrade;
 
   final ApiService _api = ApiService();
+  final SocketService _socket = SocketService();
+
+  TradeProvider() {
+    _initSocketListeners();
+  }
+
+  void _initSocketListeners() {
+    if (_socketInitialized) return;
+    _socketInitialized = true;
+
+    // Listen for real-time trade updates
+    _socket.addTradeUpdateListener(_onTradeUpdate);
+  }
+
+  void _onTradeUpdate(Map<String, dynamic> update) {
+    debugPrint('TradeProvider: Received trade update: $update');
+
+    final tradeId = update['tradeId'] as String?;
+    final trade = update['trade'] as Map<String, dynamic>?;
+
+    if (tradeId == null) return;
+
+    // Update current trade if it matches
+    if (_currentTrade != null && _currentTrade!['id'] == tradeId) {
+      if (trade != null) {
+        _currentTrade = trade;
+      } else {
+        // Partial update - merge with existing
+        _currentTrade = {..._currentTrade!, ...update};
+      }
+      notifyListeners();
+    }
+
+    // Update in trades list
+    final index = _trades.indexWhere((t) => t['id'] == tradeId);
+    if (index != -1) {
+      if (trade != null) {
+        _trades[index] = trade;
+      } else {
+        _trades[index] = {..._trades[index], ...update};
+      }
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _socket.removeTradeUpdateListener(_onTradeUpdate);
+    super.dispose();
+  }
 
   // Get traders for a corridor
   Future<void> getTraders({String? from, String? to}) async {
@@ -53,12 +105,19 @@ class TradeProvider extends ChangeNotifier {
 
     try {
       _currentTrade = await _api.getTrade(id);
+      // Join trade room for real-time updates
+      _socket.joinTradeRoom(id);
     } catch (e) {
       _currentTrade = null;
     }
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  // Leave trade room when done viewing
+  void leaveTrade(String id) {
+    _socket.leaveTradeRoom(id);
   }
 
   // Create trade

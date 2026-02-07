@@ -1,90 +1,111 @@
 # CyxTrade System Architecture
 
-> Pure protocol design - non-custodial escrow, community arbitration.
+> Users don't need crypto. Traders deposit bonds. Backend handles on-chain.
 
-**Core Principle:** The CyxTrade team never has access to user funds. All custody is via smart contracts.
+**Core Principle:** Users just use the app. Traders stake bonds to smart contract. Backend creates trades on-chain on behalf of users.
 
 ---
 
-## System Overview (Pure Protocol)
+## System Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                      CYXTRADE PURE PROTOCOL ARCHITECTURE                    │
+│                         CYXTRADE ARCHITECTURE                               │
 │                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                         CLIENT LAYER                                 │   │
-│  │                                                                      │   │
-│  │   ┌──────────┐    ┌──────────┐    ┌──────────┐                      │   │
-│  │   │   iOS    │    │ Android  │    │   Web    │                      │   │
-│  │   │   App    │    │   App    │    │   App    │                      │   │
-│  │   └────┬─────┘    └────┬─────┘    └────┬─────┘                      │   │
-│  │        │               │               │                             │   │
-│  └────────┼───────────────┼───────────────┼─────────────────────────────┘   │
-│           │               │               │                                  │
-│           └───────────────┴───────────────┘                                  │
-│                           │                                                  │
-│              ┌────────────┴────────────┐                                    │
-│              │                         │                                    │
-│              ▼                         ▼                                    │
-│  ┌───────────────────────┐  ┌───────────────────────┐                      │
-│  │   COORDINATION API    │  │   SMART CONTRACTS     │                      │
-│  │   (No custody)        │  │   (Holds all funds)   │                      │
-│  │                       │  │                       │                      │
-│  │   • User profiles     │  │   • Bond deposits     │                      │
-│  │   • Trade matching    │  │   • Trade escrow      │                      │
-│  │   • Chat relay        │  │   • Dispute resolution│                      │
-│  │   • Notifications     │  │   • Arbitrator voting │                      │
-│  │                       │  │                       │                      │
-│  │   CAN'T touch funds   │  │   NO admin keys       │                      │
-│  └───────────────────────┘  └───────────────────────┘                      │
-│           │                          │                                      │
-│           ▼                          ▼                                      │
-│  ┌───────────────────────┐  ┌───────────────────────┐                      │
-│  │   OFF-CHAIN DATA      │  │   ON-CHAIN DATA       │                      │
-│  │                       │  │                       │                      │
-│  │   • Profiles (Postgres)│ │   • Bonds (contract)  │                      │
-│  │   • Chat logs         │  │   • Trades (contract) │                      │
-│  │   • Sessions (Redis)  │  │   • Disputes          │                      │
-│  │   • Evidence (IPFS)   │  │   • Votes             │                      │
-│  └───────────────────────┘  └───────────────────────┘                      │
-│                                                                             │
-│   KEY: Backend helps coordinate. Smart contracts hold funds.                │
-│        Team has NO access to money. Ever.                                   │
+│   USERS (No crypto needed)              TRADERS (Have wallets)              │
+│   ┌──────────────────────┐              ┌──────────────────────┐            │
+│   │  Mobile App          │              │  Mobile App + Wallet │            │
+│   │  • Send money        │              │  • Accept trades     │            │
+│   │  • Track trades      │              │  • Manage bond       │            │
+│   │  • Chat with trader  │              │  • Receive payments  │            │
+│   │  • Confirm receipt   │              │  • Send to recipients│            │
+│   │                      │              │                      │            │
+│   │  NO WALLET NEEDED    │              │  WALLET REQUIRED     │            │
+│   └──────────┬───────────┘              └──────────┬───────────┘            │
+│              │                                     │                        │
+│              └─────────────┬───────────────────────┘                        │
+│                            │                                                │
+│                            ▼                                                │
+│              ┌─────────────────────────────────────┐                       │
+│              │          BACKEND API                │                       │
+│              │                                     │                       │
+│              │  • User/Trader profiles             │                       │
+│              │  • Trade coordination               │                       │
+│              │  • Chat relay                       │                       │
+│              │  • ON-CHAIN INTERACTIONS            │◄─── Backend has       │
+│              │    (creates trades, locks bonds)    │     signing key       │
+│              │                                     │                       │
+│              └─────────────────┬───────────────────┘                       │
+│                                │                                            │
+│                                ▼                                            │
+│              ┌─────────────────────────────────────┐                       │
+│              │       SMART CONTRACT (Tron)         │                       │
+│              │                                     │                       │
+│              │  • Trader bonds (USDT)              │                       │
+│              │  • Trade records                    │                       │
+│              │  • Bond locking/unlocking           │                       │
+│              │  • Dispute state                    │                       │
+│              │  • Arbitrator votes                 │                       │
+│              │                                     │                       │
+│              │  NO ADMIN KEYS - immutable          │                       │
+│              └─────────────────────────────────────┘                       │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### What Each Layer Does
+### Who Does What
 
-| Layer | Responsibility | Has Custody? |
-|-------|----------------|--------------|
-| **Mobile/Web Apps** | User interface, wallet connection | NO |
-| **Coordination API** | Matchmaking, chat, notifications | NO |
-| **Smart Contracts** | Bond custody, trade escrow, arbitration | YES (non-custodial) |
-| **IPFS** | Evidence storage for disputes | NO |
+| Actor | Has Wallet? | What They Do |
+|-------|-------------|--------------|
+| **User** | NO | Uses app, sends fiat, confirms receipt |
+| **Trader** | YES | Deposits bond, accepts trades, delivers fiat |
+| **Backend** | YES (system key) | Creates trades on-chain, locks/unlocks bonds |
+| **Smart Contract** | N/A | Holds trader bonds, enforces rules |
 
-### Why We Still Need a Backend
-
-The backend exists for **convenience**, not custody:
+### Trade Flow
 
 ```
-WITHOUT backend:
-├── Users must poll blockchain constantly
-├── No push notifications
-├── No trade matching/discovery
-├── No chat without P2P networking
-└── UX suffers
+1. USER creates trade in app
+   └── Backend calls contract.createTrade() → locks trader's bond
 
-WITH backend (no custody):
-├── Real-time notifications
-├── Trade matching service
-├── Chat relay
-├── Profile storage
-└── Better UX, same security
+2. TRADER accepts in app
+   └── Backend updates trade state
+
+3. USER sends fiat to trader (off-chain bank transfer)
+   └── USER clicks "I paid" in app
+
+4. TRADER receives fiat, sends to recipient (off-chain)
+   └── TRADER clicks "Delivered" in app
+
+5. USER confirms recipient got money
+   └── Backend calls contract.completeTrade() → unlocks bond
+
+6. IF DISPUTE:
+   └── Backend calls contract.openDispute()
+   └── Arbitrators vote on-chain
+   └── Contract executes result automatically
 ```
 
-**The backend can go offline and users won't lose funds.** They can still interact with smart contracts directly.
+### Why Backend Holds Signing Key
+
+Users don't have wallets, so backend must interact with blockchain:
+
+```
+OPTION A: Users have wallets (rejected)
+├── Users must understand crypto
+├── Gas fees for every action
+├── Complex onboarding
+└── Defeats "no crypto needed" goal
+
+OPTION B: Backend signs on behalf of users (chosen)
+├── Users just use app
+├── Backend pays gas
+├── Simple onboarding
+├── Backend can't steal (contract has no admin functions)
+└── Traders' funds are in contract, not backend
+```
+
+**Security:** Backend can create trades but CAN'T withdraw trader bonds. Only the trader's wallet can withdraw their own bond (when no active trades).
 
 ---
 

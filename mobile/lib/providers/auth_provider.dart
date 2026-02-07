@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
+import '../services/socket_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
@@ -17,6 +18,7 @@ class AuthProvider extends ChangeNotifier {
 
   final ApiService _api = ApiService();
   final StorageService _storage = StorageService();
+  final SocketService _socket = SocketService();
 
   // Check if user is logged in
   Future<void> checkAuth() async {
@@ -33,6 +35,9 @@ class AuthProvider extends ChangeNotifier {
         final user = await _api.getMe();
         _user = user;
         _isAuthenticated = true;
+
+        // Connect socket for real-time updates
+        await _socket.connect();
       }
     } catch (e) {
       await _storage.clearToken();
@@ -69,6 +74,9 @@ class AuthProvider extends ChangeNotifier {
 
       await _storage.setToken(_token!);
       _api.setToken(_token!);
+
+      // Connect socket for real-time updates
+      await _socket.connect();
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -107,6 +115,9 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       // Ignore logout errors
     }
+
+    // Disconnect socket
+    _socket.disconnect();
 
     await _storage.clearToken();
     _token = null;

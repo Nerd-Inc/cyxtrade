@@ -1,8 +1,8 @@
 # Dispute Resolution Design
 
-> How disputes are resolved in a non-custodial P2P fiat exchange.
+> How disputes between users and traders are resolved.
 >
-> **Core Reality:** Custody is non-custodial (code holds funds). Disputes are socially enforced (humans judge fiat). We make cheating expensive, not impossible.
+> **Core Reality:** Users don't need crypto. Traders stake bonds. When something goes wrong, arbitrators decide who's right and the smart contract executes the result.
 
 ---
 
@@ -40,30 +40,36 @@ Smart contracts CANNOT:
 
 ### When Disputes Happen
 
-| Scenario | Who Opens Dispute | Evidence Needed |
-|----------|-------------------|-----------------|
-| **Fiat not received** | Seller | Bank statement showing no incoming |
-| **Wrong amount received** | Seller | Bank statement showing different amount |
-| **Buyer claims sent, seller denies** | Either | Payment proof vs bank statement |
-| **Payment reversed (chargeback)** | Seller | Reversal notification |
-| **Timeout (no response)** | Either | Timestamps showing no activity |
-| **Wrong payment method** | Seller | Evidence of different method used |
-| **Third-party payment** | Seller | Payment from different name/account |
+| Scenario | Who Opens | Evidence Needed |
+|----------|-----------|-----------------|
+| **Recipient never got money** | User | Confirmation from recipient, chat logs |
+| **Trader claims delivered but didn't** | User | Recipient statement, lack of proof |
+| **User claims paid but didn't** | Trader | Bank statement showing no incoming |
+| **User lies about non-receipt** | Trader | Delivery proof, recipient confirmation |
+| **Wrong amount delivered** | User | Recipient confirmation of amount |
+| **Timeout (trader not responding)** | User | Timestamps showing inactivity |
 
 ### Example Dispute
 
 ```
-Trade: Ali sends 1000 AED to Mamadou for 163,000 XAF
+Trade: Ali (UAE) sends 1000 AED to Trader for Marie (Cameroon) to receive 163,000 XAF
 
 Timeline:
-09:00 - Trade created, Mamadou's bond locked (163,000 XAF equivalent)
-09:15 - Ali marks "fiat sent" (1000 AED)
-09:45 - Mamadou hasn't confirmed receipt
-10:00 - Timeout warning sent to Mamadou
-11:00 - Mamadou still not responding
-11:15 - Ali opens dispute: "Sent payment, no confirmation"
+09:00 - Ali creates trade, trader's bond locked (165 USDT)
+09:10 - Trader accepts, sends bank details
+09:30 - Ali sends 1000 AED to trader's bank
+09:35 - Ali marks "I Paid" in app
+10:00 - Trader confirms received AED
+10:15 - Trader claims sent XAF to Marie
+10:30 - Ali checks with Marie - she didn't receive anything
+10:45 - Ali opens dispute: "Marie never received money"
 
 Now what?
+- Trader must prove delivery (receipt, transaction ID)
+- Ali provides Marie's statement
+- Arbitrators review and vote
+- If Ali wins: Trader's 165 USDT goes to compensation
+- If Trader wins: Bond unlocked, Ali loses dispute fee
 ```
 
 ---
@@ -256,21 +262,20 @@ Problem for attacker:
 ### What Can Be Submitted
 
 ```
-BUYER (Ali) can submit:
-├── Bank transfer screenshot
+USER (Ali) can submit:
+├── Proof of payment to trader (bank transfer screenshot)
 ├── Transaction reference number
-├── Timestamp of transfer
-├── Bank statement showing debit
-├── Mobile money confirmation SMS
-├── Chat logs from trade
+├── Confirmation from recipient (Marie) that money wasn't received
+├── Chat logs with trader
+├── Timestamps showing trader inactivity
 └── Any other relevant proof
 
-SELLER (Mamadou) can submit:
-├── Bank statement showing no credit
-├── Account balance screenshots
-├── Mobile money transaction history
-├── Chat logs from trade
-├── Explanation of situation
+TRADER can submit:
+├── Proof of receiving user's payment (bank statement)
+├── Proof of sending to recipient (transfer receipt)
+├── Transaction reference for recipient transfer
+├── Mobile money confirmation
+├── Chat logs showing communication
 └── Any other relevant proof
 ```
 
@@ -746,46 +751,49 @@ function submitAppeal(bytes32 tradeId, bytes32 newEvidenceHash) external {
 ## Complete Timeline Example
 
 ```
-Day 0
-├── 09:00 - Trade created (Ali buys from Mamadou)
-├── 09:30 - Ali sends fiat, marks "sent"
-├── 11:30 - No confirmation from Mamadou
-└── 11:45 - Ali opens dispute (pays 10 USDT fee)
+Day 0: TRADE & DISPUTE
+├── 09:00 - Ali creates trade: 1000 AED → Marie (Cameroon)
+├── 09:05 - Trader's bond locked (165 USDT)
+├── 09:10 - Trader accepts, sends bank details
+├── 09:30 - Ali sends 1000 AED to trader's bank
+├── 09:35 - Ali marks "I Paid" in app
+├── 10:00 - Trader confirms received AED
+├── 10:15 - Trader marks "Delivered" (claims sent to Marie)
+├── 10:30 - Ali checks with Marie - nothing received
+├── 10:45 - Ali opens dispute (backend pays dispute fee)
+└── 10:46 - Trade state: DISPUTED, bond remains locked
 
 Day 0-2: EVIDENCE PERIOD (48h)
-├── 12:00 - 5 arbitrators randomly selected
-├── 14:00 - Ali submits: bank transfer screenshot, ref #
-├── 18:00 - Mamadou submits: bank statement (no incoming)
-└── Day 2, 11:45 - Evidence period ends
+├── 10:50 - 5 arbitrators randomly selected
+├── 11:00 - Ali submits: chat with Marie showing no receipt
+├── 14:00 - Trader submits: mobile money screenshot (claims proof)
+├── 18:00 - Ali submits: Marie's bank statement (no incoming)
+└── Day 2, 10:45 - Evidence period ends
 
 Day 2-3: COMMIT PERIOD (24h)
-├── Day 2, 12:00 - Commit period starts
-├── Day 2, 18:00 - Arbitrator 1 commits hash
-├── Day 2, 20:00 - Arbitrator 2 commits hash
-├── Day 2, 22:00 - Arbitrator 3 commits hash
-├── Day 3, 08:00 - Arbitrator 4 commits hash
-├── Day 3, 10:00 - Arbitrator 5 commits hash
-└── Day 3, 11:45 - Commit period ends
+├── Arbitrators review evidence privately
+├── Each submits encrypted vote hash
+└── Day 3, 10:45 - Commit period ends
 
 Day 3-4: REVEAL PERIOD (24h)
-├── Day 3, 12:00 - Reveal period starts
-├── Day 3, 14:00 - Votes revealed: 4 FAVOR_ALI, 1 FAVOR_MAMADOU
-└── Day 4, 11:45 - Reveal period ends
+├── Arbitrators reveal votes
+├── Results: 4 FAVOR_USER, 1 FAVOR_TRADER
+└── Day 4, 10:45 - Reveal period ends
 
 Day 4: RESOLUTION
-├── 12:00 - Contract auto-resolves
-├── Mamadou's locked bond transferred to Ali
-├── Mamadou: -20 reputation
-├── Ali: +5 reputation, dispute fee refunded
+├── Contract executes result automatically
+├── Trader's 165 USDT sent to compensation address
+├── Ali receives compensation (minus fees)
+├── Trader's reputation: -20
 ├── Arbitrators paid 0.1% fee share
-└── Dispute closed
+└── Trade state: RESOLVED
 
 Day 4-11: APPEAL WINDOW (7 days)
-└── Mamadou can appeal with new evidence
+└── Trader can appeal with new evidence (costs 50 USDT)
 
 Day 11: FINAL
 ├── No appeal submitted
-└── Resolution is final and permanent
+└── Resolution is permanent
 ```
 
 ---

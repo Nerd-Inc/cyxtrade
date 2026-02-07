@@ -25,6 +25,13 @@ class _TradeDetailScreenState extends State<TradeDetailScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    // Leave trade room when leaving screen
+    context.read<TradeProvider>().leaveTrade(widget.tradeId);
+    super.dispose();
+  }
+
   Future<void> _loadTrade() async {
     await context.read<TradeProvider>().getTrade(widget.tradeId);
   }
