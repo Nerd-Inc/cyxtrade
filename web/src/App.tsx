@@ -1,25 +1,54 @@
-import { useState } from 'react'
+import { useState, useEffect, createContext, useContext } from 'react'
+
+// Dark mode context
+const DarkModeContext = createContext({
+  dark: false,
+  toggle: () => {}
+})
 
 function App() {
+  const [dark, setDark] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('darkMode')
+      if (saved !== null) return saved === 'true'
+      return window.matchMedia('(prefers-color-scheme: dark)').matches
+    }
+    return false
+  })
+
+  useEffect(() => {
+    localStorage.setItem('darkMode', String(dark))
+    if (dark) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [dark])
+
+  const toggle = () => setDark(!dark)
+
   return (
-    <div className="min-h-screen bg-white">
-      <Header />
-      <Hero />
-      <Features />
-      <HowItWorks />
-      <Download />
-      <FAQ />
-      <Footer />
-    </div>
+    <DarkModeContext.Provider value={{ dark, toggle }}>
+      <div className={`min-h-screen ${dark ? 'bg-gray-900' : 'bg-white'}`}>
+        <Header />
+        <Hero />
+        <Features />
+        <HowItWorks />
+        <Download />
+        <FAQ />
+        <Footer />
+      </div>
+    </DarkModeContext.Provider>
   )
 }
 
 // Header Component
 function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { dark, toggle } = useContext(DarkModeContext)
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm z-50 border-b border-gray-100">
+    <header className={`fixed top-0 left-0 right-0 backdrop-blur-sm z-50 border-b ${dark ? 'bg-gray-900/95 border-gray-800' : 'bg-white/95 border-gray-100'}`}>
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-2">
@@ -29,10 +58,28 @@ function Header() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center space-x-8">
-            <a href="#features" className="text-gray-600 hover:text-teal-600 transition">Features</a>
-            <a href="#how-it-works" className="text-gray-600 hover:text-teal-600 transition">How It Works</a>
-            <a href="#download" className="text-gray-600 hover:text-teal-600 transition">Download</a>
-            <a href="#faq" className="text-gray-600 hover:text-teal-600 transition">FAQ</a>
+            <a href="#features" className={`${dark ? 'text-gray-300 hover:text-teal-400' : 'text-gray-600 hover:text-teal-600'} transition`}>Features</a>
+            <a href="#how-it-works" className={`${dark ? 'text-gray-300 hover:text-teal-400' : 'text-gray-600 hover:text-teal-600'} transition`}>How It Works</a>
+            <a href="#download" className={`${dark ? 'text-gray-300 hover:text-teal-400' : 'text-gray-600 hover:text-teal-600'} transition`}>Download</a>
+            <a href="#faq" className={`${dark ? 'text-gray-300 hover:text-teal-400' : 'text-gray-600 hover:text-teal-600'} transition`}>FAQ</a>
+
+            {/* Dark mode toggle */}
+            <button
+              onClick={toggle}
+              className={`p-2 rounded-lg ${dark ? 'bg-gray-800 text-yellow-400' : 'bg-gray-100 text-gray-600'} transition`}
+              aria-label="Toggle dark mode"
+            >
+              {dark ? (
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                </svg>
+              )}
+            </button>
+
             <a
               href="/app"
               className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition"
@@ -42,28 +89,44 @@ function Header() {
           </div>
 
           {/* Mobile menu button */}
-          <button
-            className="md:hidden p-2"
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {menuOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <div className="md:hidden flex items-center space-x-2">
+            <button
+              onClick={toggle}
+              className={`p-2 rounded-lg ${dark ? 'bg-gray-800 text-yellow-400' : 'bg-gray-100 text-gray-600'}`}
+            >
+              {dark ? (
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
+                </svg>
               ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                </svg>
               )}
-            </svg>
-          </button>
+            </button>
+            <button
+              className={`p-2 ${dark ? 'text-gray-300' : 'text-gray-600'}`}
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {menuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Mobile Nav */}
         {menuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-100">
+          <div className={`md:hidden py-4 border-t ${dark ? 'border-gray-800' : 'border-gray-100'}`}>
             <div className="flex flex-col space-y-4">
-              <a href="#features" className="text-gray-600 hover:text-teal-600">Features</a>
-              <a href="#how-it-works" className="text-gray-600 hover:text-teal-600">How It Works</a>
-              <a href="#download" className="text-gray-600 hover:text-teal-600">Download</a>
-              <a href="#faq" className="text-gray-600 hover:text-teal-600">FAQ</a>
+              <a href="#features" className={`${dark ? 'text-gray-300 hover:text-teal-400' : 'text-gray-600 hover:text-teal-600'}`}>Features</a>
+              <a href="#how-it-works" className={`${dark ? 'text-gray-300 hover:text-teal-400' : 'text-gray-600 hover:text-teal-600'}`}>How It Works</a>
+              <a href="#download" className={`${dark ? 'text-gray-300 hover:text-teal-400' : 'text-gray-600 hover:text-teal-600'}`}>Download</a>
+              <a href="#faq" className={`${dark ? 'text-gray-300 hover:text-teal-400' : 'text-gray-600 hover:text-teal-600'}`}>FAQ</a>
               <a
                 href="/app"
                 className="bg-teal-600 text-white px-4 py-2 rounded-lg text-center hover:bg-teal-700"
@@ -80,16 +143,18 @@ function Header() {
 
 // Hero Component
 function Hero() {
+  const { dark } = useContext(DarkModeContext)
+
   return (
-    <section className="pt-24 pb-16 md:pt-32 md:pb-24 bg-gradient-to-b from-teal-50 to-white">
+    <section className={`pt-24 pb-16 md:pt-32 md:pb-24 ${dark ? 'bg-gradient-to-b from-gray-800 to-gray-900' : 'bg-gradient-to-b from-teal-50 to-white'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+          <h1 className={`text-4xl md:text-6xl font-bold mb-6 ${dark ? 'text-white' : 'text-gray-900'}`}>
             Send Money Home,
             <br />
-            <span className="text-teal-600">Without the Fees</span>
+            <span className="text-teal-500">Without the Fees</span>
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+          <p className={`text-xl max-w-2xl mx-auto mb-8 ${dark ? 'text-gray-300' : 'text-gray-600'}`}>
             CyxTrade connects you with trusted local traders for fast, low-cost international transfers.
             Save up to 80% compared to traditional remittance services.
           </p>
@@ -102,7 +167,7 @@ function Hero() {
             </a>
             <a
               href="/app"
-              className="bg-white text-teal-600 px-8 py-4 rounded-xl text-lg font-semibold border-2 border-teal-600 hover:bg-teal-50 transition"
+              className={`px-8 py-4 rounded-xl text-lg font-semibold border-2 border-teal-600 transition ${dark ? 'bg-gray-800 text-teal-400 hover:bg-gray-700' : 'bg-white text-teal-600 hover:bg-teal-50'}`}
             >
               Use Web Version
             </a>
@@ -111,16 +176,16 @@ function Hero() {
           {/* Stats */}
           <div className="mt-16 grid grid-cols-3 gap-8 max-w-3xl mx-auto">
             <div>
-              <div className="text-3xl md:text-4xl font-bold text-teal-600">2-3%</div>
-              <div className="text-gray-500 mt-1">Avg. Fees</div>
+              <div className="text-3xl md:text-4xl font-bold text-teal-500">2-3%</div>
+              <div className={`mt-1 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>Avg. Fees</div>
             </div>
             <div>
-              <div className="text-3xl md:text-4xl font-bold text-teal-600">30 min</div>
-              <div className="text-gray-500 mt-1">Avg. Time</div>
+              <div className="text-3xl md:text-4xl font-bold text-teal-500">30 min</div>
+              <div className={`mt-1 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>Avg. Time</div>
             </div>
             <div>
-              <div className="text-3xl md:text-4xl font-bold text-teal-600">100%</div>
-              <div className="text-gray-500 mt-1">Protected</div>
+              <div className="text-3xl md:text-4xl font-bold text-teal-500">100%</div>
+              <div className={`mt-1 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>Protected</div>
             </div>
           </div>
         </div>
@@ -131,6 +196,8 @@ function Hero() {
 
 // Features Component
 function Features() {
+  const { dark } = useContext(DarkModeContext)
+
   const features = [
     {
       icon: '💰',
@@ -165,13 +232,13 @@ function Features() {
   ]
 
   return (
-    <section id="features" className="py-16 md:py-24 bg-white">
+    <section id="features" className={`py-16 md:py-24 ${dark ? 'bg-gray-900' : 'bg-white'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className={`text-3xl md:text-4xl font-bold mb-4 ${dark ? 'text-white' : 'text-gray-900'}`}>
             Why Choose CyxTrade?
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className={`text-xl max-w-2xl mx-auto ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
             Built for the diaspora, by the diaspora. We understand the pain of expensive remittances.
           </p>
         </div>
@@ -180,13 +247,13 @@ function Features() {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="p-6 rounded-2xl bg-gray-50 hover:bg-teal-50 transition group"
+              className={`p-6 rounded-2xl transition group ${dark ? 'bg-gray-800 hover:bg-gray-750' : 'bg-gray-50 hover:bg-teal-50'}`}
             >
               <div className="text-4xl mb-4">{feature.icon}</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-teal-600 transition">
+              <h3 className={`text-xl font-semibold mb-2 group-hover:text-teal-500 transition ${dark ? 'text-white' : 'text-gray-900'}`}>
                 {feature.title}
               </h3>
-              <p className="text-gray-600">{feature.description}</p>
+              <p className={dark ? 'text-gray-400' : 'text-gray-600'}>{feature.description}</p>
             </div>
           ))}
         </div>
@@ -197,6 +264,8 @@ function Features() {
 
 // How It Works Component
 function HowItWorks() {
+  const { dark } = useContext(DarkModeContext)
+
   const steps = [
     {
       step: '1',
@@ -221,13 +290,13 @@ function HowItWorks() {
   ]
 
   return (
-    <section id="how-it-works" className="py-16 md:py-24 bg-gray-50">
+    <section id="how-it-works" className={`py-16 md:py-24 ${dark ? 'bg-gray-800' : 'bg-gray-50'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className={`text-3xl md:text-4xl font-bold mb-4 ${dark ? 'text-white' : 'text-gray-900'}`}>
             How It Works
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className={`text-xl max-w-2xl mx-auto ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
             Sending money has never been easier. Four simple steps.
           </p>
         </div>
@@ -235,17 +304,17 @@ function HowItWorks() {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           {steps.map((item, index) => (
             <div key={index} className="relative">
-              <div className="bg-white rounded-2xl p-6 shadow-sm h-full">
+              <div className={`rounded-2xl p-6 shadow-sm h-full ${dark ? 'bg-gray-900' : 'bg-white'}`}>
                 <div className="w-12 h-12 bg-teal-600 text-white rounded-full flex items-center justify-center text-xl font-bold mb-4">
                   {item.step}
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <h3 className={`text-xl font-semibold mb-2 ${dark ? 'text-white' : 'text-gray-900'}`}>
                   {item.title}
                 </h3>
-                <p className="text-gray-600">{item.description}</p>
+                <p className={dark ? 'text-gray-400' : 'text-gray-600'}>{item.description}</p>
               </div>
               {index < steps.length - 1 && (
-                <div className="hidden lg:block absolute top-10 -right-4 text-teal-300 text-2xl">
+                <div className={`hidden lg:block absolute top-10 -right-4 text-2xl ${dark ? 'text-teal-500' : 'text-teal-300'}`}>
                   →
                 </div>
               )}
@@ -254,55 +323,55 @@ function HowItWorks() {
         </div>
 
         {/* Comparison */}
-        <div className="mt-16 bg-white rounded-2xl p-8 shadow-sm">
-          <h3 className="text-2xl font-bold text-center text-gray-900 mb-8">
+        <div className={`mt-16 rounded-2xl p-8 shadow-sm ${dark ? 'bg-gray-900' : 'bg-white'}`}>
+          <h3 className={`text-2xl font-bold text-center mb-8 ${dark ? 'text-white' : 'text-gray-900'}`}>
             Compare the Savings
           </h3>
           <div className="grid md:grid-cols-2 gap-8">
-            <div className="p-6 bg-red-50 rounded-xl">
-              <h4 className="font-semibold text-red-700 mb-4">Traditional Services</h4>
-              <div className="space-y-2 text-gray-700">
+            <div className={`p-6 rounded-xl ${dark ? 'bg-red-900/30' : 'bg-red-50'}`}>
+              <h4 className="font-semibold text-red-500 mb-4">Traditional Services</h4>
+              <div className={`space-y-2 ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <div className="flex justify-between">
                   <span>Sending $500</span>
                   <span className="font-semibold">$500.00</span>
                 </div>
-                <div className="flex justify-between text-red-600">
+                <div className="flex justify-between text-red-500">
                   <span>Fees (10-15%)</span>
                   <span className="font-semibold">-$50 to $75</span>
                 </div>
-                <div className="flex justify-between text-red-600">
+                <div className="flex justify-between text-red-500">
                   <span>Bad exchange rate</span>
                   <span className="font-semibold">-$20</span>
                 </div>
-                <div className="border-t border-red-200 pt-2 flex justify-between font-bold">
+                <div className={`border-t pt-2 flex justify-between font-bold ${dark ? 'border-red-800' : 'border-red-200'}`}>
                   <span>Recipient gets</span>
-                  <span className="text-red-600">~$405-$430</span>
+                  <span className="text-red-500">~$405-$430</span>
                 </div>
               </div>
             </div>
-            <div className="p-6 bg-teal-50 rounded-xl">
-              <h4 className="font-semibold text-teal-700 mb-4">With CyxTrade</h4>
-              <div className="space-y-2 text-gray-700">
+            <div className={`p-6 rounded-xl ${dark ? 'bg-teal-900/30' : 'bg-teal-50'}`}>
+              <h4 className="font-semibold text-teal-500 mb-4">With CyxTrade</h4>
+              <div className={`space-y-2 ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
                 <div className="flex justify-between">
                   <span>Sending $500</span>
                   <span className="font-semibold">$500.00</span>
                 </div>
-                <div className="flex justify-between text-teal-600">
+                <div className="flex justify-between text-teal-500">
                   <span>Fees (2-3%)</span>
                   <span className="font-semibold">-$10 to $15</span>
                 </div>
-                <div className="flex justify-between text-teal-600">
+                <div className="flex justify-between text-teal-500">
                   <span>Competitive rate</span>
                   <span className="font-semibold">$0</span>
                 </div>
-                <div className="border-t border-teal-200 pt-2 flex justify-between font-bold">
+                <div className={`border-t pt-2 flex justify-between font-bold ${dark ? 'border-teal-800' : 'border-teal-200'}`}>
                   <span>Recipient gets</span>
-                  <span className="text-teal-600">~$485-$490</span>
+                  <span className="text-teal-500">~$485-$490</span>
                 </div>
               </div>
             </div>
           </div>
-          <p className="text-center text-gray-500 mt-6">
+          <p className={`text-center mt-6 ${dark ? 'text-gray-500' : 'text-gray-500'}`}>
             Save $60-85 on every $500 sent. That's $700-1,000/year for monthly senders!
           </p>
         </div>
@@ -370,6 +439,7 @@ function Download() {
 // FAQ Component
 function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null)
+  const { dark } = useContext(DarkModeContext)
 
   const faqs = [
     {
@@ -407,13 +477,13 @@ function FAQ() {
   ]
 
   return (
-    <section id="faq" className="py-16 md:py-24 bg-white">
+    <section id="faq" className={`py-16 md:py-24 ${dark ? 'bg-gray-900' : 'bg-white'}`}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className={`text-3xl md:text-4xl font-bold mb-4 ${dark ? 'text-white' : 'text-gray-900'}`}>
             Frequently Asked Questions
           </h2>
-          <p className="text-xl text-gray-600">
+          <p className={`text-xl ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
             Got questions? We've got answers.
           </p>
         </div>
@@ -422,15 +492,15 @@ function FAQ() {
           {faqs.map((faq, index) => (
             <div
               key={index}
-              className="border border-gray-200 rounded-xl overflow-hidden"
+              className={`border rounded-xl overflow-hidden ${dark ? 'border-gray-700' : 'border-gray-200'}`}
             >
               <button
-                className="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-gray-50 transition"
+                className={`w-full px-6 py-4 text-left flex justify-between items-center transition ${dark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`}
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
               >
-                <span className="font-semibold text-gray-900">{faq.question}</span>
+                <span className={`font-semibold ${dark ? 'text-white' : 'text-gray-900'}`}>{faq.question}</span>
                 <svg
-                  className={`w-5 h-5 text-gray-500 transition-transform ${openIndex === index ? 'rotate-180' : ''}`}
+                  className={`w-5 h-5 transition-transform ${openIndex === index ? 'rotate-180' : ''} ${dark ? 'text-gray-400' : 'text-gray-500'}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -439,7 +509,7 @@ function FAQ() {
                 </svg>
               </button>
               {openIndex === index && (
-                <div className="px-6 pb-4 text-gray-600">
+                <div className={`px-6 pb-4 ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
                   {faq.answer}
                 </div>
               )}
@@ -453,8 +523,10 @@ function FAQ() {
 
 // Footer Component
 function Footer() {
+  const { dark } = useContext(DarkModeContext)
+
   return (
-    <footer className="bg-gray-900 text-white py-12">
+    <footer className={`py-12 ${dark ? 'bg-black' : 'bg-gray-900'} text-white`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           {/* Brand */}
@@ -507,12 +579,9 @@ function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-gray-400 text-sm">
+        <div className="border-t border-gray-800 pt-8">
+          <p className="text-gray-400 text-sm text-center">
             &copy; 2024 CyxTrade. All rights reserved.
-          </p>
-          <p className="text-gray-500 text-sm mt-2 md:mt-0">
-            Made with love for the diaspora
           </p>
         </div>
       </div>
