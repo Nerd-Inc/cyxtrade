@@ -1,0 +1,34 @@
+{
+  "name": "cyxtrade-contracts",
+  "version": "1.0.0",
+  "description": "CyxTrade smart contracts for P2P fiat exchange escrow",
+  "main": "tronbox.js",
+  "scripts": {
+    "compile": "tronbox compile",
+    "migrate:dev": "tronbox migrate --network development",
+    "migrate:shasta": "tronbox migrate --network shasta",
+    "migrate:mainnet": "tronbox migrate --network mainnet",
+    "test": "tronbox test",
+    "console:dev": "tronbox console --network development",
+    "console:shasta": "tronbox console --network shasta"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.0"
+  },
+  "devDependencies": {
+    "tronbox": "^3.2.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Nerd-Inc/cyxtrade"
+  },
+  "keywords": [
+    "tron",
+    "smart-contracts",
+    "escrow",
+    "p2p",
+    "remittance"
+  ],
+  "author": "cyxwiz-team",
+  "license": "MIT"
+}
