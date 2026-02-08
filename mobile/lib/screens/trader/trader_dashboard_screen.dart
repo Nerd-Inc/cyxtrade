@@ -77,6 +77,11 @@ class _TraderDashboardScreenState extends State<TraderDashboardScreen>
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.home_outlined),
+          tooltip: 'Home',
+          onPressed: () => context.go('/home'),
+        ),
         title: const Text('Trader Dashboard'),
         actions: [
           // Online/Offline toggle
