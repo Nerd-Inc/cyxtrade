@@ -6,15 +6,18 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Users table
 CREATE TABLE users (
-    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    phone           VARCHAR(20) UNIQUE NOT NULL,
-    phone_verified  BOOLEAN DEFAULT FALSE,
-    display_name    VARCHAR(100),
-    avatar_url      VARCHAR(500),
-    is_trader       BOOLEAN DEFAULT FALSE,
-    is_admin        BOOLEAN DEFAULT FALSE,
-    created_at      TIMESTAMP DEFAULT NOW(),
-    updated_at      TIMESTAMP DEFAULT NOW()
+    id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    phone                   VARCHAR(20) UNIQUE,          -- Optional (for recovery)
+    phone_verified          BOOLEAN DEFAULT FALSE,
+    public_key              VARCHAR(64) UNIQUE,          -- Ed25519 public key (hex)
+    public_key_fingerprint  VARCHAR(16),                 -- First 16 chars of public key
+    key_registered_at       TIMESTAMP,                   -- When keypair was registered
+    display_name            VARCHAR(100),
+    avatar_url              VARCHAR(500),
+    is_trader               BOOLEAN DEFAULT FALSE,
+    is_admin                BOOLEAN DEFAULT FALSE,
+    created_at              TIMESTAMP DEFAULT NOW(),
+    updated_at              TIMESTAMP DEFAULT NOW()
 );
 
 -- Trader profiles
@@ -37,28 +40,38 @@ CREATE TABLE traders (
 
 -- Trader payment methods
 CREATE TABLE trader_payment_methods (
-    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    trader_id           UUID NOT NULL REFERENCES traders(id) ON DELETE CASCADE,
-    method_type         VARCHAR(20) NOT NULL, -- 'bank', 'mobile_money'
-    provider            VARCHAR(50),          -- 'orange_money', 'mtn_momo', 'mpesa', 'airtel', 'wave', 'emirates_nbd', etc.
-    account_holder_name VARCHAR(100) NOT NULL,
+    id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    trader_id               UUID NOT NULL REFERENCES traders(id) ON DELETE CASCADE,
+    method_type             VARCHAR(20) NOT NULL, -- 'bank', 'mobile_money'
+    provider                VARCHAR(50),          -- 'orange_money', 'mtn_momo', 'mpesa', 'airtel', 'wave', 'emirates_nbd', etc.
+    account_holder_name     VARCHAR(100) NOT NULL,
 
     -- Mobile money fields
-    phone_number        VARCHAR(20),
-    phone_country_code  VARCHAR(5),
+    phone_number            VARCHAR(20),
+    phone_country_code      VARCHAR(5),
 
     -- Bank fields
-    bank_name           VARCHAR(100),
-    account_number      VARCHAR(50),
-    iban                VARCHAR(34),
-    swift_code          VARCHAR(11),
+    bank_name               VARCHAR(100),
+    account_number          VARCHAR(50),
+    iban                    VARCHAR(34),
+    swift_code              VARCHAR(11),
 
     -- Common
-    currency            VARCHAR(3),
-    is_primary          BOOLEAN DEFAULT FALSE,
-    is_active           BOOLEAN DEFAULT TRUE,
-    created_at          TIMESTAMP DEFAULT NOW(),
-    updated_at          TIMESTAMP DEFAULT NOW()
+    currency                VARCHAR(3),
+    is_primary              BOOLEAN DEFAULT FALSE,
+    is_active               BOOLEAN DEFAULT TRUE,
+
+    -- Verification fields
+    verification_status     VARCHAR(20) DEFAULT 'unverified', -- unverified, pending, verified, rejected, expired
+    verification_code       VARCHAR(10),
+    verification_sent_at    TIMESTAMP,
+    verified_at             TIMESTAMP,
+    verification_attempts   INTEGER DEFAULT 0,
+    verification_expires_at TIMESTAMP,
+    verification_proof_url  VARCHAR(500),
+
+    created_at              TIMESTAMP DEFAULT NOW(),
+    updated_at              TIMESTAMP DEFAULT NOW()
 );
 
 -- Trades
@@ -94,6 +107,11 @@ CREATE TABLE trades (
     -- Payment details
     payment_reference VARCHAR(100),
     payment_proof_url VARCHAR(500),
+
+    -- Payment sender verification (for third-party payment prevention)
+    payment_sender_name    VARCHAR(100),   -- Name on sender's account
+    payment_sender_account VARCHAR(100),   -- Account number/phone used
+    payment_method_used    VARCHAR(50),    -- Method used for payment
 
     -- Trader's payment method used for this trade
     trader_payment_method_id UUID REFERENCES trader_payment_methods(id)
@@ -148,6 +166,19 @@ CREATE TABLE ratings (
     UNIQUE(trade_id, from_user_id)
 );
 
+-- Payment method blacklist (for scammer prevention)
+CREATE TABLE payment_method_blacklist (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    method_type     VARCHAR(20) NOT NULL,  -- 'bank', 'mobile_money'
+    identifier      VARCHAR(100) NOT NULL, -- phone number or account number
+    reason          VARCHAR(500),
+    evidence_url    VARCHAR(500),          -- Screenshot or proof
+    reported_by     UUID REFERENCES users(id),
+    trade_id        UUID REFERENCES trades(id),
+    created_at      TIMESTAMP DEFAULT NOW(),
+    UNIQUE(method_type, identifier)
+);
+
 -- Bond transactions
 CREATE TABLE bond_transactions (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -175,6 +206,8 @@ CREATE TABLE otp_codes (
 
 -- Indexes
 CREATE INDEX idx_users_phone ON users(phone);
+CREATE INDEX idx_users_public_key ON users(public_key);
+CREATE INDEX idx_users_fingerprint ON users(public_key_fingerprint);
 CREATE INDEX idx_traders_user_id ON traders(user_id);
 CREATE INDEX idx_traders_status ON traders(status);
 CREATE INDEX idx_trades_user_id ON trades(user_id);
@@ -189,3 +222,6 @@ CREATE INDEX idx_ratings_to_trader_id ON ratings(to_trader_id);
 CREATE INDEX idx_bond_transactions_trader_id ON bond_transactions(trader_id);
 CREATE INDEX idx_trader_payment_methods_trader_id ON trader_payment_methods(trader_id);
 CREATE INDEX idx_trader_payment_methods_is_primary ON trader_payment_methods(trader_id, is_primary) WHERE is_primary = TRUE;
+CREATE INDEX idx_payment_methods_verification ON trader_payment_methods(trader_id, verification_status);
+CREATE INDEX idx_blacklist_identifier ON payment_method_blacklist(identifier);
+CREATE INDEX idx_blacklist_method_type ON payment_method_blacklist(method_type);

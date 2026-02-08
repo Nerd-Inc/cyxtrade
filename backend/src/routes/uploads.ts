@@ -9,6 +9,12 @@ import { asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
 
+// Helper to ensure param is string (Express 5 types params as string | string[])
+const getParam = (param: string | string[] | undefined): string => {
+  if (Array.isArray(param)) return param[0];
+  return param || '';
+};
+
 /**
  * POST /api/uploads/avatar
  * Upload user avatar
@@ -67,7 +73,7 @@ router.post(
       throw new AppError(ErrorCode.NO_FILE_PROVIDED, 'Please select an image to upload');
     }
 
-    const { tradeId } = req.params;
+    const tradeId = getParam(req.params.tradeId);
     const userId = req.user!.id;
 
     // Verify trade exists and belongs to user

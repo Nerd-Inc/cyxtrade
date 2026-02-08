@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react'
+import { Link } from 'react-router-dom'
 
 // Dark mode context
 const DarkModeContext = createContext({
@@ -80,12 +81,12 @@ function Header() {
               )}
             </button>
 
-            <a
-              href="/app"
+            <Link
+              to="/login"
               className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition"
             >
               Open App
-            </a>
+            </Link>
           </div>
 
           {/* Mobile menu button */}
@@ -127,12 +128,12 @@ function Header() {
               <a href="#how-it-works" className={`${dark ? 'text-gray-300 hover:text-teal-400' : 'text-gray-600 hover:text-teal-600'}`}>How It Works</a>
               <a href="#download" className={`${dark ? 'text-gray-300 hover:text-teal-400' : 'text-gray-600 hover:text-teal-600'}`}>Download</a>
               <a href="#faq" className={`${dark ? 'text-gray-300 hover:text-teal-400' : 'text-gray-600 hover:text-teal-600'}`}>FAQ</a>
-              <a
-                href="/app"
+              <Link
+                to="/login"
                 className="bg-teal-600 text-white px-4 py-2 rounded-lg text-center hover:bg-teal-700"
               >
                 Open App
-              </a>
+              </Link>
             </div>
           </div>
         )}
@@ -165,12 +166,12 @@ function Hero() {
             >
               Download App
             </a>
-            <a
-              href="/app"
+            <Link
+              to="/login"
               className={`px-8 py-4 rounded-xl text-lg font-semibold border-2 border-teal-600 transition ${dark ? 'bg-gray-800 text-teal-400 hover:bg-gray-700' : 'bg-white text-teal-600 hover:bg-teal-50'}`}
             >
               Use Web Version
-            </a>
+            </Link>
           </div>
 
           {/* Stats */}
@@ -425,9 +426,9 @@ function Download() {
 
           <p className="text-teal-200">
             Or use the{' '}
-            <a href="/app" className="text-white underline hover:no-underline">
+            <Link to="/login" className="text-white underline hover:no-underline">
               web version
-            </a>
+            </Link>
             {' '}directly in your browser
           </p>
         </div>
@@ -547,7 +548,7 @@ function Footer() {
               <li><a href="#features" className="hover:text-white transition">Features</a></li>
               <li><a href="#how-it-works" className="hover:text-white transition">How It Works</a></li>
               <li><a href="#download" className="hover:text-white transition">Download</a></li>
-              <li><a href="/app" className="hover:text-white transition">Web App</a></li>
+              <li><Link to="/login" className="hover:text-white transition">Web App</Link></li>
             </ul>
           </div>
 

@@ -1,0 +1,4 @@
+D:/Dev/conspiracy/cyxtrade/cyxtrade/mobile/native/build/windows/CMakeFiles/cyxwiz_ffi.dir
+D:/Dev/conspiracy/cyxtrade/cyxtrade/mobile/native/build/windows/CMakeFiles/INSTALL.dir
+D:/Dev/conspiracy/cyxtrade/cyxtrade/mobile/native/build/windows/CMakeFiles/ALL_BUILD.dir
+D:/Dev/conspiracy/cyxtrade/cyxtrade/mobile/native/build/windows/CMakeFiles/ZERO_CHECK.dir

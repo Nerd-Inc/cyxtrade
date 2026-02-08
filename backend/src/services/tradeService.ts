@@ -1,5 +1,15 @@
 import { query, queryOne, transaction } from './db';
 import { updateTraderBond, updateTraderRating } from './traderService';
+import {
+  isBlockchainEnabled,
+  createTradeOnChain,
+  updateTradeStateOnChain,
+  completeTradeOnChain,
+  cancelTradeOnChain,
+  openDisputeOnChain,
+  TradeState,
+  toUSDTDecimals
+} from './blockchainService';
 
 export interface Trade {
   id: string;
@@ -149,11 +159,47 @@ export async function createTrade(data: {
       data.recipientMethod || null,
     ]
   );
-  return rows[0];
+
+  const trade = rows[0];
+
+  // Create trade on blockchain (non-blocking, log errors)
+  if (isBlockchainEnabled()) {
+    try {
+      // Get trader wallet address
+      const traderResult = await query<{ wallet_address: string }>(
+        'SELECT wallet_address FROM traders WHERE id = $1',
+        [data.traderId]
+      );
+      const traderWallet = traderResult[0]?.wallet_address;
+
+      if (traderWallet) {
+        // Calculate bond to lock (same as send amount for now)
+        const bondToLock = toUSDTDecimals(data.sendAmount);
+
+        const txResult = await createTradeOnChain(
+          trade.id,
+          traderWallet,
+          data.userId,
+          data.sendAmount,
+          data.receiveAmount,
+          bondToLock
+        );
+
+        if (!txResult.success) {
+          console.warn(`[Trade] Blockchain createTrade failed: ${txResult.error}`);
+        }
+      }
+    } catch (bcError) {
+      console.error('[Trade] Blockchain createTrade error:', bcError);
+      // Don't fail the trade creation, just log the error
+    }
+  }
+
+  return trade;
 }
 
 export async function acceptTrade(tradeId: string, traderId: string): Promise<Trade | null> {
-  return transaction(async (client) => {
+  const acceptedTrade = await transaction(async (client) => {
     // Get trade details
     const tradeResult = await client.query(
       'SELECT * FROM trades WHERE id = $1 AND trader_id = $2 AND status = $3',
@@ -185,6 +231,20 @@ export async function acceptTrade(tradeId: string, traderId: string): Promise<Tr
 
     return result.rows[0];
   });
+
+  // Update state on blockchain
+  if (acceptedTrade && isBlockchainEnabled()) {
+    try {
+      const txResult = await updateTradeStateOnChain(tradeId, TradeState.ACCEPTED);
+      if (!txResult.success) {
+        console.warn(`[Trade] Blockchain updateState(ACCEPTED) failed: ${txResult.error}`);
+      }
+    } catch (bcError) {
+      console.error('[Trade] Blockchain updateState error:', bcError);
+    }
+  }
+
+  return acceptedTrade;
 }
 
 export async function declineTrade(tradeId: string, traderId: string): Promise<Trade | null> {
@@ -195,7 +255,22 @@ export async function declineTrade(tradeId: string, traderId: string): Promise<T
      RETURNING *`,
     [tradeId, traderId]
   );
-  return rows[0] || null;
+
+  const trade = rows[0] || null;
+
+  // Cancel trade on blockchain
+  if (trade && isBlockchainEnabled()) {
+    try {
+      const txResult = await cancelTradeOnChain(tradeId);
+      if (!txResult.success) {
+        console.warn(`[Trade] Blockchain cancelTrade failed: ${txResult.error}`);
+      }
+    } catch (bcError) {
+      console.error('[Trade] Blockchain cancelTrade error:', bcError);
+    }
+  }
+
+  return trade;
 }
 
 export async function markTradePaid(
@@ -212,7 +287,22 @@ export async function markTradePaid(
      RETURNING *`,
     [tradeId, userId, data.reference || null, data.proofUrl || null]
   );
-  return rows[0] || null;
+
+  const trade = rows[0] || null;
+
+  // Update state on blockchain
+  if (trade && isBlockchainEnabled()) {
+    try {
+      const txResult = await updateTradeStateOnChain(tradeId, TradeState.USER_PAID);
+      if (!txResult.success) {
+        console.warn(`[Trade] Blockchain updateState(PAID) failed: ${txResult.error}`);
+      }
+    } catch (bcError) {
+      console.error('[Trade] Blockchain updateState error:', bcError);
+    }
+  }
+
+  return trade;
 }
 
 export async function markTradeDelivered(tradeId: string, traderId: string): Promise<Trade | null> {
@@ -223,11 +313,26 @@ export async function markTradeDelivered(tradeId: string, traderId: string): Pro
      RETURNING *`,
     [tradeId, traderId]
   );
-  return rows[0] || null;
+
+  const trade = rows[0] || null;
+
+  // Update state on blockchain
+  if (trade && isBlockchainEnabled()) {
+    try {
+      const txResult = await updateTradeStateOnChain(tradeId, TradeState.DELIVERING);
+      if (!txResult.success) {
+        console.warn(`[Trade] Blockchain updateState(DELIVERING) failed: ${txResult.error}`);
+      }
+    } catch (bcError) {
+      console.error('[Trade] Blockchain updateState error:', bcError);
+    }
+  }
+
+  return trade;
 }
 
 export async function completeTrade(tradeId: string, userId: string): Promise<Trade | null> {
-  return transaction(async (client) => {
+  const completedTrade = await transaction(async (client) => {
     // Get trade
     const tradeResult = await client.query(
       `SELECT * FROM trades WHERE id = $1 AND user_id = $2 AND status = 'delivering'`,
@@ -261,6 +366,20 @@ export async function completeTrade(tradeId: string, userId: string): Promise<Tr
 
     return result.rows[0];
   });
+
+  // Complete trade on blockchain
+  if (completedTrade && isBlockchainEnabled()) {
+    try {
+      const txResult = await completeTradeOnChain(tradeId);
+      if (!txResult.success) {
+        console.warn(`[Trade] Blockchain completeTrade failed: ${txResult.error}`);
+      }
+    } catch (bcError) {
+      console.error('[Trade] Blockchain completeTrade error:', bcError);
+    }
+  }
+
+  return completedTrade;
 }
 
 export async function openDispute(
@@ -268,7 +387,7 @@ export async function openDispute(
   userId: string,
   reason: string
 ): Promise<{ trade: Trade; disputeId: string } | null> {
-  return transaction(async (client) => {
+  const result = await transaction(async (client) => {
     // Update trade status
     const tradeResult = await client.query(
       `UPDATE trades
@@ -292,6 +411,20 @@ export async function openDispute(
 
     return { trade, disputeId: disputeResult.rows[0].id };
   });
+
+  // Open dispute on blockchain
+  if (result && isBlockchainEnabled()) {
+    try {
+      const txResult = await openDisputeOnChain(tradeId);
+      if (!txResult.success) {
+        console.warn(`[Trade] Blockchain openDispute failed: ${txResult.error}`);
+      }
+    } catch (bcError) {
+      console.error('[Trade] Blockchain openDispute error:', bcError);
+    }
+  }
+
+  return result;
 }
 
 export async function rateTrade(

@@ -145,6 +145,7 @@ cyxtrade/
 |----------|---------|
 | `README.md` | Protocol overview, state machine, CLI commands |
 | `docs/ARCHITECTURE.md` | Pure protocol design, system components, data flow |
+| `docs/AUTHENTICATION.md` | Keypair auth, challenge-response, key backup/recovery |
 | `docs/TRUST_MODEL.md` | Non-custodial hawala model, reputation math |
 | `docs/DISPUTE_RESOLUTION.md` | Complete dispute flow, commit-reveal voting |
 | `docs/TRADER_ONBOARDING.md` | Tier system, bond mechanics, anti-abuse |

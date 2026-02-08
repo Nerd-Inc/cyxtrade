@@ -3,17 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../services/api_service.dart';
+import '../../providers/p2p_provider.dart';
 import '../../services/socket_service.dart';
+import '../../services/secure_chat_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String tradeId;
   final String traderName;
+  final String? traderId;  // Counterparty ID for encryption
 
   const ChatScreen({
     super.key,
     required this.tradeId,
     required this.traderName,
+    this.traderId,
   });
 
   @override
@@ -23,14 +26,18 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final List<Map<String, dynamic>> _messages = [];
+  final List<DecryptedMessage> _messages = [];
   final SocketService _socketService = SocketService();
+  final SecureChatService _chatService = SecureChatService();
 
   bool _isLoading = true;
   bool _isSending = false;
   bool _isTyping = false;
   String? _typingUser;
   Timer? _typingTimer;
+  bool _encryptionReady = false;
+  String? _encryptionError;
+  bool _p2pRegistered = false;
 
   @override
   void initState() {
@@ -51,17 +58,38 @@ class _ChatScreenState extends State<ChatScreen> {
     _socketService.addMessageListener(_onMessageReceived);
     _socketService.addTypingListener(_onTypingReceived);
     _socketService.addReadListener(_onReadReceived);
+
+    // Set up P2P message listener
+    _chatService.onP2PMessageReceived = _onP2PMessageReceived;
   }
 
-  void _onMessageReceived(Map<String, dynamic> message) {
+  void _onP2PMessageReceived(DecryptedMessage message) {
+    if (message.tradeId != widget.tradeId) return;
+
+    final userId = context.read<AuthProvider>().user?['id'];
+    // Don't add our own messages
+    if (message.senderId == userId) return;
+
+    setState(() {
+      _messages.add(message);
+      _isTyping = false;
+      _typingUser = null;
+    });
+    _scrollToBottom();
+  }
+
+  void _onMessageReceived(Map<String, dynamic> message) async {
     if (message['tradeId'] != widget.tradeId) return;
 
     final userId = context.read<AuthProvider>().user?['id'];
     // Don't add our own messages (already added optimistically)
     if (message['senderId'] == userId) return;
 
+    // Decrypt the message
+    final decrypted = await _chatService.decryptMessage(message, userId ?? '');
+
     setState(() {
-      _messages.add(message);
+      _messages.add(decrypted);
       _isTyping = false;
       _typingUser = null;
     });
@@ -111,37 +139,88 @@ class _ChatScreenState extends State<ChatScreen> {
     _socketService.removeTypingListener(_onTypingReceived);
     _socketService.removeReadListener(_onReadReceived);
 
+    // Clear P2P listener
+    _chatService.onP2PMessageReceived = null;
+
+    // Clear encryption keys for this trade
+    _chatService.clearTradeKeys(widget.tradeId);
+
     super.dispose();
   }
 
   Future<void> _loadMessages() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _encryptionError = null;
+    });
+
+    final userId = context.read<AuthProvider>().user?['id'] ?? '';
+    final traderId = widget.traderId ?? 'unknown';
+
+    // Capture provider before async gap
+    final p2p = context.read<P2PProvider>();
+
     try {
-      final response = await ApiService().getChatMessages(widget.tradeId);
+      // Register counterparty for P2P messaging
+      if (!_p2pRegistered && traderId != 'unknown') {
+        if (p2p.isInitialized) {
+          await p2p.registerCounterparty(widget.tradeId, traderId);
+          _p2pRegistered = true;
+        }
+      }
+
+      // Load and decrypt messages
+      final messages = await _chatService.loadMessages(
+        widget.tradeId,
+        userId,
+        traderId,
+      );
+
       setState(() {
         _messages.clear();
-        _messages.addAll(List<Map<String, dynamic>>.from(response['messages'] ?? []));
+        _messages.addAll(messages);
+        _encryptionReady = true;
       });
       _scrollToBottom();
 
       // Send read receipt for loaded messages
       _socketService.sendRead(widget.tradeId);
     } catch (e) {
+      debugPrint('Failed to load messages: $e');
+
+      // Try to initialize encryption anyway
+      try {
+        await _chatService.initializeForTrade(widget.tradeId, traderId);
+        setState(() {
+          _encryptionReady = true;
+        });
+      } catch (cryptoError) {
+        setState(() {
+          _encryptionError = 'Failed to initialize encryption';
+        });
+      }
+
       // Use mock messages for development
       setState(() {
         _messages.addAll([
-          {
-            'id': '1',
-            'senderId': 'trader',
-            'content': 'Hello! I\'ve received your trade request.',
-            'createdAt': DateTime.now().subtract(const Duration(minutes: 5)).toIso8601String(),
-          },
-          {
-            'id': '2',
-            'senderId': 'trader',
-            'content': 'Please send payment to my bank account and share the receipt here.',
-            'createdAt': DateTime.now().subtract(const Duration(minutes: 4)).toIso8601String(),
-          },
+          DecryptedMessage(
+            id: '1',
+            tradeId: widget.tradeId,
+            senderId: 'trader',
+            messageType: 'text',
+            content: 'Hello! I\'ve received your trade request.',
+            createdAt: DateTime.now().subtract(const Duration(minutes: 5)).toIso8601String(),
+            isEncrypted: false,
+          ),
+          DecryptedMessage(
+            id: '2',
+            tradeId: widget.tradeId,
+            senderId: 'trader',
+            messageType: 'text',
+            content: 'Please send payment to my bank account and share the receipt here.',
+            createdAt: DateTime.now().subtract(const Duration(minutes: 4)).toIso8601String(),
+            isEncrypted: false,
+          ),
         ]);
       });
     } finally {
@@ -160,32 +239,51 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
+    if (!_encryptionReady) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Encryption not ready. Please wait...')),
+      );
+      return;
+    }
+
     setState(() => _isSending = true);
     _messageController.clear();
 
     final userId = context.read<AuthProvider>().user?['id'] ?? 'user';
+    final traderId = widget.traderId ?? 'unknown';
 
     // Add message optimistically
-    final newMessage = {
-      'id': 'msg_${DateTime.now().millisecondsSinceEpoch}',
-      'senderId': userId,
-      'content': text,
-      'createdAt': DateTime.now().toIso8601String(),
-    };
+    final optimisticMessage = DecryptedMessage(
+      id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
+      tradeId: widget.tradeId,
+      senderId: userId,
+      messageType: 'text',
+      content: text,
+      createdAt: DateTime.now().toIso8601String(),
+      isEncrypted: true,
+    );
 
     setState(() {
-      _messages.add(newMessage);
+      _messages.add(optimisticMessage);
     });
     _scrollToBottom();
 
-    // Send via socket (real-time)
-    _socketService.sendMessage(widget.tradeId, text);
-
-    // Also send via API (persistence)
     try {
-      await ApiService().sendMessage(widget.tradeId, text);
+      // Send encrypted message via API
+      await _chatService.sendMessage(
+        widget.tradeId,
+        text,
+        traderId,
+      );
     } catch (e) {
-      debugPrint('Failed to persist message: $e');
+      debugPrint('Failed to send message: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send: ${e.toString()}')),
+      );
+      // Remove optimistic message on failure
+      setState(() {
+        _messages.removeWhere((m) => m.id == optimisticMessage.id);
+      });
     } finally {
       setState(() => _isSending = false);
     }
@@ -296,6 +394,12 @@ class _ChatScreenState extends State<ChatScreen> {
               ],
             ),
           ),
+          // Encryption & P2P status banner
+          _EncryptionStatusBanner(
+            encryptionReady: _encryptionReady,
+            encryptionError: _encryptionError,
+            p2pRegistered: _p2pRegistered,
+          ),
           // Messages
           Expanded(
             child: _isLoading
@@ -326,7 +430,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             return _TypingIndicator(traderName: widget.traderName);
                           }
                           final message = _messages[index];
-                          final isMe = message['senderId'] == userId;
+                          final isMe = message.senderId == userId;
                           return _MessageBubble(
                             message: message,
                             isMe: isMe,
@@ -499,7 +603,7 @@ class _DotAnimationState extends State<_DotAnimation>
 }
 
 class _MessageBubble extends StatelessWidget {
-  final Map<String, dynamic> message;
+  final DecryptedMessage message;
   final bool isMe;
   final String traderName;
 
@@ -509,9 +613,51 @@ class _MessageBubble extends StatelessWidget {
     required this.traderName,
   });
 
+  IconData _getDeliveryMethodIcon(DeliveryMethod method) {
+    switch (method) {
+      case DeliveryMethod.p2pDirect:
+        return Icons.wifi;
+      case DeliveryMethod.p2pOnion:
+        return Icons.security;
+      case DeliveryMethod.offline:
+        return Icons.cloud_download;
+      case DeliveryMethod.relay:
+      case DeliveryMethod.unknown:
+        return Icons.cloud;
+    }
+  }
+
+  Color _getDeliveryMethodColor(DeliveryMethod method) {
+    switch (method) {
+      case DeliveryMethod.p2pDirect:
+        return Colors.green;
+      case DeliveryMethod.p2pOnion:
+        return Colors.purple;
+      case DeliveryMethod.offline:
+        return Colors.orange;
+      case DeliveryMethod.relay:
+      case DeliveryMethod.unknown:
+        return Colors.grey;
+    }
+  }
+
+  String _getDeliveryMethodTooltip(DeliveryMethod method) {
+    switch (method) {
+      case DeliveryMethod.p2pDirect:
+        return 'Direct P2P';
+      case DeliveryMethod.p2pOnion:
+        return 'Anonymous (Onion Routed)';
+      case DeliveryMethod.offline:
+        return 'Offline delivery';
+      case DeliveryMethod.relay:
+      case DeliveryMethod.unknown:
+        return 'Server relay';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final timestamp = DateTime.tryParse(message['createdAt'] ?? message['timestamp'] ?? '') ?? DateTime.now();
+    final timestamp = DateTime.tryParse(message.createdAt) ?? DateTime.now();
     final timeStr = '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
 
     return Align(
@@ -539,7 +685,9 @@ class _MessageBubble extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: isMe ? Theme.of(context).primaryColor : Colors.grey.shade200,
+                color: message.decryptionFailed
+                    ? Colors.red.shade100
+                    : (isMe ? Theme.of(context).primaryColor : Colors.grey.shade200),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(16),
                   topRight: const Radius.circular(16),
@@ -548,9 +696,12 @@ class _MessageBubble extends StatelessWidget {
                 ),
               ),
               child: Text(
-                message['content'] ?? '',
+                message.content ?? '',
                 style: TextStyle(
-                  color: isMe ? Colors.white : Colors.black87,
+                  color: message.decryptionFailed
+                      ? Colors.red.shade800
+                      : (isMe ? Colors.white : Colors.black87),
+                  fontStyle: message.decryptionFailed ? FontStyle.italic : FontStyle.normal,
                 ),
               ),
             ),
@@ -566,6 +717,27 @@ class _MessageBubble extends StatelessWidget {
                       color: Colors.grey.shade500,
                     ),
                   ),
+                  if (message.isEncrypted && !message.decryptionFailed) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.lock,
+                      size: 12,
+                      color: Colors.grey.shade400,
+                    ),
+                  ],
+                  // Show delivery method indicator for P2P messages
+                  if (message.deliveryMethod != DeliveryMethod.relay &&
+                      message.deliveryMethod != DeliveryMethod.unknown) ...[
+                    const SizedBox(width: 4),
+                    Tooltip(
+                      message: _getDeliveryMethodTooltip(message.deliveryMethod),
+                      child: Icon(
+                        _getDeliveryMethodIcon(message.deliveryMethod),
+                        size: 12,
+                        color: _getDeliveryMethodColor(message.deliveryMethod),
+                      ),
+                    ),
+                  ],
                   if (isMe) ...[
                     const SizedBox(width: 4),
                     Icon(
@@ -604,6 +776,37 @@ class _ChatOptionsSheet extends StatelessWidget {
             },
           ),
           ListTile(
+            leading: const Icon(Icons.lock),
+            title: const Text('Encryption Info'),
+            subtitle: const Text('Messages are end-to-end encrypted'),
+            onTap: () {
+              Navigator.pop(context);
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Row(
+                    children: [
+                      Icon(Icons.lock, color: Colors.green),
+                      SizedBox(width: 8),
+                      Text('End-to-End Encryption'),
+                    ],
+                  ),
+                  content: const Text(
+                    'Messages in this chat are secured with end-to-end encryption. '
+                    'Only you and the other participant can read them. '
+                    'Not even CyxTrade can access your messages.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.flag_outlined),
             title: const Text('Report Issue'),
             onTap: () {
@@ -621,6 +824,112 @@ class _ChatOptionsSheet extends StatelessWidget {
               );
             },
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Encryption and P2P status banner
+class _EncryptionStatusBanner extends StatelessWidget {
+  final bool encryptionReady;
+  final String? encryptionError;
+  final bool p2pRegistered;
+
+  const _EncryptionStatusBanner({
+    required this.encryptionReady,
+    this.encryptionError,
+    required this.p2pRegistered,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final p2p = context.watch<P2PProvider>();
+
+    if (!encryptionReady && encryptionError != null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        color: Colors.orange.shade50,
+        child: Row(
+          children: [
+            Icon(Icons.warning, size: 14, color: Colors.orange.shade700),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                encryptionError!,
+                style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (!encryptionReady) {
+      return const SizedBox.shrink();
+    }
+
+    // Determine P2P status
+    String statusText = 'End-to-end encrypted';
+    IconData icon = Icons.lock;
+    Color bgColor = Colors.green.shade50;
+    Color iconColor = Colors.green.shade700;
+    Color textColor = Colors.green.shade700;
+
+    if (p2pRegistered && p2p.isConnected) {
+      statusText = 'E2E encrypted via P2P';
+      icon = Icons.wifi;
+    } else if (p2pRegistered && p2p.isRelayed) {
+      statusText = 'E2E encrypted (relay mode)';
+      icon = Icons.cloud_outlined;
+      bgColor = Colors.blue.shade50;
+      iconColor = Colors.blue.shade700;
+      textColor = Colors.blue.shade700;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      color: bgColor,
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: iconColor),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              statusText,
+              style: TextStyle(color: textColor, fontSize: 12),
+            ),
+          ),
+          if (p2p.isConnected)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${p2p.peerCount} peers',
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

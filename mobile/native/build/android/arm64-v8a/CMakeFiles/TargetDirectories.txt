@@ -1,0 +1,7 @@
+D:/Dev/conspiracy/cyxtrade/cyxtrade/mobile/native/build/android/arm64-v8a/CMakeFiles/cyxwiz_ffi.dir
+D:/Dev/conspiracy/cyxtrade/cyxtrade/mobile/native/build/android/arm64-v8a/CMakeFiles/edit_cache.dir
+D:/Dev/conspiracy/cyxtrade/cyxtrade/mobile/native/build/android/arm64-v8a/CMakeFiles/rebuild_cache.dir
+D:/Dev/conspiracy/cyxtrade/cyxtrade/mobile/native/build/android/arm64-v8a/CMakeFiles/list_install_components.dir
+D:/Dev/conspiracy/cyxtrade/cyxtrade/mobile/native/build/android/arm64-v8a/CMakeFiles/install.dir
+D:/Dev/conspiracy/cyxtrade/cyxtrade/mobile/native/build/android/arm64-v8a/CMakeFiles/install/local.dir
+D:/Dev/conspiracy/cyxtrade/cyxtrade/mobile/native/build/android/arm64-v8a/CMakeFiles/install/strip.dir

@@ -93,10 +93,19 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
             onTap: () => context.push('/trader/payment-methods/${method.id}/edit'),
             onSetPrimary: () => _setAsPrimary(method),
             onDelete: () => _confirmDelete(method),
+            onVerify: () => _verifyMethod(method),
           );
         },
       ),
     );
+  }
+
+  Future<void> _verifyMethod(PaymentMethod method) async {
+    final result = await context.push<bool>('/trader/payment-methods/${method.id}/verify');
+    if (result == true && mounted) {
+      // Refresh the list to show updated verification status
+      context.read<TraderProvider>().loadPaymentMethods();
+    }
   }
 
   Future<void> _setAsPrimary(PaymentMethod method) async {
@@ -132,7 +141,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
       ),
     );
 
-    if (confirm == true) {
+    if (confirm == true && mounted) {
       try {
         await context.read<TraderProvider>().deletePaymentMethod(method.id);
         if (mounted) {
@@ -152,12 +161,14 @@ class _PaymentMethodCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onSetPrimary;
   final VoidCallback onDelete;
+  final VoidCallback onVerify;
 
   const _PaymentMethodCard({
     required this.method,
     required this.onTap,
     required this.onSetPrimary,
     required this.onDelete,
+    required this.onVerify,
   });
 
   @override
@@ -182,11 +193,14 @@ class _PaymentMethodCard extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Text(
-                              method.displayName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                            Flexible(
+                              child: Text(
+                                method.displayName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (method.isPrimary) ...[
@@ -213,6 +227,8 @@ class _PaymentMethodCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 4),
+                        _buildVerificationBadge(),
+                        const SizedBox(height: 4),
                         Text(
                           method.accountHolderName,
                           style: TextStyle(color: Colors.grey.shade600),
@@ -223,6 +239,9 @@ class _PaymentMethodCard extends StatelessWidget {
                   PopupMenuButton<String>(
                     onSelected: (value) {
                       switch (value) {
+                        case 'verify':
+                          onVerify();
+                          break;
                         case 'primary':
                           onSetPrimary();
                           break;
@@ -232,6 +251,20 @@ class _PaymentMethodCard extends StatelessWidget {
                       }
                     },
                     itemBuilder: (context) => [
+                      if (!method.isVerified)
+                        PopupMenuItem(
+                          value: 'verify',
+                          child: Row(
+                            children: [
+                              Icon(
+                                method.isPending ? Icons.pending_outlined : Icons.verified_user_outlined,
+                                color: method.isPending ? Colors.orange : Colors.blue,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(method.isPending ? 'Continue Verification' : 'Verify'),
+                            ],
+                          ),
+                        ),
                       if (!method.isPrimary)
                         const PopupMenuItem(
                           value: 'primary',
@@ -289,6 +322,42 @@ class _PaymentMethodCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildVerificationBadge() {
+    IconData icon;
+    Color color;
+    String text;
+
+    if (method.isVerified) {
+      icon = Icons.verified;
+      color = Colors.green;
+      text = 'Verified';
+    } else if (method.isPending) {
+      icon = Icons.pending;
+      color = Colors.orange;
+      text = 'Pending';
+    } else {
+      icon = Icons.warning_amber_outlined;
+      color = Colors.red.shade400;
+      text = 'Unverified';
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            color: color,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 

@@ -15,6 +15,11 @@ class PaymentMethod {
   final String? currency;
   final bool isPrimary;
   final bool isActive;
+  // Verification fields
+  final String verificationStatus; // unverified, pending, verified, rejected, expired
+  final String? verificationCode;
+  final DateTime? verificationExpiresAt;
+  final DateTime? verifiedAt;
 
   PaymentMethod({
     required this.id,
@@ -30,7 +35,16 @@ class PaymentMethod {
     this.currency,
     this.isPrimary = false,
     this.isActive = true,
+    this.verificationStatus = 'unverified',
+    this.verificationCode,
+    this.verificationExpiresAt,
+    this.verifiedAt,
   });
+
+  bool get isVerified => verificationStatus == 'verified';
+  bool get isPending => verificationStatus == 'pending';
+  bool get isExpired => verificationStatus == 'expired' ||
+      (verificationExpiresAt != null && DateTime.now().isAfter(verificationExpiresAt!));
 
   factory PaymentMethod.fromJson(Map<String, dynamic> json) {
     return PaymentMethod(
@@ -47,6 +61,18 @@ class PaymentMethod {
       currency: json['currency'],
       isPrimary: json['is_primary'] ?? json['isPrimary'] ?? false,
       isActive: json['is_active'] ?? json['isActive'] ?? true,
+      verificationStatus: json['verification_status'] ?? json['verificationStatus'] ?? 'unverified',
+      verificationCode: json['verification_code'] ?? json['verificationCode'],
+      verificationExpiresAt: json['verification_expires_at'] != null
+          ? DateTime.parse(json['verification_expires_at'])
+          : json['verificationExpiresAt'] != null
+              ? DateTime.parse(json['verificationExpiresAt'])
+              : null,
+      verifiedAt: json['verified_at'] != null
+          ? DateTime.parse(json['verified_at'])
+          : json['verifiedAt'] != null
+              ? DateTime.parse(json['verifiedAt'])
+              : null,
     );
   }
 
@@ -184,6 +210,10 @@ class TraderProvider extends ChangeNotifier {
             currency: m.currency,
             isPrimary: false,
             isActive: m.isActive,
+            verificationStatus: m.verificationStatus,
+            verificationCode: m.verificationCode,
+            verificationExpiresAt: m.verificationExpiresAt,
+            verifiedAt: m.verifiedAt,
           )
         ).toList();
       }
@@ -269,6 +299,10 @@ class TraderProvider extends ChangeNotifier {
           currency: m.currency,
           isPrimary: m.id == id,
           isActive: m.isActive,
+          verificationStatus: m.verificationStatus,
+          verificationCode: m.verificationCode,
+          verificationExpiresAt: m.verificationExpiresAt,
+          verifiedAt: m.verifiedAt,
         )
       ).toList();
     } catch (e) {
@@ -293,9 +327,163 @@ class TraderProvider extends ChangeNotifier {
     }
   }
 
+  // ============================================
+  // Payment Method Verification
+  // ============================================
+
+  /// Initiate verification for a payment method
+  /// Returns verification code and instructions
+  Future<VerificationResult> initiateVerification(String methodId) async {
+    _error = null;
+    notifyListeners();
+
+    try {
+      final result = await _api.initiateVerification(methodId);
+
+      // Update local state
+      final index = _paymentMethods.indexWhere((m) => m.id == methodId);
+      if (index != -1) {
+        final m = _paymentMethods[index];
+        _paymentMethods[index] = PaymentMethod(
+          id: m.id,
+          traderId: m.traderId,
+          methodType: m.methodType,
+          provider: m.provider,
+          accountHolderName: m.accountHolderName,
+          phoneNumber: m.phoneNumber,
+          bankName: m.bankName,
+          accountNumber: m.accountNumber,
+          iban: m.iban,
+          swiftCode: m.swiftCode,
+          currency: m.currency,
+          isPrimary: m.isPrimary,
+          isActive: m.isActive,
+          verificationStatus: 'pending',
+          verificationCode: result['code'] as String,
+          verificationExpiresAt: DateTime.parse(result['expiresAt'] as String),
+          verifiedAt: null,
+        );
+        notifyListeners();
+      }
+
+      return VerificationResult(
+        code: result['code'] as String,
+        amount: result['amount'] as int,
+        instructions: result['instructions'] as String,
+        expiresAt: DateTime.parse(result['expiresAt'] as String),
+      );
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Submit verification proof (screenshot URL)
+  Future<void> submitVerificationProof(String methodId, String proofUrl) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _api.submitVerificationProof(methodId, proofUrl);
+
+      // Update local state
+      final index = _paymentMethods.indexWhere((m) => m.id == methodId);
+      if (index != -1) {
+        final m = _paymentMethods[index];
+        _paymentMethods[index] = PaymentMethod(
+          id: m.id,
+          traderId: m.traderId,
+          methodType: m.methodType,
+          provider: m.provider,
+          accountHolderName: m.accountHolderName,
+          phoneNumber: m.phoneNumber,
+          bankName: m.bankName,
+          accountNumber: m.accountNumber,
+          iban: m.iban,
+          swiftCode: m.swiftCode,
+          currency: m.currency,
+          isPrimary: m.isPrimary,
+          isActive: m.isActive,
+          verificationStatus: 'verified',
+          verificationCode: null,
+          verificationExpiresAt: null,
+          verifiedAt: DateTime.now(),
+        );
+      }
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Cancel pending verification
+  Future<void> cancelVerification(String methodId) async {
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _api.cancelVerification(methodId);
+
+      // Update local state
+      final index = _paymentMethods.indexWhere((m) => m.id == methodId);
+      if (index != -1) {
+        final m = _paymentMethods[index];
+        _paymentMethods[index] = PaymentMethod(
+          id: m.id,
+          traderId: m.traderId,
+          methodType: m.methodType,
+          provider: m.provider,
+          accountHolderName: m.accountHolderName,
+          phoneNumber: m.phoneNumber,
+          bankName: m.bankName,
+          accountNumber: m.accountNumber,
+          iban: m.iban,
+          swiftCode: m.swiftCode,
+          currency: m.currency,
+          isPrimary: m.isPrimary,
+          isActive: m.isActive,
+          verificationStatus: 'unverified',
+          verificationCode: null,
+          verificationExpiresAt: null,
+          verifiedAt: null,
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Get payment method by ID
+  PaymentMethod? getPaymentMethod(String id) {
+    return _paymentMethods.where((m) => m.id == id).firstOrNull;
+  }
+
   // Clear error
   void clearError() {
     _error = null;
     notifyListeners();
   }
+}
+
+/// Verification result from initiateVerification
+class VerificationResult {
+  final String code;
+  final int amount;
+  final String instructions;
+  final DateTime expiresAt;
+
+  VerificationResult({
+    required this.code,
+    required this.amount,
+    required this.instructions,
+    required this.expiresAt,
+  });
 }

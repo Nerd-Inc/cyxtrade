@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/trade_provider.dart';
+import '../../providers/p2p_provider.dart';
+import '../../services/p2p_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,6 +23,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadData() async {
+    // Initialize P2P networking if not already done
+    final p2p = context.read<P2PProvider>();
+    if (!p2p.isInitialized && !p2p.isInitializing) {
+      // Initialize P2P in background (don't block UI)
+      p2p.initialize();
+    }
+
     await context.read<TradeProvider>().getMyTrades();
   }
 
@@ -28,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final trades = context.watch<TradeProvider>();
+    final p2p = context.watch<P2PProvider>();
     final isTrader = auth.user?['isTrader'] == true;
     final userName = auth.user?['displayName'] ?? 'there';
 
@@ -66,6 +76,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               actions: [
+                // P2P connection status indicator
+                _P2PStatusIndicator(p2p: p2p),
                 IconButton(
                   icon: const Icon(Icons.notifications_outlined),
                   onPressed: () => context.push('/notifications'),
@@ -575,6 +587,63 @@ class _StatusChip extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w500,
         ),
+      ),
+    );
+  }
+}
+
+/// P2P connection status indicator
+class _P2PStatusIndicator extends StatelessWidget {
+  final P2PProvider p2p;
+
+  const _P2PStatusIndicator({required this.p2p});
+
+  @override
+  Widget build(BuildContext context) {
+    if (p2p.isInitializing) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 8),
+        child: SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    IconData icon;
+    Color color;
+    String tooltip;
+
+    switch (p2p.status) {
+      case P2PConnectionStatus.connected:
+        icon = Icons.wifi;
+        color = Colors.green;
+        tooltip = 'P2P Connected (${p2p.peerCount} peers)';
+        break;
+      case P2PConnectionStatus.relayed:
+        icon = Icons.cloud_outlined;
+        color = Colors.orange;
+        tooltip = 'Relay Mode';
+        break;
+      case P2PConnectionStatus.connecting:
+        icon = Icons.wifi_find;
+        color = Colors.blue;
+        tooltip = 'Connecting...';
+        break;
+      case P2PConnectionStatus.disconnected:
+      default:
+        icon = Icons.wifi_off;
+        color = Colors.grey;
+        tooltip = 'P2P Offline';
+        break;
+    }
+
+    return Tooltip(
+      message: tooltip,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Icon(icon, color: color, size: 20),
       ),
     );
   }

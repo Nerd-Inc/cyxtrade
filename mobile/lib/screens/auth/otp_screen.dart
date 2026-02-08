@@ -32,7 +32,13 @@ class _OtpScreenState extends State<OtpScreen> {
     try {
       await context.read<AuthProvider>().verifyOtp(widget.phone, otp);
       if (mounted) {
-        context.go('/home');
+        final user = context.read<AuthProvider>().user;
+        // Check if profile needs completion (first-time user)
+        if (user?.displayName == null || user!.displayName!.isEmpty) {
+          context.go('/complete-profile');
+        } else {
+          context.go('/home');
+        }
       }
     } catch (e) {
       if (mounted) {

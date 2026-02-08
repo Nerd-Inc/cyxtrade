@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import { AuthRequest, authMiddleware, traderMiddleware } from '../middleware/auth';
 import {
   findTraderById,
@@ -10,11 +11,40 @@ import {
   Corridor
 } from '../services/traderService';
 import { paymentMethodService } from '../services/paymentMethodService';
+import {
+  initiateVerification,
+  submitVerificationProof,
+  getVerificationStatus,
+  cancelVerification
+} from '../services/paymentVerificationService';
 import { AppError, ErrorCode } from '../utils/errors';
 import { sendSuccess } from '../utils/response';
 import { asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
+
+// Helper to ensure param is string (Express 5 types params as string | string[])
+const getParam = (param: string | string[] | undefined): string => {
+  if (Array.isArray(param)) return param[0];
+  return param || '';
+};
+
+// Generate a Tron-style address (T + base58 encoded)
+function generateTronAddress(): string {
+  // In production, use TronWeb.createAccount()
+  // For now, generate a mock but valid-looking Tron address
+  const BASE58_CHARS = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  const addressLength = 33; // Tron addresses are 34 chars starting with T
+
+  let address = 'T';
+  for (let i = 0; i < addressLength; i++) {
+    address += BASE58_CHARS[Math.floor(Math.random() * BASE58_CHARS.length)];
+  }
+  return address;
+}
+
+// Store generated addresses (in production, use DB)
+const traderAddresses = new Map<string, string>();
 
 // Mock traders for development (when DB is not available)
 const mockTraders = [
@@ -124,7 +154,7 @@ router.get('/me', authMiddleware, traderMiddleware, asyncHandler(async (req: Aut
 
 // GET /api/traders/:id - Get trader details (public)
 router.get('/:id', asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  const id = getParam(req.params.id);
 
   const trader = await findTraderById(id);
   if (!trader) {
@@ -171,6 +201,81 @@ router.post('/apply', authMiddleware, asyncHandler(async (req: AuthRequest, res)
     applicationId: trader.id,
     status: trader.status
   }, 201);
+}));
+
+// POST /api/traders/register - Quick registration with auto-generated address
+router.post('/register', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError(ErrorCode.NOT_AUTHENTICATED);
+  }
+
+  // Check if already a trader
+  let existingAddress = traderAddresses.get(userId);
+  if (existingAddress) {
+    // Already registered - return existing address
+    sendSuccess(res, {
+      message: 'Already registered',
+      traderId: userId,
+      address: existingAddress,
+      isNew: false
+    });
+    return;
+  }
+
+  // Check database for existing trader
+  try {
+    const existing = await findTraderByUserId(userId);
+    if (existing) {
+      throw new AppError(ErrorCode.TRADER_ALREADY_EXISTS, 'You already have a trader account');
+    }
+  } catch (dbError) {
+    // Database not available - continue with mock registration
+    console.log('⚠️ Database not available, using mock registration');
+  }
+
+  // Generate new Tron address for deposits
+  const address = generateTronAddress();
+  traderAddresses.set(userId, address);
+
+  // In production: Create actual wallet, store encrypted private key
+  console.log(`🔐 Generated trader address for ${userId}: ${address}`);
+
+  // Try to create trader in database
+  try {
+    const defaultCorridor: Corridor = { from: 'AED', to: 'XAF', buyRate: 162, sellRate: 159 };
+    await createTraderApplication(userId, [defaultCorridor]);
+  } catch (dbError) {
+    // Database not available - that's ok for mock
+  }
+
+  sendSuccess(res, {
+    message: 'Registration successful',
+    traderId: userId,
+    address: address,
+    isNew: true,
+    instructions: {
+      minDeposit: '100 USDT',
+      network: 'TRC20 (Tron)',
+      confirmations: 19,
+      estimatedTime: '1-3 minutes'
+    }
+  }, 201);
+}));
+
+// GET /api/traders/me/address - Get trader's deposit address
+router.get('/me/address', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError(ErrorCode.NOT_AUTHENTICATED);
+  }
+
+  const address = traderAddresses.get(userId);
+  if (!address) {
+    throw new AppError(ErrorCode.NOT_A_TRADER, 'You are not registered as a trader');
+  }
+
+  sendSuccess(res, { address });
 }));
 
 // PUT /api/traders/me - Update trader profile (trader required)
@@ -280,7 +385,7 @@ router.get('/me/payment-methods/:id', authMiddleware, traderMiddleware, asyncHan
     throw new AppError(ErrorCode.NOT_A_TRADER);
   }
 
-  const method = await paymentMethodService.getPaymentMethod(req.params.id);
+  const method = await paymentMethodService.getPaymentMethod(getParam(req.params.id));
   if (!method || method.trader_id !== trader.id) {
     throw new AppError(ErrorCode.PAYMENT_METHOD_NOT_FOUND);
   }
@@ -302,7 +407,7 @@ router.put('/me/payment-methods/:id', authMiddleware, traderMiddleware, asyncHan
 
   try {
     const method = await paymentMethodService.updatePaymentMethod(
-      req.params.id,
+      getParam(req.params.id),
       trader.id,
       req.body
     );
@@ -332,7 +437,7 @@ router.delete('/me/payment-methods/:id', authMiddleware, traderMiddleware, async
   }
 
   try {
-    await paymentMethodService.deletePaymentMethod(req.params.id, trader.id);
+    await paymentMethodService.deletePaymentMethod(getParam(req.params.id), trader.id);
     sendSuccess(res, { message: 'Payment method deleted' });
   } catch (error: any) {
     if (error.message?.includes('not found')) {
@@ -355,7 +460,7 @@ router.put('/me/payment-methods/:id/primary', authMiddleware, traderMiddleware, 
   }
 
   try {
-    await paymentMethodService.setPrimary(trader.id, req.params.id);
+    await paymentMethodService.setPrimary(trader.id, getParam(req.params.id));
     sendSuccess(res, { message: 'Primary payment method updated' });
   } catch (error: any) {
     if (error.message?.includes('not found')) {
@@ -365,9 +470,94 @@ router.put('/me/payment-methods/:id/primary', authMiddleware, traderMiddleware, 
   }
 }));
 
+// ============================================
+// Payment Method Verification Routes
+// ============================================
+
+// POST /api/traders/me/payment-methods/:id/verify - Initiate verification
+router.post('/me/payment-methods/:id/verify', authMiddleware, traderMiddleware, asyncHandler(async (req: AuthRequest, res) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError(ErrorCode.NOT_AUTHENTICATED);
+  }
+
+  const trader = await findTraderByUserId(userId);
+  if (!trader) {
+    throw new AppError(ErrorCode.NOT_A_TRADER);
+  }
+
+  const result = await initiateVerification(getParam(req.params.id), trader.id);
+
+  sendSuccess(res, {
+    code: result.code,
+    amount: result.amount,
+    instructions: result.instructions,
+    expiresAt: result.expiresAt
+  });
+}));
+
+// POST /api/traders/me/payment-methods/:id/proof - Submit verification proof (screenshot)
+router.post('/me/payment-methods/:id/proof', authMiddleware, traderMiddleware, asyncHandler(async (req: AuthRequest, res) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError(ErrorCode.NOT_AUTHENTICATED);
+  }
+
+  const trader = await findTraderByUserId(userId);
+  if (!trader) {
+    throw new AppError(ErrorCode.NOT_A_TRADER);
+  }
+
+  const { proofUrl } = req.body;
+  if (!proofUrl) {
+    throw new AppError(ErrorCode.MISSING_FIELD, 'Proof URL is required', { field: 'proofUrl' });
+  }
+
+  const result = await submitVerificationProof(getParam(req.params.id), trader.id, proofUrl);
+
+  sendSuccess(res, {
+    verified: result.verified,
+    message: 'Payment method verified successfully'
+  });
+}));
+
+// GET /api/traders/me/payment-methods/:id/verification-status - Get verification status
+router.get('/me/payment-methods/:id/verification-status', authMiddleware, traderMiddleware, asyncHandler(async (req: AuthRequest, res) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError(ErrorCode.NOT_AUTHENTICATED);
+  }
+
+  const trader = await findTraderByUserId(userId);
+  if (!trader) {
+    throw new AppError(ErrorCode.NOT_A_TRADER);
+  }
+
+  const status = await getVerificationStatus(getParam(req.params.id), trader.id);
+
+  sendSuccess(res, status);
+}));
+
+// DELETE /api/traders/me/payment-methods/:id/verify - Cancel verification
+router.delete('/me/payment-methods/:id/verify', authMiddleware, traderMiddleware, asyncHandler(async (req: AuthRequest, res) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError(ErrorCode.NOT_AUTHENTICATED);
+  }
+
+  const trader = await findTraderByUserId(userId);
+  if (!trader) {
+    throw new AppError(ErrorCode.NOT_A_TRADER);
+  }
+
+  await cancelVerification(getParam(req.params.id), trader.id);
+
+  sendSuccess(res, { message: 'Verification cancelled' });
+}));
+
 // GET /api/traders/:id/payment-details - Get trader's payment details for a trade (public for trade parties)
 router.get('/:id/payment-details', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
-  const traderId = req.params.id;
+  const traderId = getParam(req.params.id);
 
   // Get trader's primary payment method
   const method = await paymentMethodService.getPrimaryPaymentMethod(traderId);

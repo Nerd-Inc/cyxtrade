@@ -3,10 +3,15 @@ class ApiConfig {
   static const String baseUrl = 'http://localhost:3000/api';
 
   // Endpoints
+  // OTP Auth (legacy/recovery)
   static const String authOtp = '/auth/otp';
   static const String authVerify = '/auth/verify';
   static const String authRefresh = '/auth/refresh';
   static const String authLogout = '/auth/logout';
+
+  // Keypair Auth
+  static const String authChallenge = '/auth/challenge';
+  static const String authVerifySignature = '/auth/verify-signature';
 
   static const String usersMe = '/users/me';
   static String usersById(String id) => '/users/$id';
@@ -20,6 +25,11 @@ class ApiConfig {
   static String tradersPaymentMethodById(String id) => '/traders/me/payment-methods/$id';
   static String tradersPaymentMethodPrimary(String id) => '/traders/me/payment-methods/$id/primary';
   static String traderPaymentDetails(String traderId) => '/traders/$traderId/payment-details';
+
+  // Payment method verification
+  static String tradersPaymentMethodVerify(String id) => '/traders/me/payment-methods/$id/verify';
+  static String tradersPaymentMethodProof(String id) => '/traders/me/payment-methods/$id/proof';
+  static String tradersPaymentMethodVerificationStatus(String id) => '/traders/me/payment-methods/$id/verification-status';
 
   // Uploads
   static const String uploadAvatar = '/uploads/avatar';
@@ -40,6 +50,13 @@ class ApiConfig {
   static String chatImage(String tradeId) => '/chat/trades/$tradeId/messages/image';
   static String chatRead(String tradeId) => '/chat/trades/$tradeId/messages/read';
   static String chatTyping(String tradeId) => '/chat/trades/$tradeId/typing';
+  static String chatSystem(String tradeId) => '/chat/trades/$tradeId/system';
+
+  // Key Exchange (E2E Encryption)
+  static const String keysRegister = '/keys/register';
+  static const String keysMe = '/keys/me';
+  static String keysUser(String userId) => '/keys/$userId';
+  static String keysTrade(String tradeId) => '/keys/trade/$tradeId';
 
   // WebSocket
   static const String wsUrl = 'http://localhost:3000';

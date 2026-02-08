@@ -2,7 +2,8 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import rateLimit from 'express-rate-limit';
-import { getOrCreateUser } from '../services/userService';
+import nacl from 'tweetnacl';
+import { getOrCreateUser, findUserByPublicKey, createUserWithPublicKey } from '../services/userService';
 import { findTraderByUserId } from '../services/traderService';
 import { AppError, ErrorCode } from '../utils/errors';
 import { sendSuccess, sendAppError } from '../utils/response';
@@ -38,6 +39,26 @@ const verifyRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+// Rate limiting for keypair challenge requests
+const challengeRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  message: { error: 'Too many challenge requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate limiting for signature verification
+const signatureRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  message: { error: 'Too many verification attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const CHALLENGE_EXPIRY_SECONDS = 300; // 5 minutes
 
 // Generate cryptographically secure OTP
 function generateSecureOTP(): string {
@@ -104,8 +125,11 @@ router.post('/verify', verifyRateLimiter, asyncHandler(async (req, res) => {
     throw new AppError(ErrorCode.INVALID_OTP, 'Verification code not found or expired. Please request a new one');
   }
 
+  // Dev mode: accept "123456" as a bypass OTP
+  const isDevBypass = process.env.NODE_ENV !== 'production' && otp === '123456';
+
   // Constant-time comparison to prevent timing attacks
-  const isValid = crypto.timingSafeEqual(
+  const isValid = isDevBypass || crypto.timingSafeEqual(
     Buffer.from(storedOtp.padEnd(6, '0')),
     Buffer.from(otp.padEnd(6, '0'))
   );
@@ -264,6 +288,153 @@ router.delete('/logout', asyncHandler(async (req, res) => {
   }
 
   sendSuccess(res, { message: 'Logged out' });
+}));
+
+// ============================================
+// KEYPAIR-BASED AUTHENTICATION
+// ============================================
+
+// POST /api/auth/challenge - Get challenge to sign with private key
+router.post('/challenge', challengeRateLimiter, asyncHandler(async (req, res) => {
+  const { publicKey } = req.body;
+
+  if (!publicKey) {
+    throw new AppError(ErrorCode.MISSING_FIELD, 'Public key is required', { field: 'publicKey' });
+  }
+
+  // Validate public key format (64 hex chars = 32 bytes Ed25519 public key)
+  if (!/^[a-f0-9]{64}$/i.test(publicKey)) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid public key format. Expected 64 hex characters.');
+  }
+
+  // Generate random challenge
+  const challenge = crypto.randomBytes(32).toString('hex');
+  const expiresAt = Date.now() + CHALLENGE_EXPIRY_SECONDS * 1000;
+
+  // Store challenge in Redis
+  const challengeKey = `challenge:${publicKey.toLowerCase()}`;
+  await redisClient.setEx(challengeKey, CHALLENGE_EXPIRY_SECONDS, JSON.stringify({
+    challenge,
+    expiresAt
+  }));
+
+  sendSuccess(res, {
+    challenge,
+    expiresAt
+  });
+}));
+
+// POST /api/auth/verify-signature - Verify signed challenge and issue JWT
+router.post('/verify-signature', signatureRateLimiter, asyncHandler(async (req, res) => {
+  const { publicKey, signature } = req.body;
+
+  if (!publicKey) {
+    throw new AppError(ErrorCode.MISSING_FIELD, 'Public key is required', { field: 'publicKey' });
+  }
+  if (!signature) {
+    throw new AppError(ErrorCode.MISSING_FIELD, 'Signature is required', { field: 'signature' });
+  }
+
+  // Validate formats
+  if (!/^[a-f0-9]{64}$/i.test(publicKey)) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid public key format');
+  }
+  if (!/^[a-f0-9]{128}$/i.test(signature)) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid signature format. Expected 128 hex characters.');
+  }
+
+  const normalizedPublicKey = publicKey.toLowerCase();
+  const challengeKey = `challenge:${normalizedPublicKey}`;
+
+  // Get stored challenge
+  const storedData = await redisClient.get(challengeKey);
+  if (!storedData) {
+    throw new AppError(ErrorCode.INVALID_TOKEN, 'Challenge not found or expired. Please request a new challenge.');
+  }
+
+  const { challenge, expiresAt } = JSON.parse(storedData);
+
+  // Check if challenge expired
+  if (Date.now() > expiresAt) {
+    await redisClient.del(challengeKey);
+    throw new AppError(ErrorCode.EXPIRED_TOKEN, 'Challenge has expired. Please request a new challenge.');
+  }
+
+  // Verify Ed25519 signature
+  const messageBytes = Buffer.from(challenge, 'hex');
+  const signatureBytes = Buffer.from(signature, 'hex');
+  const publicKeyBytes = Buffer.from(normalizedPublicKey, 'hex');
+
+  const isValid = nacl.sign.detached.verify(messageBytes, signatureBytes, publicKeyBytes);
+
+  if (!isValid) {
+    throw new AppError(ErrorCode.INVALID_TOKEN, 'Invalid signature');
+  }
+
+  // Clear used challenge (single use)
+  await redisClient.del(challengeKey);
+
+  // Get or create user by public key
+  const fingerprint = normalizedPublicKey.substring(0, 16);
+  let user: any;
+  let trader: any = null;
+  let isTrader = false;
+
+  try {
+    user = await findUserByPublicKey(normalizedPublicKey);
+
+    if (!user) {
+      user = await createUserWithPublicKey(normalizedPublicKey, fingerprint);
+    }
+
+    trader = await findTraderByUserId(user.id);
+    isTrader = trader?.status === 'active';
+  } catch (dbError) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new AppError(ErrorCode.DATABASE_ERROR, 'Service temporarily unavailable');
+    }
+    // Development fallback
+    console.log('⚠️ Database not available, using mock user');
+    const { v4: uuidv4 } = await import('uuid');
+    user = {
+      id: uuidv4(),
+      public_key: normalizedPublicKey,
+      public_key_fingerprint: fingerprint,
+      display_name: null,
+      avatar_url: null,
+      is_admin: false,
+      is_trader: false
+    };
+  }
+
+  // Generate JWT token
+  const tokenId = crypto.randomUUID();
+  const token = jwt.sign(
+    {
+      jti: tokenId,
+      id: user.id,
+      publicKey: fingerprint,
+      isTrader,
+      isAdmin: user.is_admin || false
+    },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
+  );
+
+  sendSuccess(res, {
+    token,
+    user: {
+      id: user.id,
+      publicKey: normalizedPublicKey,
+      fingerprint,
+      phone: user.phone || null,
+      displayName: user.display_name,
+      avatarUrl: user.avatar_url,
+      isTrader,
+      isAdmin: user.is_admin || false,
+      traderId: trader?.id
+    }
+  });
 }));
 
 // Helper to check if token is blacklisted (exported for middleware)

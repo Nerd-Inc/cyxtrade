@@ -1,0 +1,20 @@
+# ninja log v5
+31	415	7922423116200027	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/transport/transport.c.o	410f3a142ec9f6f9
+0	539	7922423117618360	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/util/memory.c.o	e3ce20dbb9e7d367
+109	580	7922423117958333	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/crypto/crypto.c.o	71fb5d2cc86bb8f6
+18	685	7922423118348532	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/util/log.c.o	e35b960a75c69820
+95	730	7922423118933828	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/crypto/primitives.c.o	5d16309025fa348f
+121	826	7922423119163822	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/crypto/mac.c.o	26a63aad43234079
+136	887	7922423119539236	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/crypto/zkp.c.o	21d7e0fef0debfab
+44	926	7922423120584643	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/core/discovery.c.o	8bae722d00e232c9
+170	989	7922423122170117	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/crypto/credentials.c.o	6ca02c94db359f83
+686	1226	7922423124546636	CMakeFiles/cyxwiz_ffi.dir/src/cyxwiz_ffi.c.o	f0fadebb70214f3
+155	1266	7922423124956636	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/crypto/sharing.c.o	af9bc532ce144685
+56	1490	7922423127047446	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/core/peer.c.o	acaa36498058a05d
+418	1580	7922423128012940	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/crypto/privacy.c.o	de95dc7822f538e1
+68	1604	7922423128012940	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/core/dht.c.o	6cb78d04c0e27a43
+80	1626	7922423128303091	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/core/routing.c.o	a47290552c7bf776
+583	1768	7922423130083690	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/core/consensus.c.o	a99fa75bfa1e96c6
+9	1907	7922423131474439	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/transport/udp.c.o	a8abd7f087d63da6
+540	2420	7922423136568495	CMakeFiles/cyxwiz_ffi.dir/D_/Dev/conspiracy/src/core/onion.c.o	a7750167bd46cc4c
+2420	2839	7922423140888554	libcyxwiz_ffi.so	9a1c0aebee0d55c2

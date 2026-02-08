@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="D:\Dev\conspiracy\cyxtrade\cyxtrade\mobile\native\build\windows\CMakeFiles\77f5cb8c17f9c28ac37c91a8cf3534d7\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{DDDCE9E5-FC83-39CC-8570-76B71FB90148}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

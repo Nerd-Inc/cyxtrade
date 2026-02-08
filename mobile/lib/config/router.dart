@@ -16,6 +16,7 @@ import '../screens/trader/become_trader_screen.dart';
 import '../screens/arbitrator/become_arbitrator_screen.dart';
 import '../screens/trader/payment_methods_screen.dart';
 import '../screens/trader/payment_method_form_screen.dart';
+import '../screens/trader/verify_payment_method_screen.dart';
 import '../screens/trade/trade_success_screen.dart';
 import '../screens/trade/payment_instructions_screen.dart';
 import '../screens/trade/rate_trade_screen.dart';
@@ -150,6 +151,13 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final id = state.pathParameters['id']!;
         return PaymentMethodFormScreen(methodId: id);
+      },
+    ),
+    GoRoute(
+      path: '/trader/payment-methods/:id/verify',
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return VerifyPaymentMethodScreen(methodId: id);
       },
     ),
 

@@ -104,7 +104,29 @@ class ApiService {
     }
   }
 
-  // Auth
+  // ============================================
+  // Keypair Authentication (Primary)
+  // ============================================
+
+  /// Request a challenge to sign with private key
+  Future<Map<String, dynamic>> requestChallenge(String publicKey) async {
+    return _call(() => _dio.post(ApiConfig.authChallenge, data: {
+          'publicKey': publicKey,
+        }));
+  }
+
+  /// Verify signed challenge and get JWT
+  Future<Map<String, dynamic>> verifySignature(String publicKey, String signature) async {
+    return _call(() => _dio.post(ApiConfig.authVerifySignature, data: {
+          'publicKey': publicKey,
+          'signature': signature,
+        }));
+  }
+
+  // ============================================
+  // OTP Authentication (Legacy/Recovery)
+  // ============================================
+
   Future<Map<String, dynamic>> requestOtp(String phone) async {
     return _call(() => _dio.post(ApiConfig.authOtp, data: {'phone': phone}));
   }
@@ -297,5 +319,151 @@ class ApiService {
   Future<Map<String, dynamic>> getTraderPaymentDetails(String traderId) async {
     final response = await _call(() => _dio.get(ApiConfig.traderPaymentDetails(traderId)));
     return (response as Map<String, dynamic>)['paymentMethod'];
+  }
+
+  // ============================================
+  // Payment Method Verification
+  // ============================================
+
+  /// Initiate verification for a payment method
+  Future<Map<String, dynamic>> initiateVerification(String methodId) async {
+    return _call(() => _dio.post(ApiConfig.tradersPaymentMethodVerify(methodId)));
+  }
+
+  /// Submit verification proof (screenshot URL)
+  Future<Map<String, dynamic>> submitVerificationProof(String methodId, String proofUrl) async {
+    return _call(() => _dio.post(ApiConfig.tradersPaymentMethodProof(methodId), data: {
+          'proofUrl': proofUrl,
+        }));
+  }
+
+  /// Get verification status for a payment method
+  Future<Map<String, dynamic>> getVerificationStatus(String methodId) async {
+    return _call(() => _dio.get(ApiConfig.tradersPaymentMethodVerificationStatus(methodId)));
+  }
+
+  /// Cancel pending verification
+  Future<void> cancelVerification(String methodId) async {
+    await _call(() => _dio.delete(ApiConfig.tradersPaymentMethodVerify(methodId)));
+  }
+
+  // ============================================
+  // E2E Encryption Key Exchange
+  // ============================================
+
+  /// Register or update my public key
+  Future<Map<String, dynamic>> registerPublicKey(String publicKey, {String? identityKey}) async {
+    return _call(() => _dio.post(ApiConfig.keysRegister, data: {
+          'publicKey': publicKey,
+          if (identityKey != null) 'identityKey': identityKey,
+        }));
+  }
+
+  /// Get my registered key info
+  Future<Map<String, dynamic>> getMyKeyInfo() async {
+    return _call(() => _dio.get(ApiConfig.keysMe));
+  }
+
+  /// Get another user's public key
+  Future<Map<String, dynamic>> getUserPublicKey(String userId) async {
+    return _call(() => _dio.get(ApiConfig.keysUser(userId)));
+  }
+
+  /// Register trade-specific ephemeral key
+  Future<Map<String, dynamic>> registerTradeKey(String tradeId, String publicKey) async {
+    return _call(() => _dio.post(ApiConfig.keysTrade(tradeId), data: {
+          'publicKey': publicKey,
+        }));
+  }
+
+  /// Get all participant keys for a trade
+  Future<Map<String, dynamic>> getTradeKeys(String tradeId) async {
+    return _call(() => _dio.get(ApiConfig.keysTrade(tradeId)));
+  }
+
+  // ============================================
+  // E2E Encrypted Chat
+  // ============================================
+
+  /// Send an encrypted message
+  Future<Map<String, dynamic>> sendEncryptedMessage(
+    String tradeId,
+    Map<String, dynamic> encrypted, {
+    String messageType = 'text',
+  }) async {
+    return _call(() => _dio.post(ApiConfig.chatMessages(tradeId), data: {
+          'encrypted': encrypted,
+          'messageType': messageType,
+        }));
+  }
+
+  /// Send a system message (not E2E encrypted)
+  Future<Map<String, dynamic>> sendSystemMessage(
+    String tradeId,
+    String content, {
+    String messageType = 'system',
+  }) async {
+    return _call(() => _dio.post(ApiConfig.chatSystem(tradeId), data: {
+          'content': content,
+          'messageType': messageType,
+        }));
+  }
+
+  // ============================================
+  // P2P Bootstrap & Relay
+  // ============================================
+
+  /// Register P2P node ID with bootstrap server
+  Future<Map<String, dynamic>> registerP2PNode({
+    required String nodeId,
+    String? onionPubkey,
+  }) async {
+    return _call(() => _dio.post('/api/bootstrap/register', data: {
+          'nodeId': nodeId,
+          if (onionPubkey != null) 'onionPubkey': onionPubkey,
+        }));
+  }
+
+  /// Send heartbeat to bootstrap server
+  Future<Map<String, dynamic>> sendP2PHeartbeat() async {
+    return _call(() => _dio.post('/api/bootstrap/heartbeat'));
+  }
+
+  /// Get P2P peer info for a user
+  Future<Map<String, dynamic>> getP2PPeerInfo(String userId) async {
+    return _call(() => _dio.get('/api/bootstrap/peer/$userId'));
+  }
+
+  /// Unregister from P2P network
+  Future<Map<String, dynamic>> unregisterP2PNode() async {
+    return _call(() => _dio.delete('/api/bootstrap/unregister'));
+  }
+
+  /// Queue a message for offline delivery via relay
+  Future<Map<String, dynamic>> queueRelayMessage({
+    required String recipientId,
+    required String tradeId,
+    required Map<String, dynamic> encrypted,
+  }) async {
+    return _call(() => _dio.post('/api/relay/queue', data: {
+          'recipientId': recipientId,
+          'tradeId': tradeId,
+          'encrypted': encrypted,
+        }));
+  }
+
+  /// Get pending messages from relay
+  Future<Map<String, dynamic>> getPendingRelayMessages() async {
+    return _call(() => _dio.get('/api/relay/pending'));
+  }
+
+  /// Acknowledge message delivery
+  Future<Map<String, dynamic>> acknowledgeRelayMessage(String messageId) async {
+    return _call(() => _dio.delete('/api/relay/pending/$messageId'));
+  }
+
+  /// Get relay queue status
+  Future<Map<String, dynamic>> getRelayStatus() async {
+    return _call(() => _dio.get('/api/relay/status'));
   }
 }

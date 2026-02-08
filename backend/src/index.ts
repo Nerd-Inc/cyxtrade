@@ -18,6 +18,9 @@ import tradeRoutes from './routes/trades';
 import chatRoutes from './routes/chat';
 import adminRoutes from './routes/admin';
 import uploadRoutes from './routes/uploads';
+import keyRoutes from './routes/keys';
+import relayRoutes from './routes/relay';
+import bootstrapRoutes from './routes/bootstrap';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -28,6 +31,9 @@ import { setupSocketHandlers } from './services/socket';
 
 // Import database
 import { initializeDatabase } from './services/db';
+
+// Import blockchain
+import { initBlockchain, isBlockchainEnabled } from './services/blockchainService';
 
 const app = express();
 const httpServer = createServer(app);
@@ -62,6 +68,9 @@ app.use('/api/trades', authMiddleware, tradeRoutes);
 app.use('/api/chat', authMiddleware, chatRoutes);
 app.use('/api/admin', authMiddleware, adminRoutes);
 app.use('/api/uploads', authMiddleware, uploadRoutes);
+app.use('/api/keys', keyRoutes);  // Key exchange for E2E encryption
+app.use('/api/relay', authMiddleware, relayRoutes);  // Offline message queue
+app.use('/api/bootstrap', bootstrapRoutes);  // P2P peer discovery
 
 // Error handling
 app.use(errorHandler);
@@ -81,6 +90,15 @@ async function startServer() {
     console.log('   To enable full functionality, start PostgreSQL on port 5432');
   }
 
+  // Initialize blockchain (optional - server can run without it)
+  try {
+    await initBlockchain();
+  } catch (bcError) {
+    console.log('⚠️  Blockchain not available - running without on-chain features');
+  }
+
+  const blockchainStatus = isBlockchainEnabled() ? '✓ enabled' : '✗ disabled';
+
   httpServer.listen(PORT, () => {
     console.log(`
 ╔═══════════════════════════════════════════════════════════╗
@@ -89,6 +107,7 @@ async function startServer() {
 ║                                                           ║
 ║   Running on: http://localhost:${PORT}                      ║
 ║   Environment: ${process.env.NODE_ENV || 'development'}                          ║
+║   Blockchain: ${blockchainStatus}                               ║
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
     `);
