@@ -28,9 +28,9 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await context.read<AuthProvider>().updateProfile(
-            displayName: _nameController.text.trim(),
-          );
+      await context.read<AuthProvider>().updateProfile({
+            'displayName': _nameController.text.trim(),
+          });
       if (mounted) {
         showSuccessSnackBar(context, 'Profile updated');
         context.go('/home');
@@ -166,7 +166,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       const Icon(Icons.phone, color: Colors.grey),
                       const SizedBox(width: 12),
                       Text(
-                        user?.phone ?? 'Phone not set',
+                        user?['phone'] as String? ?? 'Phone not set',
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color: Colors.grey,
                         ),

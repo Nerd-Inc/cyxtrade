@@ -34,7 +34,8 @@ class _OtpScreenState extends State<OtpScreen> {
       if (mounted) {
         final user = context.read<AuthProvider>().user;
         // Check if profile needs completion (first-time user)
-        if (user?.displayName == null || user!.displayName!.isEmpty) {
+        final displayName = user?['displayName'] as String?;
+        if (displayName == null || displayName.isEmpty) {
           context.go('/complete-profile');
         } else {
           context.go('/home');
