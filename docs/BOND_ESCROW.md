@@ -422,11 +422,12 @@ function slashBond(address trader, address recipient, uint256 amount) internal {
 
 | Contract | Address | Purpose |
 |----------|---------|---------|
-| CyxTradeEscrow | `TPK3zPHrMHxH8nEHTpNRxVBSMa5Y4UGvEo` | Main escrow, holds bonds |
-| ArbitratorRegistry | `TRHWA3VCYC2etTrSyVmoDfHcFhKiMgMYDw` | Arbitrator staking |
-| DisputeResolution | `TYogHXEJT6qhWDgrzF44oysMvzp4JaFszB` | Dispute voting |
+| CyxTradeEscrow | `TGVHmzTU5xvM3KJ9SUMpJM3WST3FMNQPzm` | Main escrow, holds bonds |
+| ArbitratorRegistry | `TG5FQEiDTSJKYKCf44GnkpckvazBNabbxo` | Arbitrator staking |
+| DisputeResolution | `TKvov2ThwCmxQ2RrFbZi5nMYJNKrLYoPAM` | Dispute voting |
+| MockUSDT | `TEUNzEw4vVEioPWGxD3kMgzN349FxC6xMn` | Test token (Shasta only) |
 
-View on Tronscan: https://shasta.tronscan.org/#/contract/TPK3zPHrMHxH8nEHTpNRxVBSMa5Y4UGvEo
+View on Tronscan: https://shasta.tronscan.org/#/contract/TGVHmzTU5xvM3KJ9SUMpJM3WST3FMNQPzm
 
 ### Mainnet (Pending)
 

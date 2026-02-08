@@ -14,8 +14,8 @@ const DisputeResolution = artifacts.require('DisputeResolution');
 
 // USDT addresses per network
 const USDT_ADDRESSES = {
-  // Shasta testnet - Mock USDT (deploy your own or use existing)
-  shasta: 'TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs', // Example
+  // Shasta testnet - Our deployed MockUSDT
+  shasta: 'TEUNzEw4vVEioPWGxD3kMgzN349FxC6xMn',
 
   // Mainnet USDT-TRC20
   mainnet: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',

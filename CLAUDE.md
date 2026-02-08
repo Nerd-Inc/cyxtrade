@@ -177,9 +177,10 @@ cyxtrade/
 
 | Contract | Address | Purpose |
 |----------|---------|---------|
-| CyxTradeEscrow | `TPK3zPHrMHxH8nEHTpNRxVBSMa5Y4UGvEo` | Holds trader bonds |
-| ArbitratorRegistry | `TRHWA3VCYC2etTrSyVmoDfHcFhKiMgMYDw` | Arbitrator staking |
-| DisputeResolution | `TYogHXEJT6qhWDgrzF44oysMvzp4JaFszB` | Dispute voting |
+| CyxTradeEscrow | `TGVHmzTU5xvM3KJ9SUMpJM3WST3FMNQPzm` | Holds trader bonds |
+| ArbitratorRegistry | `TG5FQEiDTSJKYKCf44GnkpckvazBNabbxo` | Arbitrator staking |
+| DisputeResolution | `TKvov2ThwCmxQ2RrFbZi5nMYJNKrLYoPAM` | Dispute voting |
+| MockUSDT | `TEUNzEw4vVEioPWGxD3kMgzN349FxC6xMn` | Test token (Shasta only) |
 
 ### Ready for Implementation
 - [ ] IPFS evidence storage
