@@ -8,6 +8,7 @@ export enum ErrorCode {
   INVALID_FORMAT = 1005,
   INVALID_OTP = 1006,
   OTP_EXPIRED = 1007,
+  TOO_MANY_ATTEMPTS = 1008,
 
   // Auth errors (2xxx)
   INVALID_TOKEN = 2001,
@@ -44,6 +45,12 @@ export enum ErrorCode {
   USER_ALREADY_EXISTS = 6002,
   PROFILE_UPDATE_FAILED = 6003,
 
+  // Crypto/Key errors (7xxx)
+  KEY_NOT_FOUND = 7001,
+  INVALID_KEY = 7002,
+  DECRYPTION_FAILED = 7003,
+  KEY_EXCHANGE_FAILED = 7004,
+
   // Server errors (9xxx)
   DATABASE_ERROR = 9001,
   EXTERNAL_SERVICE_ERROR = 9002,
@@ -61,6 +68,7 @@ const defaultMessages: Record<ErrorCode, string> = {
   [ErrorCode.INVALID_FORMAT]: 'Invalid format',
   [ErrorCode.INVALID_OTP]: 'Invalid verification code',
   [ErrorCode.OTP_EXPIRED]: 'Verification code has expired',
+  [ErrorCode.TOO_MANY_ATTEMPTS]: 'Too many failed attempts. Please request a new code',
 
   // Auth
   [ErrorCode.INVALID_TOKEN]: 'Invalid authentication token',
@@ -97,6 +105,12 @@ const defaultMessages: Record<ErrorCode, string> = {
   [ErrorCode.USER_ALREADY_EXISTS]: 'User already exists',
   [ErrorCode.PROFILE_UPDATE_FAILED]: 'Failed to update profile',
 
+  // Crypto
+  [ErrorCode.KEY_NOT_FOUND]: 'Encryption key not found',
+  [ErrorCode.INVALID_KEY]: 'Invalid encryption key',
+  [ErrorCode.DECRYPTION_FAILED]: 'Failed to decrypt message',
+  [ErrorCode.KEY_EXCHANGE_FAILED]: 'Key exchange failed',
+
   // Server
   [ErrorCode.DATABASE_ERROR]: 'A database error occurred',
   [ErrorCode.EXTERNAL_SERVICE_ERROR]: 'An external service error occurred',
@@ -114,6 +128,7 @@ const statusCodes: Record<ErrorCode, number> = {
   [ErrorCode.INVALID_FORMAT]: 400,
   [ErrorCode.INVALID_OTP]: 400,
   [ErrorCode.OTP_EXPIRED]: 400,
+  [ErrorCode.TOO_MANY_ATTEMPTS]: 429,
 
   // Auth - 401/403
   [ErrorCode.INVALID_TOKEN]: 401,
@@ -149,6 +164,12 @@ const statusCodes: Record<ErrorCode, number> = {
   [ErrorCode.USER_NOT_FOUND]: 404,
   [ErrorCode.USER_ALREADY_EXISTS]: 400,
   [ErrorCode.PROFILE_UPDATE_FAILED]: 500,
+
+  // Crypto - 400/404
+  [ErrorCode.KEY_NOT_FOUND]: 404,
+  [ErrorCode.INVALID_KEY]: 400,
+  [ErrorCode.DECRYPTION_FAILED]: 400,
+  [ErrorCode.KEY_EXCHANGE_FAILED]: 500,
 
   // Server - 500/503/429
   [ErrorCode.DATABASE_ERROR]: 500,
