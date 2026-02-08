@@ -258,6 +258,42 @@ As new traders join, **new corridors appear automatically**, without protocol ch
 
 ---
 
+## Smart Contracts
+
+Deployed on Tron blockchain. Non-custodial, immutable, no admin keys.
+
+### Contract Addresses (Shasta Testnet)
+
+| Contract | Address | Purpose |
+|----------|---------|---------|
+| CyxTradeEscrow | `TPK3zPHrMHxH8nEHTpNRxVBSMa5Y4UGvEo` | Holds trader bonds, locks per trade |
+| ArbitratorRegistry | `TRHWA3VCYC2etTrSyVmoDfHcFhKiMgMYDw` | Arbitrator staking (500 USDT) |
+| DisputeResolution | `TYogHXEJT6qhWDgrzF44oysMvzp4JaFszB` | Commit-reveal voting |
+
+### How Bonds Work
+
+```
+1. Trader deposits 5000 USDT bond to CyxTradeEscrow
+2. User creates trade (1000 AED → 163,000 XAF)
+3. Contract locks 270 USDT from trader's bond
+4. Fiat exchange happens off-chain
+5. User confirms receipt → bond unlocked
+6. If dispute → arbitrators vote → winner gets bond
+```
+
+### Security Properties
+
+| Property | Guarantee |
+|----------|-----------|
+| Non-custodial | Contract holds funds, not team |
+| Immutable | No admin keys, no upgrades |
+| Backend limited | Can lock bonds, cannot withdraw |
+| Trader protected | Only they can withdraw own bond |
+
+See [BOND_ESCROW.md](docs/BOND_ESCROW.md) for full technical design.
+
+---
+
 ## Trade State Machine
 
 All trades follow this flow:
@@ -436,7 +472,7 @@ cyxtrade exit
 
 ## Status
 
-**Phase: Design Validated, MVP In Progress**
+**Phase: Smart Contracts Deployed (Testnet)**
 
 - [x] Problem research
 - [x] Trust model
@@ -444,9 +480,11 @@ cyxtrade exit
 - [x] Global protocol framing
 - [x] Backend API setup
 - [x] Mobile app scaffold
-- [ ] Core implementation
+- [x] Smart contracts deployed (Shasta testnet)
+- [x] Backend blockchain integration
 - [ ] Pilot traders onboarded
 - [ ] Live corridor test
+- [ ] Mainnet deployment
 
 ---
 

@@ -62,10 +62,10 @@ npm test
 
 ## Contract Addresses
 
-### Shasta Testnet
-- CyxTradeEscrow: `TBD`
-- ArbitratorRegistry: `TBD`
-- DisputeResolution: `TBD`
+### Shasta Testnet (Deployed 2026-02-08)
+- CyxTradeEscrow: `TPK3zPHrMHxH8nEHTpNRxVBSMa5Y4UGvEo`
+- ArbitratorRegistry: `TRHWA3VCYC2etTrSyVmoDfHcFhKiMgMYDw`
+- DisputeResolution: `TYogHXEJT6qhWDgrzF44oysMvzp4JaFszB`
 
 ### Mainnet
 - CyxTradeEscrow: `TBD`

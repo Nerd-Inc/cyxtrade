@@ -418,19 +418,27 @@ function slashBond(address trader, address recipient, uint256 amount) internal {
 
 ## Contract Addresses
 
-*(To be deployed)*
+### Shasta Testnet (Deployed 2026-02-08)
+
+| Contract | Address | Purpose |
+|----------|---------|---------|
+| CyxTradeEscrow | `TPK3zPHrMHxH8nEHTpNRxVBSMa5Y4UGvEo` | Main escrow, holds bonds |
+| ArbitratorRegistry | `TRHWA3VCYC2etTrSyVmoDfHcFhKiMgMYDw` | Arbitrator staking |
+| DisputeResolution | `TYogHXEJT6qhWDgrzF44oysMvzp4JaFszB` | Dispute voting |
+
+View on Tronscan: https://shasta.tronscan.org/#/contract/TPK3zPHrMHxH8nEHTpNRxVBSMa5Y4UGvEo
+
+### Mainnet (Pending)
 
 | Chain | Contract | Status |
 |-------|----------|--------|
-| Tron | `TBD...` | Pending |
-| Ethereum | `0xTBD...` | Pending |
-| Polygon | `0xTBD...` | Pending |
+| Tron | `TBD` | Pending audit |
 
-All contracts will be:
-- Verified source on explorer
-- Audited by [TBD]
+All contracts are:
+- Open source (verified on explorer)
 - No admin functions
 - No upgrade mechanism
+- Immutable once deployed
 
 ---
 
@@ -525,4 +533,4 @@ CyxTrade follows the same model, adapted for stablecoins.
 
 ---
 
-*Last updated: 2025-02*
+*Last updated: 2026-02*

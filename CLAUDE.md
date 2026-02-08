@@ -110,9 +110,18 @@ cyxtrade/
 │   ├── UX_DESIGN.md          # Interface patterns, onboarding
 │   └── EXPANSION_ROADMAP.md  # Future corridors and growth plan
 │
+├── contracts/             # Solidity smart contracts (Tron)
+│   ├── contracts/         # Contract source files
+│   │   ├── CyxTradeEscrow.sol      # Main escrow contract
+│   │   ├── ArbitratorRegistry.sol  # Arbitrator staking
+│   │   └── DisputeResolution.sol   # Dispute voting
+│   ├── migrations/        # Deployment scripts
+│   └── tronbox.js         # TronBox configuration
+│
 ├── backend/               # Node.js coordination API
 │   └── src/
 │       ├── routes/        # API routes (auth, trades, traders, uploads)
+│       ├── services/      # Business logic + blockchainService.ts
 │       ├── middleware/    # Auth, error handling
 │       └── utils/         # errors.ts, response.ts
 │
@@ -161,12 +170,21 @@ cyxtrade/
 - [x] Real-time chat with Socket.IO
 - [x] Trader payment methods and image uploads
 - [x] Comprehensive error handling and recovery system
+- [x] Smart contracts deployed (Shasta testnet)
+- [x] Backend blockchain service integration
+
+### Smart Contracts (Shasta Testnet)
+
+| Contract | Address | Purpose |
+|----------|---------|---------|
+| CyxTradeEscrow | `TPK3zPHrMHxH8nEHTpNRxVBSMa5Y4UGvEo` | Holds trader bonds |
+| ArbitratorRegistry | `TRHWA3VCYC2etTrSyVmoDfHcFhKiMgMYDw` | Arbitrator staking |
+| DisputeResolution | `TYogHXEJT6qhWDgrzF44oysMvzp4JaFszB` | Dispute voting |
 
 ### Ready for Implementation
-- [ ] Smart contracts (Solidity)
-- [ ] Arbitrator registry contract
 - [ ] IPFS evidence storage
 - [ ] Push notifications
+- [ ] Mainnet deployment
 
 ### Future Phases
 - [ ] CyxWiz protocol integration (E2E encrypted chat)

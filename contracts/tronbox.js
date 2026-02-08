@@ -10,6 +10,8 @@
  * - TRON_MAINNET_KEY: Mainnet private key (if different)
  */
 
+require('dotenv').config();
+
 const port = process.env.HOST_PORT || 9090;
 
 module.exports = {
@@ -53,7 +55,7 @@ module.exports = {
 
   compilers: {
     solc: {
-      version: '0.8.19',
+      version: '0.8.20',
       settings: {
         optimizer: {
           enabled: true,
