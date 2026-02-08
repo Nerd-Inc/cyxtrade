@@ -10,6 +10,7 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final isTrader = auth.user?['isTrader'] == true;
+    final isArbitrator = auth.user?['isArbitrator'] == true;
 
     return Scaffold(
       appBar: AppBar(
@@ -72,6 +73,27 @@ class ProfileScreen extends StatelessWidget {
                                   ),
                                 ),
                               ],
+                              if (isArbitrator) ...[
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.purple.shade100,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    'Arbitrator',
+                                    style: TextStyle(
+                                      color: Colors.purple.shade700,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 4),
@@ -117,6 +139,30 @@ class ProfileScreen extends StatelessWidget {
                 subtitle: 'Start earning by facilitating trades',
                 onTap: () => context.push('/become-trader'),
               ),
+
+            // Arbitrator section
+            if (isArbitrator)
+              _MenuItem(
+                icon: Icons.gavel,
+                title: 'Arbitrator Dashboard',
+                subtitle: 'View disputes and your arbitrator stats',
+                onTap: () {
+                  // TODO: Navigate to arbitrator dashboard
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Arbitrator dashboard coming soon')),
+                  );
+                },
+              )
+            else
+              _MenuItem(
+                icon: Icons.gavel,
+                title: 'Become an Arbitrator',
+                subtitle: isTrader
+                    ? 'Help resolve disputes and earn rewards'
+                    : 'Become a trader first to unlock',
+                onTap: () => context.push('/become-arbitrator'),
+              ),
+
             _MenuItem(
               icon: Icons.notifications,
               title: 'Notifications',

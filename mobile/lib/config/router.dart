@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../screens/splash_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/otp_screen.dart';
+import '../screens/auth/complete_profile_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/send/send_screen.dart';
 import '../screens/send/trader_selection_screen.dart';
@@ -12,6 +13,7 @@ import '../screens/history/history_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/trader/trader_dashboard_screen.dart';
 import '../screens/trader/become_trader_screen.dart';
+import '../screens/arbitrator/become_arbitrator_screen.dart';
 import '../screens/trader/payment_methods_screen.dart';
 import '../screens/trader/payment_method_form_screen.dart';
 import '../screens/trade/trade_success_screen.dart';
@@ -45,6 +47,10 @@ final appRouter = GoRouter(
         final phone = state.extra as String? ?? '';
         return OtpScreen(phone: phone);
       },
+    ),
+    GoRoute(
+      path: '/complete-profile',
+      builder: (context, state) => const CompleteProfileScreen(),
     ),
 
     // Main app with bottom nav
@@ -122,6 +128,12 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/become-trader',
       builder: (context, state) => const BecomeTraderScreen(),
+    ),
+
+    // Become an arbitrator
+    GoRoute(
+      path: '/become-arbitrator',
+      builder: (context, state) => const BecomeArbitratorScreen(),
     ),
 
     // Payment methods management
