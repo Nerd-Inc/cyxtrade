@@ -149,6 +149,18 @@ export async function initializeDatabase(): Promise<void> {
     `);
 
     await query(`
+      CREATE TABLE IF NOT EXISTS dispute_evidence (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        dispute_id UUID REFERENCES disputes(id) ON DELETE CASCADE,
+        submitted_by UUID REFERENCES users(id),
+        evidence_type VARCHAR(20),
+        content TEXT,
+        file_url VARCHAR(500),
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await query(`
       CREATE TABLE IF NOT EXISTS ratings (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         trade_id UUID REFERENCES trades(id),

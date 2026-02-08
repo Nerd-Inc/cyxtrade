@@ -1,4 +1,9 @@
 import { pool } from '../config/database';
+import {
+  encryptPaymentMethod,
+  decryptPaymentMethod,
+  isEncryptionEnabled,
+} from './encryptionService';
 
 export interface PaymentMethod {
   id: string;
@@ -200,43 +205,59 @@ class PaymentMethodService {
 
   /**
    * Get all payment methods for a trader
+   * Returns decrypted data - use maskPaymentMethod for display
    */
-  async getPaymentMethods(traderId: string): Promise<PaymentMethod[]> {
+  async getPaymentMethods(traderId: string, decrypt = true): Promise<PaymentMethod[]> {
     const result = await pool.query(
       `SELECT * FROM trader_payment_methods
        WHERE trader_id = $1 AND is_active = TRUE
        ORDER BY is_primary DESC, created_at DESC`,
       [traderId]
     );
+
+    if (decrypt) {
+      return result.rows.map((row: PaymentMethod) => decryptPaymentMethod(row, traderId));
+    }
+
     return result.rows;
   }
 
   /**
    * Get a single payment method
+   * Returns decrypted data
    */
-  async getPaymentMethod(id: string): Promise<PaymentMethod | null> {
+  async getPaymentMethod(id: string, decrypt = true): Promise<PaymentMethod | null> {
     const result = await pool.query(
       'SELECT * FROM trader_payment_methods WHERE id = $1',
       [id]
     );
-    return result.rows[0] || null;
+
+    if (!result.rows[0]) return null;
+
+    const method = result.rows[0] as PaymentMethod;
+    return decrypt ? decryptPaymentMethod(method, method.trader_id) : method;
   }
 
   /**
    * Get trader's primary payment method
+   * Returns decrypted data
    */
-  async getPrimaryPaymentMethod(traderId: string): Promise<PaymentMethod | null> {
+  async getPrimaryPaymentMethod(traderId: string, decrypt = true): Promise<PaymentMethod | null> {
     const result = await pool.query(
       `SELECT * FROM trader_payment_methods
        WHERE trader_id = $1 AND is_primary = TRUE AND is_active = TRUE
        LIMIT 1`,
       [traderId]
     );
-    return result.rows[0] || null;
+
+    if (!result.rows[0]) return null;
+
+    return decrypt ? decryptPaymentMethod(result.rows[0], traderId) : result.rows[0];
   }
 
   /**
    * Add a payment method
+   * Encrypts sensitive fields before storing
    */
   async addPaymentMethod(traderId: string, data: CreatePaymentMethodDTO): Promise<PaymentMethod> {
     // Validate data
@@ -246,7 +267,7 @@ class PaymentMethodService {
     }
 
     // If this is the first method or marked as primary, handle primary flag
-    const existingMethods = await this.getPaymentMethods(traderId);
+    const existingMethods = await this.getPaymentMethods(traderId, false);
     const shouldBePrimary = existingMethods.length === 0 || data.is_primary;
 
     // If setting as primary, unset other primaries
@@ -256,6 +277,17 @@ class PaymentMethodService {
         [traderId]
       );
     }
+
+    // Prepare data for encryption
+    const toStore = {
+      account_holder_name: data.account_holder_name,
+      phone_number: data.phone_number,
+      account_number: data.account_number,
+      iban: data.iban?.replace(/\s/g, '').toUpperCase(),
+    };
+
+    // Encrypt sensitive fields
+    const encrypted = encryptPaymentMethod(toStore, traderId);
 
     const result = await pool.query(
       `INSERT INTO trader_payment_methods
@@ -267,19 +299,20 @@ class PaymentMethodService {
         traderId,
         data.method_type,
         data.provider,
-        data.account_holder_name,
-        data.phone_number,
+        encrypted.account_holder_name,
+        encrypted.phone_number,
         data.phone_country_code,
         data.bank_name,
-        data.account_number,
-        data.iban?.replace(/\s/g, '').toUpperCase(),
+        encrypted.account_number,
+        encrypted.iban,
         data.swift_code?.replace(/\s/g, '').toUpperCase(),
         data.currency,
         shouldBePrimary,
       ]
     );
 
-    return result.rows[0];
+    // Return decrypted data
+    return decryptPaymentMethod(result.rows[0], traderId);
   }
 
   /**

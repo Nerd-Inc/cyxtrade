@@ -391,6 +391,44 @@ export async function openDisputeOnChain(tradeId: string): Promise<TxReceipt> {
   }
 }
 
+/**
+ * Resolve a dispute on-chain
+ * Executes the resolution decision and handles bond
+ *
+ * @param tradeId Trade ID
+ * @param resolution 1 = favor_user, 2 = favor_trader, 3 = split
+ */
+export async function resolveDisputeOnChain(tradeId: string, resolution: number): Promise<TxReceipt> {
+  if (!isBlockchainEnabled()) {
+    console.warn('[Blockchain] Not enabled, skipping resolveDispute');
+    return { txHash: '', success: false, error: 'Blockchain not enabled' };
+  }
+
+  try {
+    const tradeIdBytes = tronWeb.sha3(tradeId);
+
+    // Call resolveDispute on escrow contract
+    // Resolution: 1 = favor user (slash bond), 2 = favor trader (unlock bond), 3 = split
+    const tx = await escrowContract.resolveDispute(tradeIdBytes, resolution).send({
+      feeLimit: 100_000_000,
+    });
+
+    console.log(`[Blockchain] Dispute resolved: ${tx}`);
+
+    return {
+      txHash: tx,
+      success: true,
+    };
+  } catch (error: any) {
+    console.error('[Blockchain] resolveDisputeOnChain failed:', error);
+    return {
+      txHash: '',
+      success: false,
+      error: error.message || 'Transaction failed',
+    };
+  }
+}
+
 // ============ Query Operations ============
 
 /**

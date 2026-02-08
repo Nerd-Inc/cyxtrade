@@ -2,6 +2,7 @@ import sharp from 'sharp';
 import fs from 'fs/promises';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { isPinataEnabled, uploadToIPFS, getIPFSUrl } from './ipfsService';
 
 // Upload directory - configurable via environment
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
@@ -81,19 +82,39 @@ class UploadService {
 
   /**
    * Upload dispute evidence image
+   * Uses IPFS (Pinata) if configured, otherwise falls back to local storage
    */
   async uploadEvidence(disputeId: string, buffer: Buffer): Promise<UploadResult> {
-    const filename = `${disputeId}-${uuidv4()}.webp`;
-    const filepath = path.join(UPLOAD_DIR, 'evidence', filename);
+    const filename = `evidence-${disputeId}-${uuidv4()}.webp`;
 
-    await sharp(buffer)
+    // Process image: resize and convert to webp
+    const processed = await sharp(buffer)
       .resize(1200, null, {
         fit: 'inside',
         withoutEnlargement: true,
       })
       .webp({ quality: 85 })
-      .toFile(filepath);
+      .toBuffer();
 
+    // Try IPFS first if configured
+    if (isPinataEnabled()) {
+      try {
+        const cid = await uploadToIPFS(processed, filename, {
+          disputeId,
+          type: 'evidence',
+        });
+        const url = getIPFSUrl(cid);
+        console.log(`[Upload] Evidence stored on IPFS: ${cid}`);
+        return { url, filename: cid };
+      } catch (error) {
+        console.warn('[Upload] IPFS upload failed, falling back to local:', error);
+        // Fall through to local storage
+      }
+    }
+
+    // Fallback to local storage
+    const filepath = path.join(UPLOAD_DIR, 'evidence', filename);
+    await fs.writeFile(filepath, processed);
     const url = `${this.baseUrl}/uploads/evidence/${filename}`;
 
     return { url, filename };

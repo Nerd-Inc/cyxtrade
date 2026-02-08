@@ -2,7 +2,9 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { cryptoService, type Identity } from '../services/crypto'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+// In development, use relative path to go through Vite proxy
+// In production, use VITE_API_URL environment variable
+const API_URL = import.meta.env.VITE_API_URL || '/api'
 
 export interface User {
   id: string
@@ -63,11 +65,23 @@ export const useAuthStore = create<AuthState>()(
           const identity = await cryptoService.getOrCreateIdentity()
 
           // Request challenge from server
-          const challengeRes = await fetch(`${API_URL}/auth/challenge`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ publicKey: identity.publicKey })
-          })
+          let challengeRes: Response
+          try {
+            challengeRes = await fetch(`${API_URL}/auth/challenge`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ publicKey: identity.publicKey })
+            })
+          } catch (fetchError) {
+            throw new Error('Cannot connect to server. Make sure the backend is running on http://localhost:3000')
+          }
+
+          // Check if response is JSON
+          const contentType = challengeRes.headers.get('content-type')
+          if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server returned non-JSON response. Is the backend running on http://localhost:3000?')
+          }
+
           const challengeData = await challengeRes.json()
           if (!challengeRes.ok) {
             throw new Error(challengeData.error?.message || 'Failed to get challenge')
@@ -77,14 +91,26 @@ export const useAuthStore = create<AuthState>()(
           const signature = await cryptoService.signChallenge(challengeData.data.challenge)
 
           // Verify signature and get JWT
-          const verifyRes = await fetch(`${API_URL}/auth/verify-signature`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              publicKey: identity.publicKey,
-              signature
+          let verifyRes: Response
+          try {
+            verifyRes = await fetch(`${API_URL}/auth/verify-signature`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                publicKey: identity.publicKey,
+                signature
+              })
             })
-          })
+          } catch (fetchError) {
+            throw new Error('Cannot connect to server. Make sure the backend is running.')
+          }
+
+          // Check if response is JSON
+          const verifyContentType = verifyRes.headers.get('content-type')
+          if (!verifyContentType || !verifyContentType.includes('application/json')) {
+            throw new Error('Server returned non-JSON response. Is the backend running?')
+          }
+
           const verifyData = await verifyRes.json()
           if (!verifyRes.ok) {
             throw new Error(verifyData.error?.message || 'Failed to verify signature')

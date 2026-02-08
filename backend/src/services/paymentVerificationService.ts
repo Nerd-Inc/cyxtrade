@@ -14,6 +14,7 @@ export interface PaymentMethod {
   trader_id: string;
   method_type: string;
   provider: string | null;
+  bank_name: string | null;
   account_holder_name: string;
   phone_number: string | null;
   account_number: string | null;
