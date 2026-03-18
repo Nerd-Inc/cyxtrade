@@ -10,8 +10,17 @@ import AppHome from './pages/AppHome'
 import SendMoney from './pages/SendMoney'
 import History from './pages/History'
 import TradeDetails from './pages/TradeDetails'
+import Chat from './pages/Chat'
 import TraderDashboard from './pages/TraderDashboard'
 import PaymentMethods from './pages/PaymentMethods'
+import Settings from './pages/Settings'
+// Pro pages
+import ProMarketplace from './pages/ProMarketplace'
+import ProWallet from './pages/ProWallet'
+import ProOrders from './pages/ProOrders'
+import ProOrderDetails from './pages/ProOrderDetails'
+import ProTrade from './pages/ProTrade'
+import PostAd from './pages/PostAd'
 
 // Protected route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -147,12 +156,7 @@ export const router = createBrowserRouter([
     path: '/app/chat/:tradeId',
     element: (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Chat</h1>
-            <p className="text-gray-600 dark:text-gray-400">Chat feature coming soon - use the mobile app for real-time messaging</p>
-          </div>
-        </div>
+        <Chat />
       </ProtectedRoute>
     )
   },
@@ -173,12 +177,67 @@ export const router = createBrowserRouter([
     path: '/app/settings',
     element: (
       <ProtectedRoute>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Settings</h1>
-            <p className="text-gray-600 dark:text-gray-400">Settings page coming soon</p>
-          </div>
-        </div>
+        <Settings />
+      </ProtectedRoute>
+    )
+  },
+
+  // ============================================
+  // CyxTrade Pro Routes
+  // ============================================
+  {
+    path: '/pro',
+    element: (
+      <ProtectedRoute>
+        <ProMarketplace />
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: '/pro/wallet',
+    element: (
+      <ProtectedRoute>
+        <ProWallet />
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: '/pro/orders',
+    element: (
+      <ProtectedRoute>
+        <ProOrders />
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: '/pro/order/:id',
+    element: (
+      <ProtectedRoute>
+        <ProOrderDetails />
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: '/pro/trade/:id',
+    element: (
+      <ProtectedRoute>
+        <ProTrade />
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: '/pro/post-ad',
+    element: (
+      <ProtectedRoute>
+        <PostAd />
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: '/pro/my-ads',
+    element: (
+      <ProtectedRoute>
+        <ProMarketplace />
       </ProtectedRoute>
     )
   },

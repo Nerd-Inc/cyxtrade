@@ -26,6 +26,9 @@
 
 ## Our Solution
 
+CyxTrade offers **two trading modes** to serve different user needs:
+
+### CyxTrade (Basic Mode)
 **Users don't need crypto. Traders stake bonds. Backend handles on-chain.**
 
 Key components:
@@ -34,6 +37,15 @@ Key components:
 3. **Backend** - Creates trades on-chain on behalf of users
 4. **Smart Contract** - Holds trader bonds, locks per trade
 5. **Arbitrators** - Staked humans resolve disputes
+
+### CyxTrade Pro (Advanced Mode)
+**Binance-style P2P trading with user wallets and escrow.**
+
+Key components:
+1. **Users** - Have their own crypto wallets on the platform
+2. **Escrow** - User's crypto is locked as collateral (no bonds needed)
+3. **P2P Ads** - Users create buy/sell ads with custom prices
+4. **Direct Trading** - Peer-to-peer without intermediary traders
 
 Trade flow:
 ```
@@ -120,8 +132,14 @@ cyxtrade/
 │
 ├── backend/               # Node.js coordination API
 │   └── src/
-│       ├── routes/        # API routes (auth, trades, traders, uploads)
-│       ├── services/      # Business logic + blockchainService.ts
+│       ├── routes/        # API routes
+│       │   ├── auth.ts, trades.ts, traders.ts, uploads.ts
+│       │   └── pro/       # CyxTrade Pro routes
+│       │       ├── index.ts, ads.ts, orders.ts, wallet.ts
+│       ├── services/      # Business logic
+│       │   ├── db.ts, blockchainService.ts
+│       │   ├── walletService.ts      # Pro wallet operations
+│       │   └── p2pOrderService.ts    # Pro order/escrow logic
 │       ├── middleware/    # Auth, error handling
 │       └── utils/         # errors.ts, response.ts
 │
@@ -133,7 +151,21 @@ cyxtrade/
 │       ├── utils/         # Error utilities
 │       └── widgets/       # Reusable widgets (error_display, offline_banner)
 │
-├── web/                   # React web app
+├── web/                   # React web app (Vite + React 19)
+│   └── src/
+│       ├── pages/         # Page components
+│       │   ├── AppHome.tsx, Login.tsx, SendMoney.tsx, etc.
+│       │   ├── ProMarketplace.tsx    # Pro P2P marketplace
+│       │   ├── ProWallet.tsx         # Pro wallet management
+│       │   ├── ProOrders.tsx         # Pro order list
+│       │   ├── ProOrderDetails.tsx   # Pro order details
+│       │   ├── ProTrade.tsx          # Start trade from ad
+│       │   └── PostAd.tsx            # Post ad wizard
+│       ├── store/         # Zustand stores
+│       │   ├── auth.ts, trade.ts, trader.ts
+│       │   └── pro.ts     # Pro stores (wallet, ads, orders)
+│       └── router.tsx     # React Router config
+│
 └── admin/                 # React admin panel
 ```
 
@@ -173,6 +205,11 @@ cyxtrade/
 - [x] Comprehensive error handling and recovery system
 - [x] Smart contracts deployed (Shasta testnet)
 - [x] Backend blockchain service integration
+- [x] **CyxTrade Pro** - Advanced P2P trading mode
+  - [x] Wallet system (balances, deposits, withdrawals)
+  - [x] P2P ads (create, update, delete, browse)
+  - [x] P2P orders with escrow (lock, release, refund)
+  - [x] Pro frontend (React + Zustand)
 
 ### Smart Contracts (Shasta Testnet)
 
@@ -216,6 +253,92 @@ cyxtrade/
 5. **Resolution** → Smart contract executes automatically
 
 Arbitrators stake 500+ USDT. Corrupt voting = stake slashed.
+
+---
+
+## CyxTrade Pro
+
+CyxTrade Pro is the advanced P2P trading mode for users familiar with Binance P2P style trading.
+
+### Key Differences from Basic Mode
+
+| Feature | CyxTrade (Basic) | CyxTrade Pro |
+|---------|------------------|--------------|
+| **Collateral** | Trader bonds | User's crypto (escrow) |
+| **Wallet** | Not needed | Required |
+| **Who trades** | Users ↔ Traders | Users ↔ Users |
+| **Ads** | Trader corridors | User-created ads |
+| **Target** | Remittance users | Crypto-savvy users |
+
+### Pro Database Tables
+
+| Table | Purpose |
+|-------|---------|
+| `supported_assets` | Crypto/fiat assets (USDT, BTC, etc.) |
+| `user_wallets` | User balances (available + locked) |
+| `wallet_transactions` | Deposits, withdrawals, escrow ops |
+| `deposit_addresses` | User deposit addresses per asset |
+| `p2p_ads` | Buy/sell advertisements |
+| `p2p_orders` | Orders with escrow tracking |
+
+### Pro API Routes (`/api/pro/`)
+
+**Wallet Routes** (`/api/pro/wallet/`)
+- `GET /assets` - List supported assets
+- `GET /balances` - All wallet balances
+- `GET /balance/:asset` - Single asset balance
+- `POST /init/:asset` - Initialize wallet
+- `GET /deposit/:asset` - Get deposit address
+- `POST /withdraw` - Request withdrawal
+- `DELETE /withdraw/:id` - Cancel withdrawal
+- `GET /transactions` - Transaction history
+
+**Ads Routes** (`/api/pro/ads/`)
+- `GET /` - List ads with filters
+- `GET /my` - User's own ads
+- `POST /` - Create ad
+- `PUT /:id` - Update ad
+- `DELETE /:id` - Delete ad
+
+**Orders Routes** (`/api/pro/orders/`)
+- `GET /` - List orders
+- `POST /` - Create order (locks escrow)
+- `PUT /:id/paid` - Mark as paid
+- `PUT /:id/release` - Release crypto
+- `PUT /:id/cancel` - Cancel order
+- `POST /:id/dispute` - Open dispute
+
+### Pro Frontend Routes (`/pro/`)
+
+| Route | Page | Description |
+|-------|------|-------------|
+| `/pro` | ProMarketplace | Browse/filter P2P ads |
+| `/pro/wallet` | ProWallet | Manage balances, deposit, withdraw |
+| `/pro/orders` | ProOrders | View active/past orders |
+| `/pro/order/:id` | ProOrderDetails | Order actions (pay/release/cancel) |
+| `/pro/trade/:id` | ProTrade | Start trade from ad |
+| `/pro/post-ad` | PostAd | Multi-step ad wizard |
+
+### Escrow Flow
+
+```
+1. Seller creates "Sell USDT" ad
+2. Buyer creates order → Seller's USDT locked in escrow
+3. Buyer sends fiat → Marks "Paid"
+4. Seller verifies → Releases escrow to buyer
+5. If dispute → Arbitrators decide
+
+Cancel/Expire → Escrow refunded to seller
+```
+
+### Pro Store (Zustand)
+
+```typescript
+// web/src/store/pro.ts
+useWalletStore    // Balances, deposits, withdrawals
+useAdsStore       // P2P advertisements
+useOrdersStore    // P2P orders
+```
 
 ---
 
@@ -288,7 +411,12 @@ Arbitrators stake 500+ USDT. Corrupt voting = stake slashed.
 # Backend
 cd backend
 npm install
-npm run dev
+npm run dev          # Runs on http://localhost:3000
+
+# Web (React)
+cd web
+npm install
+npm run dev          # Runs on http://localhost:5173
 
 # Mobile
 cd mobile
@@ -299,6 +427,20 @@ flutter run
 cmake -B build
 cmake --build build
 ```
+
+### Web Routes
+
+| Route | Description |
+|-------|-------------|
+| `/` | Landing page |
+| `/login` | Authentication |
+| `/app` | Main app home |
+| `/app/send` | Send money |
+| `/app/history` | Trade history |
+| `/pro` | **CyxTrade Pro** marketplace |
+| `/pro/wallet` | Pro wallet |
+| `/pro/orders` | Pro orders |
+| `/pro/post-ad` | Create P2P ad |
 
 ---
 
@@ -368,4 +510,4 @@ try {
 
 ---
 
-*Last updated: 2026-02*
+*Last updated: 2026-03*
