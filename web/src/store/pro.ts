@@ -309,13 +309,18 @@ interface AdsState {
     asset: string
     fiatCurrency: string
     price: number
+    priceType?: 'fixed' | 'floating'
+    floatingMargin?: number
     totalAmount: number
-    minAmount: number
-    maxAmount: number
-    paymentMethods: string[]
-    paymentWindow?: number
+    minLimit: number
+    maxLimit: number
+    paymentMethodIds: string[]
+    paymentTimeLimit?: number
     terms?: string
     autoReply?: string
+    remarks?: string
+    regionRestrictions?: string
+    counterpartyConditions?: object
   }) => Promise<P2PAd | null>
   updateAd: (id: string, data: Partial<{
     price: number

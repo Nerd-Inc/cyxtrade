@@ -1,13 +1,14 @@
-import { useState, useEffect, createContext, useContext } from 'react'
+import { useState, useEffect, useRef, createContext, useContext, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
-// Dark mode context
-const DarkModeContext = createContext({
+// Dark mode context - exported for use in other components
+export const DarkModeContext = createContext({
   dark: false,
   toggle: () => {}
 })
 
-function App() {
+// Dark mode provider - exported to wrap the entire app
+export function DarkModeProvider({ children }: { children: ReactNode }) {
   const [dark, setDark] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('darkMode')
@@ -30,16 +31,74 @@ function App() {
 
   return (
     <DarkModeContext.Provider value={{ dark, toggle }}>
-      <div className={`min-h-screen ${dark ? 'bg-gray-900' : 'bg-white'}`}>
-        <Header />
-        <Hero />
-        <Features />
-        <HowItWorks />
-        <Download />
-        <FAQ />
-        <Footer />
-      </div>
+      {children}
     </DarkModeContext.Provider>
+  )
+}
+
+type LandingPair = {
+  from: string
+  to: string
+}
+
+type LandingMarketRow = {
+  pair: string
+  rate: number
+  change: number
+  pnl: number
+  snl: number
+}
+
+type LandingTraderCorridor = {
+  from: string
+  to: string
+  rate?: number
+  buyRate?: number
+  sellRate?: number
+}
+
+type LandingTrader = {
+  corridors?: LandingTraderCorridor[]
+}
+
+type LandingTradersResponse = {
+  data?: {
+    traders?: LandingTrader[]
+  }
+}
+
+const DEFAULT_LANDING_PAIRS: LandingPair[] = [
+  { from: 'AED', to: 'XAF' },
+  { from: 'USD', to: 'XAF' },
+  { from: 'EUR', to: 'XAF' },
+  { from: 'GBP', to: 'XAF' },
+]
+
+const COMMON_CURRENCIES = ['AED', 'USD', 'EUR', 'GBP', 'XAF', 'NGN', 'KES', 'GHS', 'MAD', 'SAR', 'QAR', 'EGP', 'INR', 'PKR', 'TRY']
+
+const LANDING_FALLBACK: Record<string, number> = {
+  'AED/XAF': 164.2,
+  'USD/XAF': 602.1,
+  'EUR/XAF': 658.4,
+  'GBP/XAF': 771.9,
+}
+
+const landingPairKey = (from: string, to: string) => `${from}/${to}`
+
+function App() {
+  const { dark } = useContext(DarkModeContext)
+
+  return (
+    <div className={`min-h-screen ${dark ? 'bg-gray-900' : 'bg-white'}`}>
+      <Header />
+      <Hero />
+      <LiveMarket />
+      <Features />
+      <HowItWorks />
+      <Download />
+      <FAQ />
+      <Footer />
+    </div>
   )
 }
 
@@ -145,11 +204,83 @@ function Header() {
 // Hero Component
 function Hero() {
   const { dark } = useContext(DarkModeContext)
+  const slides = [
+    {
+      image: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1600&q=80',
+      title: 'Send Worldwide',
+      caption: 'Move money across borders with trusted local traders.',
+      effect: 'pan-left',
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1600&q=80',
+      title: 'Trader Executes',
+      caption: 'Matched trader delivers payout using verified channels.',
+      effect: 'zoom-in',
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1600&q=80',
+      title: 'Family First',
+      caption: 'Money reaches home quickly for essential family needs.',
+      effect: 'soft-fade',
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1600&q=80',
+      title: 'Reaching Rural Homes',
+      caption: 'Support families in rural communities with accessible local payout routes.',
+      effect: 'pan-right',
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=1600&q=80',
+      title: 'Community Economy',
+      caption: 'Enable local merchants and agents to serve more people reliably.',
+      effect: 'zoom-out',
+    },
+    {
+      image: '/logo.png',
+      title: 'CyxTrade Network',
+      caption: 'Community-powered transfers with transparent trust.',
+      effect: 'focus',
+    }
+  ]
+  const [activeSlide, setActiveSlide] = useState(0)
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % slides.length)
+    }, 5000)
+    return () => window.clearInterval(id)
+  }, [slides.length])
+
+  const getSlideMotionClass = (effect: string, isActive: boolean) => {
+    const base = 'absolute inset-0 w-full h-full object-cover transition-all duration-[1400ms] ease-out will-change-transform'
+    if (!isActive) {
+      return `${base} opacity-0 scale-105`
+    }
+
+    if (effect === 'pan-left') return `${base} opacity-45 scale-105 -translate-x-4 md:-translate-x-8`
+    if (effect === 'pan-right') return `${base} opacity-45 scale-105 translate-x-4 md:translate-x-8`
+    if (effect === 'zoom-in') return `${base} opacity-45 scale-110`
+    if (effect === 'zoom-out') return `${base} opacity-45 scale-100`
+    if (effect === 'focus') return `${base} opacity-45 scale-95`
+    return `${base} opacity-45 scale-103`
+  }
 
   return (
-    <section className={`pt-24 pb-16 md:pt-32 md:pb-24 ${dark ? 'bg-gradient-to-b from-gray-800 to-gray-900' : 'bg-gradient-to-b from-teal-50 to-white'}`}>
+    <section className={`relative overflow-hidden pt-24 pb-16 md:pt-32 md:pb-24 ${dark ? 'bg-gradient-to-b from-gray-800 to-gray-900' : 'bg-gradient-to-b from-teal-50 to-white'}`}>
+      <div className="absolute inset-0">
+        {slides.map((slide, index) => (
+          <img
+            key={slide.title}
+            src={slide.image}
+            alt={slide.title}
+            className={getSlideMotionClass(slide.effect, activeSlide === index)}
+          />
+        ))}
+        <div className={`absolute inset-0 ${dark ? 'bg-gray-900/55' : 'bg-white/42'}`} />
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center">
+        <div className="relative z-10 text-center">
           <h1 className={`text-4xl md:text-6xl font-bold mb-6 ${dark ? 'text-white' : 'text-gray-900'}`}>
             Send Money Home,
             <br />
@@ -174,6 +305,26 @@ function Hero() {
             </Link>
           </div>
 
+          <div className={`mt-8 inline-flex items-center gap-3 px-4 py-2 rounded-full border ${dark ? 'border-gray-700 bg-gray-900/60 text-gray-300' : 'border-white/70 bg-white/80 text-gray-700'}`}>
+            <span className="h-2.5 w-2.5 rounded-full bg-teal-500 animate-pulse" />
+            <span className="text-sm font-medium">{slides[activeSlide].title}</span>
+            <span className="hidden sm:inline text-xs opacity-80">{slides[activeSlide].caption}</span>
+          </div>
+
+          <div className="mt-4 flex justify-center gap-2">
+            {slides.map((_, index) => (
+              <button
+                key={`hero-dot-${index}`}
+                type="button"
+                onClick={() => setActiveSlide(index)}
+                className={`h-2.5 rounded-full transition-all ${
+                  activeSlide === index ? 'w-8 bg-teal-500' : 'w-2.5 bg-gray-400/60 hover:bg-gray-400'
+                }`}
+                aria-label={`Show hero slide ${index + 1}`}
+              />
+            ))}
+          </div>
+
           {/* Stats */}
           <div className="mt-16 grid grid-cols-3 gap-8 max-w-3xl mx-auto">
             <div>
@@ -189,6 +340,227 @@ function Hero() {
               <div className={`mt-1 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>Protected</div>
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function LiveMarket() {
+  const { dark } = useContext(DarkModeContext)
+  const [rows, setRows] = useState<LandingMarketRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [metric, setMetric] = useState<'rate' | 'pnl' | 'snl'>('rate')
+  const [watchPairs, setWatchPairs] = useState<LandingPair[]>(DEFAULT_LANDING_PAIRS)
+  const [baseCurrency, setBaseCurrency] = useState('AED')
+  const [quoteCurrency, setQuoteCurrency] = useState('XAF')
+  const rowsRef = useRef<LandingMarketRow[]>([])
+
+  useEffect(() => {
+    rowsRef.current = rows
+  }, [rows])
+
+  const addWatchPair = () => {
+    const from = baseCurrency.trim().toUpperCase()
+    const to = quoteCurrency.trim().toUpperCase()
+    if (!from || !to || from === to) return
+
+    const exists = watchPairs.some((pair) => pair.from === from && pair.to === to)
+    if (exists) return
+
+    setWatchPairs((prev) => [...prev, { from, to }])
+  }
+
+  const removeWatchPair = (pairToRemove: string) => {
+    setWatchPairs((prev) => {
+      if (prev.length <= 1) return prev
+      return prev.filter((pair) => landingPairKey(pair.from, pair.to) !== pairToRemove)
+    })
+  }
+
+  useEffect(() => {
+    let mounted = true
+
+    const toRate = (corridor: LandingTraderCorridor): number | null => {
+      if (typeof corridor.rate === 'number') return corridor.rate
+      if (typeof corridor.buyRate === 'number' && typeof corridor.sellRate === 'number') {
+        return (corridor.buyRate + corridor.sellRate) / 2
+      }
+      if (typeof corridor.buyRate === 'number') return corridor.buyRate
+      if (typeof corridor.sellRate === 'number') return corridor.sellRate
+      return null
+    }
+
+    const refresh = async () => {
+      const nextRows = await Promise.all(
+        watchPairs.map(async (pair) => {
+          const key = landingPairKey(pair.from, pair.to)
+          const previous = rowsRef.current.find((row) => row.pair === key)?.rate ?? LANDING_FALLBACK[key] ?? 100
+
+          try {
+            const res = await fetch(`/api/traders?from=${pair.from}&to=${pair.to}&online=true&limit=50`)
+            const payload = (await res.json()) as LandingTradersResponse
+            const traders = payload?.data?.traders || []
+            const rates = traders
+              .flatMap((trader) => trader.corridors || [])
+              .filter((corridor) => corridor.from === pair.from && corridor.to === pair.to)
+              .map((corridor) => toRate(corridor))
+              .filter((rate): rate is number => typeof rate === 'number' && Number.isFinite(rate))
+
+            if (rates.length > 0) {
+              const rate = rates.reduce((sum, item) => sum + item, 0) / rates.length
+              const change = ((rate - previous) / previous) * 100
+              return {
+                pair: key,
+                rate,
+                change,
+                pnl: change,
+                snl: ((Math.max(...rates) - Math.min(...rates)) / Math.max(...rates)) * 100,
+              }
+            }
+          } catch {
+            // If API quotes are unavailable, keep moving simulated rates.
+          }
+
+          const drift = (Math.random() - 0.5) * 0.004
+          const rate = previous * (1 + drift)
+          return {
+            pair: key,
+            rate,
+            change: drift * 100,
+            pnl: drift * 100,
+            snl: Math.abs(drift) * 120,
+          }
+        })
+      )
+
+      if (mounted) {
+        setRows(nextRows)
+        setLoading(false)
+      }
+    }
+
+    refresh()
+    const id = window.setInterval(refresh, 3000)
+    return () => {
+      mounted = false
+      window.clearInterval(id)
+    }
+  }, [watchPairs])
+
+  const sortedRows = [...rows].sort((a, b) => {
+    if (metric === 'pnl') return b.pnl - a.pnl
+    if (metric === 'snl') return a.snl - b.snl
+    return b.rate - a.rate
+  })
+
+  return (
+    <section className={`py-10 md:py-14 ${dark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
+          <div>
+            <h2 className={`text-2xl md:text-3xl font-bold ${dark ? 'text-white' : 'text-gray-900'}`}>Live Market</h2>
+            <p className={dark ? 'text-gray-400' : 'text-gray-600'}>
+              Compare corridor rates in real time by Rate, PnL, and SNL.
+            </p>
+          </div>
+          <select
+            value={metric}
+            onChange={(e) => setMetric(e.target.value as 'rate' | 'pnl' | 'snl')}
+            className={`px-3 py-2 rounded-lg border ${dark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+          >
+            <option value="rate">Sort by Rate</option>
+            <option value="pnl">Sort by PnL</option>
+            <option value="snl">Sort by SNL</option>
+          </select>
+        </div>
+
+        <div className={`mb-4 rounded-xl border p-3 ${dark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'}`}>
+          <p className={`text-xs uppercase tracking-wide mb-2 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>Watchlist (Any Pair)</p>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+            <input
+              list="landing-base-list"
+              value={baseCurrency}
+              onChange={(e) => setBaseCurrency(e.target.value)}
+              maxLength={5}
+              placeholder="Base (e.g. USD)"
+              className={`px-3 py-2 rounded-lg border uppercase ${dark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+            />
+            <input
+              list="landing-quote-list"
+              value={quoteCurrency}
+              onChange={(e) => setQuoteCurrency(e.target.value)}
+              maxLength={5}
+              placeholder="Quote (e.g. XAF)"
+              className={`px-3 py-2 rounded-lg border uppercase ${dark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+            />
+            <button
+              type="button"
+              onClick={addWatchPair}
+              className="sm:col-span-2 px-3 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition"
+            >
+              Add Pair
+            </button>
+          </div>
+          <datalist id="landing-base-list">
+            {COMMON_CURRENCIES.map((currency) => <option key={`lb-${currency}`} value={currency} />)}
+          </datalist>
+          <datalist id="landing-quote-list">
+            {COMMON_CURRENCIES.map((currency) => <option key={`lq-${currency}`} value={currency} />)}
+          </datalist>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {watchPairs.map((pair) => {
+              const key = landingPairKey(pair.from, pair.to)
+              return (
+                <span key={key} className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border text-xs ${dark ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-gray-100 border-gray-200 text-gray-700'}`}>
+                  {key}
+                  <button
+                    type="button"
+                    onClick={() => removeWatchPair(key)}
+                    className="text-gray-400 hover:text-red-500"
+                    disabled={watchPairs.length <= 1}
+                  >
+                    x
+                  </button>
+                </span>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className={`rounded-2xl border overflow-hidden ${dark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'}`}>
+          <table className="w-full text-sm">
+            <thead className={dark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'}>
+              <tr>
+                <th className="text-left px-4 py-3 font-medium">Pair</th>
+                <th className="text-right px-4 py-3 font-medium">Rate</th>
+                <th className="text-right px-4 py-3 font-medium">Change</th>
+                <th className="text-right px-4 py-3 font-medium">PnL</th>
+                <th className="text-right px-4 py-3 font-medium">SNL</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && rows.length === 0 ? (
+                <tr>
+                  <td className="px-4 py-8 text-center text-gray-500" colSpan={5}>Loading market feed...</td>
+                </tr>
+              ) : (
+                sortedRows.map((row) => (
+                  <tr key={row.pair} className={dark ? 'border-t border-gray-800' : 'border-t border-gray-200'}>
+                    <td className={`px-4 py-3 font-medium ${dark ? 'text-white' : 'text-gray-900'}`}>{row.pair}</td>
+                    <td className={`px-4 py-3 text-right ${dark ? 'text-white' : 'text-gray-900'}`}>{row.rate.toFixed(3)}</td>
+                    <td className={`px-4 py-3 text-right font-semibold ${row.change >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {row.change >= 0 ? '+' : ''}{row.change.toFixed(3)}%
+                    </td>
+                    <td className={`px-4 py-3 text-right font-semibold ${row.pnl >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {row.pnl >= 0 ? '+' : ''}{row.pnl.toFixed(2)}%
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold text-amber-500">{row.snl.toFixed(2)}%</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </section>

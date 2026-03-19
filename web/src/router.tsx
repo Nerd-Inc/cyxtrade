@@ -21,6 +21,8 @@ import ProOrders from './pages/ProOrders'
 import ProOrderDetails from './pages/ProOrderDetails'
 import ProTrade from './pages/ProTrade'
 import PostAd from './pages/PostAd'
+import ProChat from './pages/ProChat'
+import ProUserCenter from './pages/ProUserCenter'
 
 // Protected route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -238,6 +240,22 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <ProMarketplace />
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: '/pro/chat',
+    element: (
+      <ProtectedRoute>
+        <ProChat />
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: '/pro/user-center',
+    element: (
+      <ProtectedRoute>
+        <ProUserCenter />
       </ProtectedRoute>
     )
   },

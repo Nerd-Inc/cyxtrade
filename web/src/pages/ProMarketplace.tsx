@@ -1,7 +1,8 @@
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo, useRef, useContext } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
 import { useAdsStore, useWalletStore, type P2PAd } from '../store/pro'
+import { DarkModeContext } from '../App'
 
 // Crypto assets with icons, names, symbols, and colors
 const CRYPTO_ASSETS = [
@@ -275,6 +276,7 @@ const CURRENCY_PREFIXES: Record<string, string> = {
 }
 
 export default function ProMarketplace() {
+  const { dark, toggle: toggleTheme } = useContext(DarkModeContext)
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const { ads, isLoading, error, fetchAds } = useAdsStore()
@@ -300,11 +302,88 @@ export default function ProMarketplace() {
   // Payment modal state
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentSearch, setPaymentSearch] = useState('')
+
+  // Expanded ad state (for buy/sell form)
+  const [expandedAdId, setExpandedAdId] = useState<string | null>(null)
+  const [orderAmount, setOrderAmount] = useState('')
+  const [autoSubscribe, setAutoSubscribe] = useState(false)
   const [selectedPayments, setSelectedPayments] = useState<string[]>([])
 
   // Amount filter
   const [showAmountModal, setShowAmountModal] = useState(false)
   const [amountFilter, setAmountFilter] = useState('')
+
+  // Sort dropdown state
+  const [showSortDropdown, setShowSortDropdown] = useState(false)
+  const [sortBy, setSortBy] = useState<'price' | 'orders' | 'completion' | 'rating'>('price')
+  const sortDropdownRef = useRef<HTMLDivElement>(null)
+
+  const SORT_OPTIONS = [
+    { value: 'price', label: 'Price' },
+    { value: 'orders', label: 'Completed order number' },
+    { value: 'completion', label: 'Completion Rate' },
+    { value: 'rating', label: 'Rating' },
+  ] as const
+
+  // Close sort dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setShowSortDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const adsPerPage = 11
+
+  // Mock ads data based on Binance P2P design
+  const MOCK_BUY_ADS = [
+    { id: '1', traderName: 'Jooxrb', avatar: 'J', avatarColor: '#1E88E5', verified: false, orders: 314, completionRate: 99.70, thumbsUp: 97.67, responseTime: 15, price: 3.700, currency: 'AED', available: 3763.91, asset: 'USDT', minLimit: 1000, maxLimit: 13926, paymentMethods: ['Bank Transfer'] },
+    { id: '2', traderName: 'QinXhao', avatar: 'Q', avatarColor: '#43A047', verified: true, orders: 77, completionRate: 100.00, thumbsUp: 95.11, responseTime: 15, price: 3.702, currency: 'AED', available: 59473.20, asset: 'USDT', minLimit: 49999, maxLimit: 50000, paymentMethods: ['Bank Transfer'] },
+    { id: '3', traderName: 'Amounex', avatar: 'A', avatarColor: '#8E24AA', verified: true, orders: 421, completionRate: 100.00, thumbsUp: 99.83, responseTime: 15, price: 3.702, currency: 'AED', available: 52005.76, asset: 'USDT', minLimit: 19999, maxLimit: 50000, paymentMethods: ['Bank Transfer'] },
+    { id: '4', traderName: 'Y3seenn', avatar: 'Y', avatarColor: '#FB8C00', verified: false, orders: 11, completionRate: 91.70, thumbsUp: 100.00, responseTime: 15, price: 3.702, currency: 'AED', available: 2438.88, asset: 'USDT', minLimit: 8900, maxLimit: 8962, paymentMethods: ['Bank Transfer'] },
+    { id: '5', traderName: 'MrExchange444', avatar: 'M', avatarColor: '#00897B', verified: true, orders: 265, completionRate: 98.90, thumbsUp: 100.00, responseTime: 15, price: 3.702, currency: 'AED', available: 69689.26, asset: 'USDT', minLimit: 20000, maxLimit: 257989, paymentMethods: ['Bank Transfer'] },
+    { id: '6', traderName: 'User-0aab4', avatar: 'U', avatarColor: '#E53935', verified: false, orders: 328, completionRate: 99.70, thumbsUp: 100.00, responseTime: 15, price: 3.703, currency: 'AED', available: 534.58, asset: 'USDT', minLimit: 1000, maxLimit: 1979, paymentMethods: ['Bank Transfer'] },
+    { id: '7', traderName: 'CryptoKing', avatar: 'C', avatarColor: '#5E35B1', verified: true, orders: 892, completionRate: 99.85, thumbsUp: 98.45, responseTime: 10, price: 3.698, currency: 'AED', available: 125000.00, asset: 'USDT', minLimit: 5000, maxLimit: 100000, paymentMethods: ['Bank Transfer'] },
+    { id: '8', traderName: 'FastTrader', avatar: 'F', avatarColor: '#039BE5', verified: true, orders: 1205, completionRate: 99.92, thumbsUp: 99.12, responseTime: 5, price: 3.699, currency: 'AED', available: 85000.00, asset: 'USDT', minLimit: 1000, maxLimit: 50000, paymentMethods: ['Bank Transfer'] },
+    { id: '9', traderName: 'P2PMaster', avatar: 'P', avatarColor: '#C2185B', verified: true, orders: 2341, completionRate: 99.95, thumbsUp: 99.50, responseTime: 8, price: 3.701, currency: 'AED', available: 200000.00, asset: 'USDT', minLimit: 10000, maxLimit: 150000, paymentMethods: ['Bank Transfer'] },
+    { id: '10', traderName: 'TradeHub', avatar: 'T', avatarColor: '#00838F', verified: true, orders: 678, completionRate: 99.40, thumbsUp: 97.80, responseTime: 12, price: 3.704, currency: 'AED', available: 42000.00, asset: 'USDT', minLimit: 2000, maxLimit: 30000, paymentMethods: ['Bank Transfer'] },
+    { id: '11', traderName: 'CoinDealer', avatar: 'C', avatarColor: '#6D4C41', verified: false, orders: 189, completionRate: 98.50, thumbsUp: 96.20, responseTime: 20, price: 3.705, currency: 'AED', available: 18500.00, asset: 'USDT', minLimit: 1000, maxLimit: 12000, paymentMethods: ['Bank Transfer'] },
+    { id: '12', traderName: 'SwiftExchange', avatar: 'S', avatarColor: '#455A64', verified: true, orders: 1456, completionRate: 99.80, thumbsUp: 98.90, responseTime: 6, price: 3.699, currency: 'AED', available: 95000.00, asset: 'USDT', minLimit: 5000, maxLimit: 75000, paymentMethods: ['Bank Transfer'] },
+  ]
+
+  const MOCK_SELL_ADS = [
+    { id: '101', traderName: 'Tether_Official', avatar: 'T', avatarColor: '#26A69A', verified: false, orders: 12, completionRate: 92.40, thumbsUp: 98.63, responseTime: 15, price: 3.686, currency: 'AED', available: 1500.00, asset: 'USDT', minLimit: 5000, maxLimit: 5529, paymentMethods: ['Bank Transfer'] },
+    { id: '102', traderName: 'LastHope_exchange', avatar: 'L', avatarColor: '#26A69A', verified: false, orders: 251, completionRate: 99.30, thumbsUp: 100.00, responseTime: 15, price: 3.685, currency: 'AED', available: 1193.08, asset: 'USDT', minLimit: 1000, maxLimit: 4396, paymentMethods: ['Aani', 'Bank Transfer', 'ADIB: Abu Dhabi Isla...'] },
+    { id: '103', traderName: 'AA-Cr-Zeus', avatar: 'A', avatarColor: '#66BB6A', verified: false, orders: 24, completionRate: 100.00, thumbsUp: 99.42, responseTime: 30, price: 3.684, currency: 'AED', available: 479.80, asset: 'USDT', minLimit: 1765, maxLimit: 1766, paymentMethods: ['Bank Transfer'] },
+    { id: '104', traderName: 'THR_Alrawahi', avatar: 'T', avatarColor: '#26A69A', verified: false, orders: 96, completionRate: 99.00, thumbsUp: 99.56, responseTime: 60, price: 3.683, currency: 'AED', available: 6800.00, asset: 'USDT', minLimit: 24999, maxLimit: 25000, paymentMethods: ['Cash Deposit to Bank'] },
+    { id: '105', traderName: 'salimalrawahi', avatar: 'S', avatarColor: '#78909C', verified: false, orders: 182, completionRate: 100.00, thumbsUp: 98.91, responseTime: 180, price: 3.683, currency: 'AED', available: 6792.00, asset: 'USDT', minLimit: 22000, maxLimit: 25000, paymentMethods: ['Cash Deposit to Bank'] },
+    { id: '106', traderName: 'Hossain', avatar: 'H', avatarColor: '#42A5F5', verified: true, orders: 64, completionRate: 94.20, thumbsUp: 97.50, responseTime: 15, price: 3.682, currency: 'AED', available: 27160.00, asset: 'USDT', minLimit: 30000, maxLimit: 100000, paymentMethods: ['Emirates NBD', 'ADIB: Abu Dhabi Isla...'] },
+    { id: '107', traderName: 'QuickSeller', avatar: 'Q', avatarColor: '#7B1FA2', verified: true, orders: 534, completionRate: 99.80, thumbsUp: 99.20, responseTime: 8, price: 3.681, currency: 'AED', available: 45000.00, asset: 'USDT', minLimit: 5000, maxLimit: 35000, paymentMethods: ['Bank Transfer', 'Aani'] },
+    { id: '108', traderName: 'CashKing_UAE', avatar: 'C', avatarColor: '#F57C00', verified: true, orders: 892, completionRate: 99.60, thumbsUp: 98.80, responseTime: 10, price: 3.680, currency: 'AED', available: 89000.00, asset: 'USDT', minLimit: 10000, maxLimit: 75000, paymentMethods: ['Bank Transfer'] },
+    { id: '109', traderName: 'DubaiTrader', avatar: 'D', avatarColor: '#D32F2F', verified: true, orders: 1205, completionRate: 99.90, thumbsUp: 99.60, responseTime: 5, price: 3.679, currency: 'AED', available: 150000.00, asset: 'USDT', minLimit: 20000, maxLimit: 120000, paymentMethods: ['Emirates NBD', 'Bank Transfer'] },
+    { id: '110', traderName: 'FastCash24', avatar: 'F', avatarColor: '#388E3C', verified: false, orders: 156, completionRate: 97.80, thumbsUp: 96.50, responseTime: 25, price: 3.685, currency: 'AED', available: 12500.00, asset: 'USDT', minLimit: 1000, maxLimit: 10000, paymentMethods: ['Bank Transfer'] },
+    { id: '111', traderName: 'CryptoEmirates', avatar: 'C', avatarColor: '#1565C0', verified: true, orders: 445, completionRate: 99.20, thumbsUp: 98.10, responseTime: 12, price: 3.678, currency: 'AED', available: 65000.00, asset: 'USDT', minLimit: 8000, maxLimit: 50000, paymentMethods: ['Cash Deposit to Bank', 'Bank Transfer'] },
+    { id: '112', traderName: 'GulfExchange', avatar: 'G', avatarColor: '#00695C', verified: true, orders: 789, completionRate: 99.70, thumbsUp: 99.00, responseTime: 8, price: 3.677, currency: 'AED', available: 110000.00, asset: 'USDT', minLimit: 15000, maxLimit: 90000, paymentMethods: ['Bank Transfer', 'Emirates NBD'] },
+  ]
+
+  // Use mock data instead of store data
+  const mockAds = tradeType === 'buy' ? MOCK_BUY_ADS : MOCK_SELL_ADS
+
+  // Filter by selected asset
+  const filteredMockAds = mockAds.map(ad => ({
+    ...ad,
+    asset: selectedAsset,
+    currency: selectedFiat
+  }))
+
+  // Pagination
+  const totalPages = Math.ceil(filteredMockAds.length / adsPerPage)
+  const paginatedAds = filteredMockAds.slice((currentPage - 1) * adsPerPage, currentPage * adsPerPage)
 
   useEffect(() => {
     fetchAds({ type: tradeType, asset: selectedAsset, fiatCurrency: selectedFiat || undefined, paymentMethod: selectedPayment || undefined })
@@ -409,170 +488,328 @@ export default function ProMarketplace() {
   // Get payment method color
   const getPaymentColor = (method: string) => PAYMENT_METHOD_COLORS[method] || PAYMENT_METHOD_COLORS.DEFAULT
 
+  // Mock user stats (replace with real data from API)
+  const userStats = {
+    trades30d: 25,
+    completionRate: 92.59,
+    avgReleaseTime: 4.29,
+    avgPayTime: 3.63,
+    positiveFeedback: 98.04,
+    feedbackCount: 950,
+  }
+
+  const [activeTab, setActiveTab] = useState<'express' | 'p2p' | 'block'>('p2p')
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className={`min-h-screen ${dark ? 'bg-gray-900' : 'bg-gray-50'}`}>
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
+      <header className={`${dark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b sticky top-0 z-10`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
+          <div className="flex justify-between items-center h-14">
+            <div className="flex items-center space-x-6">
               <Link to="/app" className="flex items-center space-x-2">
-                <img src="/logo.png" alt="CyxTrade" className="h-8 w-8" />
-                <span className="text-xl font-bold text-teal-600">CyxTrade</span>
+                <span className="text-xl font-bold text-orange-500">CyxTrade</span>
               </Link>
-              <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs font-semibold rounded">
-                PRO
-              </span>
+
+              {/* Main Navigation Tabs */}
+              <nav className="hidden md:flex items-center">
+                <button
+                  onClick={() => setActiveTab('express')}
+                  className={`px-4 py-4 text-sm font-medium border-b-2 transition ${
+                    activeTab === 'express'
+                      ? 'text-orange-500 border-orange-500'
+                      : `${dark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} border-transparent`
+                  }`}
+                >
+                  Express
+                </button>
+                <button
+                  onClick={() => setActiveTab('p2p')}
+                  className={`px-4 py-4 text-sm font-medium border-b-2 transition ${
+                    activeTab === 'p2p'
+                      ? 'text-orange-500 border-orange-500'
+                      : `${dark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} border-transparent`
+                  }`}
+                >
+                  P2P
+                </button>
+                <button
+                  onClick={() => setActiveTab('block')}
+                  className={`px-4 py-4 text-sm font-medium border-b-2 transition ${
+                    activeTab === 'block'
+                      ? 'text-orange-500 border-orange-500'
+                      : `${dark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} border-transparent`
+                  }`}
+                >
+                  Block Trade
+                </button>
+              </nav>
             </div>
 
-            <nav className="hidden md:flex items-center space-x-6">
-              <Link to="/pro" className="text-teal-600 font-medium">P2P</Link>
-              <Link to="/pro/orders" className="text-gray-600 dark:text-gray-400 hover:text-teal-600">Orders</Link>
-              <Link to="/pro/wallet" className="text-gray-600 dark:text-gray-400 hover:text-teal-600">Wallet</Link>
-              <Link to="/pro/post-ad" className="text-gray-600 dark:text-gray-400 hover:text-teal-600">Post Ad</Link>
-            </nav>
+            <div className="flex items-center gap-4">
+              {/* Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className={`p-2 rounded-lg transition ${dark ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {dark ? (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                  </svg>
+                )}
+              </button>
 
-            <div className="flex items-center gap-3">
-              {/* Currency Selector Button */}
+              {/* Currency Selector */}
               <button
                 onClick={() => setShowCurrencyModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 dark:bg-gray-600 text-white rounded-lg hover:bg-gray-600 dark:hover:bg-gray-500 transition"
+                className={`flex items-center gap-1.5 px-3 py-1.5 border rounded hover:opacity-80 transition text-sm ${
+                  dark ? 'border-gray-600 text-white' : 'border-gray-300 text-gray-700'
+                }`}
               >
                 <span className="font-medium">{selectedFiat}</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
 
-              <Link to="/app" className="hidden sm:block text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm">
-                Basic
+              <Link to="/pro/orders" className={`text-sm ${dark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>Orders</Link>
+              <Link to="/pro/wallet" className={`text-sm ${dark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>Wallet</Link>
+
+              {/* Chat */}
+              <Link to="/pro/chat" className={`flex items-center gap-1 text-sm ${dark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                Chat
               </Link>
-              <button
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm"
-              >
-                {isLoggingOut ? '...' : 'Logout'}
-              </button>
+
+              {/* User Center */}
+              <Link to="/pro/user-center" className={`flex items-center gap-1 text-sm ${dark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                User Center
+              </Link>
+
+              {/* More dropdown */}
+              <div className="relative group">
+                <button className={`flex items-center gap-1.5 text-sm ${dark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  More
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div className={`absolute right-0 mt-2 w-52 rounded-lg shadow-xl border py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 ${dark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+                  <Link to="/pro/user-center" className={`flex items-center gap-3 px-4 py-2.5 text-sm ${dark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    Payment Methods
+                  </Link>
+                  <Link to="/pro/post-ad" className={`flex items-center gap-3 px-4 py-2.5 text-sm ${dark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Post new Ad
+                  </Link>
+                  <Link to="/pro/my-ads" className={`flex items-center gap-3 px-4 py-2.5 text-sm ${dark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    My ads
+                  </Link>
+                  <div className={`flex items-center justify-between gap-3 px-4 py-2.5 text-sm cursor-pointer ${dark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
+                    <div className="flex items-center gap-3">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      P2P Help Center
+                    </div>
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                  <div className={`border-t my-1 ${dark ? 'border-gray-700' : 'border-gray-200'}`}></div>
+                  <button
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className={`flex items-center gap-3 w-full text-left px-4 py-2.5 text-sm ${dark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    {isLoggingOut ? 'Logging out...' : 'Logout'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Mobile Navigation */}
-      <nav className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex gap-4 overflow-x-auto">
-        <Link to="/pro" className="text-teal-600 font-medium whitespace-nowrap">P2P</Link>
-        <Link to="/pro/orders" className="text-gray-600 dark:text-gray-400 whitespace-nowrap">Orders</Link>
-        <Link to="/pro/wallet" className="text-gray-600 dark:text-gray-400 whitespace-nowrap">Wallet</Link>
-        <Link to="/pro/post-ad" className="text-gray-600 dark:text-gray-400 whitespace-nowrap">Post Ad</Link>
+      {/* Mobile Navigation Tabs */}
+      <nav className={`md:hidden flex border-b ${dark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+        <button
+          onClick={() => setActiveTab('express')}
+          className={`flex-1 py-3 text-sm font-medium border-b-2 transition ${
+            activeTab === 'express'
+              ? 'text-orange-500 border-orange-500'
+              : `${dark ? 'text-gray-400' : 'text-gray-500'} border-transparent`
+          }`}
+        >
+          Express
+        </button>
+        <button
+          onClick={() => setActiveTab('p2p')}
+          className={`flex-1 py-3 text-sm font-medium border-b-2 transition ${
+            activeTab === 'p2p'
+              ? 'text-orange-500 border-orange-500'
+              : `${dark ? 'text-gray-400' : 'text-gray-500'} border-transparent`
+          }`}
+        >
+          P2P
+        </button>
+        <button
+          onClick={() => setActiveTab('block')}
+          className={`flex-1 py-3 text-sm font-medium border-b-2 transition ${
+            activeTab === 'block'
+              ? 'text-orange-500 border-orange-500'
+              : `${dark ? 'text-gray-400' : 'text-gray-500'} border-transparent`
+          }`}
+        >
+          Block Trade
+        </button>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Balance Banner */}
-        {userBalance && (
-          <div className="bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-xl p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-teal-100 text-sm">Available {selectedAsset}</p>
-                <p className="text-2xl font-bold">{userBalance.available.toFixed(4)}</p>
-                <p className="text-teal-100 text-xs">Locked: {userBalance.locked.toFixed(4)}</p>
-              </div>
-              <Link
-                to="/pro/wallet"
-                className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
-              >
-                Manage Wallet
-              </Link>
-            </div>
+      <main className="max-w-7xl mx-auto px-4 py-4">
+        {/* Promotional Banner */}
+        <div className={`relative rounded-xl overflow-hidden mb-6 ${dark ? 'bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900' : 'bg-gradient-to-r from-orange-500 via-orange-400 to-orange-500'}`}>
+          <div className="absolute inset-0 opacity-20">
+            <div className={`absolute top-4 right-20 w-24 h-24 rounded-full ${dark ? 'bg-green-500/30' : 'bg-white/30'}`}></div>
+            <div className={`absolute top-8 right-8 w-16 h-16 rounded-full ${dark ? 'bg-orange-500/30' : 'bg-white/30'}`}></div>
           </div>
-        )}
-
-        {/* Buy/Sell Toggle */}
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => setTradeType('buy')}
-            className={`flex-1 py-3 rounded-xl font-semibold transition ${
-              tradeType === 'buy'
-                ? 'bg-green-500 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-            }`}
-          >
-            Buy
-          </button>
-          <button
-            onClick={() => setTradeType('sell')}
-            className={`flex-1 py-3 rounded-xl font-semibold transition ${
-              tradeType === 'sell'
-                ? 'bg-red-500 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-            }`}
-          >
-            Sell
-          </button>
+          <div className="relative px-6 py-8 md:py-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <p className={`text-sm font-medium mb-1 ${dark ? 'text-orange-500' : 'text-white/80'}`}>CYXTRADE</p>
+              <h2 className="text-2xl md:text-3xl font-bold text-white">
+                SELL USDT & USDC SAFER & FASTER VIA
+              </h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-white">
+                DIRECT BANK TRANSFER
+              </h2>
+            </div>
+            <Link
+              to="/pro/post-ad"
+              className={`inline-flex items-center justify-center px-6 py-3 font-semibold rounded-lg transition whitespace-nowrap ${dark ? 'bg-white text-gray-900 hover:bg-gray-100' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
+            >
+              JOIN HERE
+            </Link>
+          </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-6">
+        {/* Buy/Sell Toggle + Crypto Tabs Row */}
+        <div className="flex flex-col gap-4 mb-4">
+          {/* Buy/Sell Toggle - Small */}
+          <div className="flex items-center gap-4">
+            <div className={`inline-flex rounded-lg p-1 ${dark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+              <button
+                onClick={() => { setTradeType('buy'); setCurrentPage(1); }}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition ${
+                  tradeType === 'buy'
+                    ? 'bg-green-500 text-white'
+                    : `${dark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`
+                }`}
+              >
+                Buy
+              </button>
+              <button
+                onClick={() => { setTradeType('sell'); setCurrentPage(1); }}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition ${
+                  tradeType === 'sell'
+                    ? 'bg-red-500 text-white'
+                    : `${dark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`
+                }`}
+              >
+                Sell
+              </button>
+            </div>
+
+            {/* Crypto Tabs */}
+            <div className="flex-1 overflow-x-auto scrollbar-hide">
+              <div className="flex items-center gap-1">
+                {CRYPTO_ASSETS.slice(0, 12).map(crypto => (
+                  <button
+                    key={crypto.code}
+                    onClick={() => setSelectedAsset(crypto.code)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition flex items-center gap-1.5 ${
+                      selectedAsset === crypto.code
+                        ? `${dark ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-900'}`
+                        : `${dark ? 'text-gray-400 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`
+                    }`}
+                  >
+                    {crypto.code}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Filters Row */}
           <div className="flex flex-wrap items-center gap-3">
-            {/* Crypto Selector Button */}
-            <button
-              onClick={() => setShowCryptoModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-            >
-              {selectedCryptoData && (
-                <span
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                  style={{ backgroundColor: selectedCryptoData.color }}
-                >
-                  {selectedCryptoData.icon}
-                </span>
-              )}
-              <span className="font-semibold text-gray-900 dark:text-white">{selectedAsset}</span>
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
+            {/* Transaction Amount with Currency Selector */}
+            <div className={`flex items-center rounded-lg border text-sm transition overflow-hidden ${
+              dark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'
+            }`}>
+              {/* Amount Input */}
+              <input
+                type="text"
+                value={amountFilter}
+                onChange={(e) => setAmountFilter(e.target.value)}
+                placeholder="Transaction amount"
+                className={`w-36 px-3 py-2 outline-none bg-transparent ${
+                  dark ? 'text-gray-200 placeholder-gray-500' : 'text-gray-700 placeholder-gray-400'
+                }`}
+              />
+              {/* Separator */}
+              <div className={`h-6 w-px ${dark ? 'bg-gray-600' : 'bg-gray-300'}`} />
+              {/* Currency Selector */}
+              <button
+                onClick={() => setShowCurrencyModal(true)}
+                className={`flex items-center gap-2 px-3 py-2 transition ${
+                  dark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
+                }`}
+              >
+                {selectedCurrencyData && (
+                  <span
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
+                    style={{ backgroundColor: selectedCurrencyData.color }}
+                  >
+                    {selectedCurrencyData.symbol.slice(0, 1)}
+                  </span>
+                )}
+                <span className="font-medium">{selectedFiat}</span>
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
 
-            {/* Currency Selector Button */}
-            <button
-              onClick={() => setShowCurrencyModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-            >
-              {selectedCurrencyData && (
-                <span
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                  style={{ backgroundColor: selectedCurrencyData.color }}
-                >
-                  {selectedCurrencyData.symbol.slice(0, 2)}
-                </span>
-              )}
-              <span className="font-semibold text-gray-900 dark:text-white">{selectedFiat}</span>
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {/* Amount Filter */}
-            <button
-              onClick={() => setShowAmountModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-            >
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {amountFilter || 'Amount'}
-              </span>
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {/* Payment Method Selector */}
+            {/* All Payment Methods */}
             <button
               onClick={() => setShowPaymentModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition ${
+                dark ? 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600' : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+              }`}
             >
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {selectedPayment || 'Payment'}
-              </span>
+              <span>{selectedPayment || 'All payment methods'}</span>
               <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
@@ -581,137 +818,776 @@ export default function ProMarketplace() {
             {/* Filter Icon */}
             <button
               onClick={() => fetchAds({ type: tradeType, asset: selectedAsset, fiatCurrency: selectedFiat || undefined, paymentMethod: selectedPayment || undefined })}
-              className="p-2.5 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+              className={`p-2 rounded-lg border transition ${
+                dark ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-white border-gray-300 hover:border-gray-400'
+              }`}
               title="Filter"
             >
-              <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-5 h-5 ${dark ? 'text-gray-400' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
               </svg>
             </button>
+
+            {/* Spacer */}
+            <div className="flex-1"></div>
+
+            {/* Sort By Dropdown */}
+            <div className="relative" ref={sortDropdownRef}>
+              <button
+                onClick={() => setShowSortDropdown(!showSortDropdown)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition ${
+                  showSortDropdown
+                    ? 'border-orange-500 bg-gray-800'
+                    : dark ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-white border-gray-300 hover:border-gray-400'
+                }`}
+              >
+                <span className={dark ? 'text-gray-500' : 'text-gray-400'}>Sort By</span>
+                <span className={`font-medium ${showSortDropdown ? 'text-orange-500' : dark ? 'text-white' : 'text-gray-900'}`}>
+                  {SORT_OPTIONS.find(opt => opt.value === sortBy)?.label}
+                </span>
+                <svg className={`w-4 h-4 transition-transform ${showSortDropdown ? 'rotate-180 text-orange-500' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Dropdown Menu */}
+              {showSortDropdown && (
+                <div className={`absolute right-0 top-full mt-2 w-56 rounded-lg shadow-lg z-50 py-2 ${
+                  dark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+                }`}>
+                  {SORT_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setSortBy(option.value)
+                        setShowSortDropdown(false)
+                      }}
+                      className={`w-full flex items-center justify-between px-4 py-3 text-sm transition ${
+                        dark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
+                      } ${sortBy === option.value ? (dark ? 'text-white' : 'text-gray-900') : (dark ? 'text-gray-400' : 'text-gray-600')}`}
+                    >
+                      <span>{option.label}</span>
+                      {sortBy === option.value && (
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
+        </div>
+
+        {/* Table Header */}
+        <div className={`hidden md:grid grid-cols-12 gap-4 px-4 py-3 text-xs font-medium uppercase tracking-wider ${
+          dark ? 'text-gray-500' : 'text-gray-400'
+        }`}>
+          <div className="col-span-3">Advertisers</div>
+          <div className="col-span-2">Price</div>
+          <div className="col-span-3">Available/Order Limit</div>
+          <div className="col-span-2">Payment</div>
+          <div className="col-span-2 text-right">Trade</div>
         </div>
 
         {/* Error */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl mb-6">
+          <div className={`px-4 py-3 rounded-xl mb-6 border ${dark ? 'bg-red-900/20 border-red-500 text-red-400' : 'bg-red-50 border-red-200 text-red-600'}`}>
             {error}
           </div>
         )}
 
         {/* Ads List */}
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-2 border-teal-600 border-t-transparent" />
-          </div>
-        ) : ads.length === 0 ? (
-          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-            <p className="text-gray-500 dark:text-gray-400 text-lg">No ads found</p>
-            <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Try adjusting your filters</p>
-            <Link
-              to="/pro/post-ad"
-              className="inline-block mt-4 bg-teal-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-teal-700 transition"
-            >
-              Post an Ad
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {ads.map(ad => (
+        <div className={`divide-y ${dark ? 'divide-gray-700' : 'divide-gray-200'}`}>
+          {paginatedAds.map(ad => (
+            <div key={ad.id}>
+              {/* Ad Row */}
               <div
-                key={ad.id}
-                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:border-teal-500 transition cursor-pointer"
-                onClick={() => handleTradeClick(ad)}
+                className={`grid grid-cols-1 md:grid-cols-12 gap-4 py-4 px-4 transition ${
+                  expandedAdId === ad.id
+                    ? dark ? 'bg-gray-800/50' : 'bg-gray-50'
+                    : ''
+                }`}
               >
-                {/* Top Row: Trader Info + Payment Methods */}
-                <div className="flex items-start justify-between gap-4">
-                  {/* Trader Info */}
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center text-lg font-bold text-white">
-                        {ad.traderName?.charAt(0).toUpperCase() || '?'}
-                      </div>
-                      <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-900 dark:text-white">{ad.traderName || 'Anonymous'}</p>
-                        <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        <span className="underline decoration-dotted">{ad.completedCount} Trades ({(ad.completionRate * 100).toFixed(1)}%)</span>
-                        <span className="text-gray-400">|</span>
-                        <span className="flex items-center gap-1">
-                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
-                          </svg>
-                          {(ad.completionRate * 100).toFixed(2)}%
-                        </span>
-                      </div>
+                {/* Advertisers - col-span-3 */}
+                <div className="md:col-span-3 flex items-start gap-3">
+                  <div className="relative flex-shrink-0">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white"
+                      style={{ backgroundColor: ad.avatarColor }}
+                    >
+                      {ad.avatar}
                     </div>
                   </div>
-
-                  {/* Payment Methods with colored dots */}
-                  <div className="text-right space-y-1">
-                    {ad.paymentMethods.slice(0, 4).map(method => (
-                      <div key={method} className="flex items-center justify-end gap-1.5 text-xs text-gray-600 dark:text-gray-400">
-                        <span className="truncate max-w-[120px]">{method}</span>
-                        <span
-                          className="w-2 h-2 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: getPaymentColor(method) }}
-                        ></span>
-                      </div>
-                    ))}
-                    {ad.paymentMethods.length > 4 && (
-                      <div className="text-xs text-gray-500">+{ad.paymentMethods.length - 4} more</div>
-                    )}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className={`font-medium text-sm truncate ${dark ? 'text-white' : 'text-gray-900'}`}>{ad.traderName}</p>
+                      {ad.verified && (
+                        <span className="text-yellow-500 text-xs">●</span>
+                      )}
+                    </div>
+                    <div className={`flex items-center gap-1 text-[11px] mt-0.5 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      <span>{ad.orders} orders</span>
+                      <span className={dark ? 'text-gray-600' : 'text-gray-300'}>|</span>
+                      <span>{ad.completionRate.toFixed(2)}% completion</span>
+                    </div>
+                    <div className={`flex items-center gap-1 text-[11px] mt-0.5 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                      </svg>
+                      <span>{ad.thumbsUp}%</span>
+                      <span className={dark ? 'text-gray-600' : 'text-gray-300'}>|</span>
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>{ad.responseTime} min</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Price Row */}
-                <div className="mt-4 flex items-end justify-between">
-                  <div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      <span className="text-base font-normal text-gray-500 mr-1">{getCurrencyPrefix(ad.fiatCurrency)}</span>
-                      {ad.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      <span className="text-sm font-normal text-gray-500 ml-1">/{ad.asset}</span>
-                    </p>
-                    <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      <span>Limit <span className="text-gray-900 dark:text-white font-medium">{ad.minAmount.toLocaleString()} - {ad.maxAmount.toLocaleString()} {ad.fiatCurrency}</span></span>
+                {/* Price - col-span-2 */}
+                <div className="md:col-span-2 flex items-center">
+                  <p className={`text-lg font-semibold ${dark ? 'text-white' : 'text-gray-900'}`}>
+                    <span className={`text-xs font-normal mr-1 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>{getCurrencyPrefix(ad.currency)}</span>
+                    {ad.price.toFixed(3)}
+                  </p>
+                </div>
+
+                {/* Available/Order Limit - col-span-3 */}
+                <div className="md:col-span-3 flex flex-col justify-center">
+                  <div className={`text-sm ${dark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    {ad.available.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {ad.asset}
+                  </div>
+                  <div className={`text-xs mt-0.5 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {ad.minLimit.toLocaleString()}.000 {ad.currency} - {ad.maxLimit.toLocaleString()}.000 {ad.currency}
+                  </div>
+                </div>
+
+                {/* Payment - col-span-2 */}
+                <div className="md:col-span-2 flex flex-col justify-center gap-1">
+                  {ad.paymentMethods.slice(0, 3).map((method, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <span
+                        className="w-0.5 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: '#F0B90B' }}
+                      ></span>
+                      <span className={`text-xs truncate ${dark ? 'text-gray-400' : 'text-gray-600'}`}>{method}</span>
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      Available <span className="text-gray-900 dark:text-white font-medium">{ad.availableAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {ad.asset}</span>
+                  ))}
+                </div>
+
+                {/* Trade Button - col-span-2 */}
+                <div className="md:col-span-2 flex items-center justify-end">
+                  <button
+                    className={`px-6 py-2 rounded text-sm font-medium transition ${
+                      tradeType === 'buy'
+                        ? 'bg-green-500 hover:bg-green-600 text-white'
+                        : 'bg-[#F6465D] hover:bg-[#E5384F] text-white'
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (expandedAdId === ad.id) {
+                        setExpandedAdId(null)
+                        setOrderAmount('')
+                        setAutoSubscribe(false)
+                      } else {
+                        setExpandedAdId(ad.id)
+                        setOrderAmount('')
+                        setAutoSubscribe(false)
+                      }
+                    }}
+                  >
+                    {tradeType === 'buy' ? `Buy ${ad.asset}` : `Sell ${ad.asset}`}
+                  </button>
+                </div>
+              </div>
+
+              {/* Expanded Order Form Section */}
+              {expandedAdId === ad.id && (
+                <div className={`px-4 pb-6 ${dark ? 'bg-gray-800/50' : 'bg-gray-50'}`}>
+                  <div className={`rounded-lg p-6 ${dark ? 'bg-gray-900/50' : 'bg-white shadow-sm border border-gray-200'}`}>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                      {/* Left Side: Advertiser's Terms */}
+                      <div>
+                        <h3 className={`text-sm font-semibold mb-4 ${dark ? 'text-white' : 'text-gray-900'}`}>
+                          Advertiser's Terms <span className={`font-normal ${dark ? 'text-gray-500' : 'text-gray-400'}`}>(Please read carefully)</span>
+                        </h3>
+                        <div className="space-y-3">
+                          <div className="flex items-start gap-3">
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${dark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                              <svg className={`w-3 h-3 ${dark ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
+                              {ad.terms || 'Please make sure to complete payment within the payment window. Contact me via chat if you have any issues.'}
+                            </p>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${dark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                              <svg className={`w-3 h-3 ${dark ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
+                              Verified traders only. Please have your payment method ready before starting the trade.
+                            </p>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${dark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                              <svg className={`w-3 h-3 ${dark ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
+                              Average release time: {ad.responseTime} minutes. I'm online and ready to trade.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Side: Order Form */}
+                      <div>
+                        {/* Price Display */}
+                        <div className="mb-4">
+                          <span className={`text-xs ${dark ? 'text-gray-500' : 'text-gray-400'}`}>Price</span>
+                          <p className={`text-xl font-semibold ${tradeType === 'buy' ? 'text-green-500' : 'text-red-500'}`}>
+                            {getCurrencyPrefix(ad.currency)} {ad.price.toFixed(2)} <span className={`text-xs font-normal ${dark ? 'text-gray-500' : 'text-gray-400'}`}>{ad.currency}</span>
+                          </p>
+                        </div>
+
+                        {/* You Pay / You Receive Input */}
+                        <div className="space-y-4">
+                          <div>
+                            <label className={`block text-xs mb-1.5 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
+                              {tradeType === 'buy' ? 'You Pay' : 'You Receive'}
+                            </label>
+                            <div className={`flex items-center rounded-lg border ${dark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-300'}`}>
+                              <input
+                                type="text"
+                                value={orderAmount}
+                                onChange={(e) => setOrderAmount(e.target.value)}
+                                placeholder={`${ad.minLimit.toLocaleString()} - ${ad.maxLimit.toLocaleString()}`}
+                                className={`flex-1 px-4 py-3 bg-transparent outline-none text-sm ${dark ? 'text-white placeholder-gray-600' : 'text-gray-900 placeholder-gray-400'}`}
+                              />
+                              <span className={`px-4 py-3 text-sm font-medium ${dark ? 'text-gray-400' : 'text-gray-500'}`}>{ad.currency}</span>
+                              <button
+                                onClick={() => setOrderAmount(ad.maxLimit.toString())}
+                                className="px-3 py-1 mr-2 text-xs font-medium text-orange-500 hover:text-orange-400 transition"
+                              >
+                                All
+                              </button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className={`block text-xs mb-1.5 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
+                              {tradeType === 'buy' ? 'You Receive' : 'You Pay'}
+                            </label>
+                            <div className={`flex items-center rounded-lg border ${dark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-300'}`}>
+                              <input
+                                type="text"
+                                value={orderAmount ? (parseFloat(orderAmount) / ad.price).toFixed(6) : ''}
+                                readOnly
+                                placeholder="0.00"
+                                className={`flex-1 px-4 py-3 bg-transparent outline-none text-sm ${dark ? 'text-white placeholder-gray-600' : 'text-gray-900 placeholder-gray-400'}`}
+                              />
+                              <span className={`px-4 py-3 text-sm font-medium ${dark ? 'text-gray-400' : 'text-gray-500'}`}>{ad.asset}</span>
+                            </div>
+                          </div>
+
+                          {/* Payment Method Selection */}
+                          <div>
+                            <label className={`block text-xs mb-1.5 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>Payment Method</label>
+                            <div className="flex flex-wrap gap-2">
+                              {ad.paymentMethods.map((method, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => {
+                                    if (selectedPayments.includes(method)) {
+                                      setSelectedPayments(selectedPayments.filter(p => p !== method))
+                                    } else {
+                                      setSelectedPayments([...selectedPayments, method])
+                                    }
+                                  }}
+                                  className={`px-3 py-1.5 rounded text-xs font-medium transition border ${
+                                    selectedPayments.includes(method)
+                                      ? 'border-orange-500 bg-orange-500/10 text-orange-500'
+                                      : dark
+                                        ? 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600'
+                                        : 'border-gray-300 bg-gray-50 text-gray-600 hover:border-gray-400'
+                                  }`}
+                                >
+                                  {method}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Auto-subscribe */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-600'}`}>Auto-subscribe to ads from this advertiser</span>
+                              <svg className={`w-4 h-4 ${dark ? 'text-gray-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <button
+                              onClick={() => setAutoSubscribe(!autoSubscribe)}
+                              className={`relative w-11 h-6 rounded-full transition-colors ${
+                                autoSubscribe ? 'bg-orange-500' : dark ? 'bg-gray-700' : 'bg-gray-300'
+                              }`}
+                            >
+                              <span
+                                className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                                  autoSubscribe ? 'translate-x-5' : ''
+                                }`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-3 pt-2">
+                            <button
+                              onClick={() => {
+                                if (orderAmount && parseFloat(orderAmount) >= ad.minLimit) {
+                                  navigate(`/pro/trade/${ad.id}?amount=${orderAmount}`)
+                                }
+                              }}
+                              disabled={!orderAmount || parseFloat(orderAmount) < ad.minLimit || parseFloat(orderAmount) > ad.maxLimit}
+                              className={`flex-1 py-3 rounded-lg text-sm font-semibold transition ${
+                                tradeType === 'buy'
+                                  ? 'bg-green-500 hover:bg-green-600 text-white disabled:bg-green-500/50 disabled:cursor-not-allowed'
+                                  : 'bg-[#F6465D] hover:bg-[#E5384F] text-white disabled:bg-[#F6465D]/50 disabled:cursor-not-allowed'
+                              }`}
+                            >
+                              {tradeType === 'buy' ? `Buy ${ad.asset}` : `Sell ${ad.asset}`}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setExpandedAdId(null)
+                                setOrderAmount('')
+                                setAutoSubscribe(false)
+                                setSelectedPayments([])
+                              }}
+                              className={`px-6 py-3 rounded-lg text-sm font-medium transition border ${
+                                dark
+                                  ? 'border-gray-700 text-gray-400 hover:border-gray-600 hover:text-white'
+                                  : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-900'
+                              }`}
+                            >
+                              Hide
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
 
-                  {/* Time + Button */}
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 py-6">
+            {/* Previous Button */}
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className={`p-2 rounded transition ${
+                currentPage === 1
+                  ? 'text-gray-600 cursor-not-allowed'
+                  : dark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            {/* Page Numbers */}
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum: number
+              if (totalPages <= 5) {
+                pageNum = i + 1
+              } else if (currentPage <= 3) {
+                pageNum = i + 1
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i
+              } else {
+                pageNum = currentPage - 2 + i
+              }
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`w-8 h-8 rounded text-sm font-medium transition ${
+                    currentPage === pageNum
+                      ? 'bg-gray-700 text-white'
+                      : dark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              )
+            })}
+
+            {/* Ellipsis and Last Page */}
+            {totalPages > 5 && currentPage < totalPages - 2 && (
+              <>
+                <span className={dark ? 'text-gray-600' : 'text-gray-400'}>...</span>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  className={`w-8 h-8 rounded text-sm font-medium transition ${
+                    dark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  {totalPages}
+                </button>
+              </>
+            )}
+
+            {/* Next Button */}
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className={`p-2 rounded transition ${
+                currentPage === totalPages
+                  ? 'text-gray-600 cursor-not-allowed'
+                  : dark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {/* ============================================ */}
+        {/* How P2P Works Section */}
+        {/* ============================================ */}
+        <div className="mt-16">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className={`text-2xl font-bold ${dark ? 'text-white' : 'text-gray-900'}`}>How P2P Works</h2>
+            <div className={`inline-flex rounded-lg p-1 ${dark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+              <button
+                onClick={() => { setTradeType('buy'); setCurrentPage(1); }}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
+                  tradeType === 'buy'
+                    ? 'bg-orange-500 text-white'
+                    : `${dark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`
+                }`}
+              >
+                Buy Crypto
+              </button>
+              <button
+                onClick={() => { setTradeType('sell'); setCurrentPage(1); }}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${
+                  tradeType === 'sell'
+                    ? 'bg-orange-500 text-white'
+                    : `${dark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`
+                }`}
+              >
+                Sell Crypto
+              </button>
+            </div>
+          </div>
+
+          {/* Steps Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Step 1 */}
+            <div className={`p-6 rounded-xl border ${dark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <div className="mb-4">
+                <div className="relative inline-block">
+                  <svg className={`w-12 h-12 ${dark ? 'text-gray-400' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
+                    <span className="w-2 h-2 bg-orange-300 rounded-full"></span>
+                  </span>
+                </div>
+              </div>
+              <h3 className={`text-lg font-semibold mb-2 ${dark ? 'text-white' : 'text-gray-900'}`}>1. Place an Order</h3>
+              <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {tradeType === 'buy'
+                  ? 'Once you place a P2P order, the crypto asset will be escrowed by CyxTrade P2P.'
+                  : 'After you place an order, your crypto will be escrowed by CyxTrade P2P.'}
+              </p>
+            </div>
+
+            {/* Step 2 */}
+            <div className={`p-6 rounded-xl border ${dark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <div className="mb-4">
+                <div className="relative inline-block">
+                  {tradeType === 'buy' ? (
+                    <svg className={`w-12 h-12 ${dark ? 'text-gray-400' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  ) : (
+                    <svg className={`w-12 h-12 ${dark ? 'text-gray-400' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  )}
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
+                    <span className="w-2 h-2 bg-orange-300 rounded-full"></span>
+                  </span>
+                </div>
+              </div>
+              <h3 className={`text-lg font-semibold mb-2 ${dark ? 'text-white' : 'text-gray-900'}`}>
+                {tradeType === 'buy' ? '2. Pay the Seller' : '2. Verify Payment'}
+              </h3>
+              <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {tradeType === 'buy'
+                  ? 'Send money to the seller via the suggested payment methods. Complete the fiat transaction and click "Transferred, notify seller" on CyxTrade P2P.'
+                  : 'Check the transaction record in the given payment account, and make sure you receive the money sent by the buyer.'}
+              </p>
+            </div>
+
+            {/* Step 3 */}
+            <div className={`p-6 rounded-xl border ${dark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <div className="mb-4">
+                <div className="relative inline-block">
+                  <svg className={`w-12 h-12 ${dark ? 'text-gray-400' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+              <h3 className={`text-lg font-semibold mb-2 ${dark ? 'text-white' : 'text-gray-900'}`}>
+                {tradeType === 'buy' ? '3. Receive Crypto' : '3. Release Crypto'}
+              </h3>
+              <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {tradeType === 'buy'
+                  ? 'Once the seller confirms receipt of money, the escrowed crypto will be released to you.'
+                  : 'Once you confirm the receipt of money, release crypto to the buyer on CyxTrade P2P.'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ============================================ */}
+        {/* Advantages Section */}
+        {/* ============================================ */}
+        <div className="mt-16">
+          <h2 className={`text-2xl font-bold mb-8 ${dark ? 'text-white' : 'text-gray-900'}`}>Advantages of P2P Exchange</h2>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left - Features List */}
+            <div className="space-y-8">
+              {/* Global Marketplace */}
+              <div>
+                <div className="text-orange-500 mb-3">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className={`text-lg font-semibold mb-2 ${dark ? 'text-white' : 'text-gray-900'}`}>Global and Local Marketplace</h3>
+                <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Where as many other P2P platforms target specific markets, CyxTrade P2P provides a truly global trading experience with support for more than 70 local currencies.
+                </p>
+              </div>
+
+              {/* Flexible Payment */}
+              <div>
+                <div className="text-orange-500 mb-3">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <h3 className={`text-lg font-semibold mb-2 ${dark ? 'text-white' : 'text-gray-900'}`}>Flexible Payment Methods</h3>
+                <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Trusted by millions of users worldwide, CyxTrade P2P provides a safe platform to conduct crypto trades in 800+ payment methods and 100+ fiat currencies.
+                </p>
+              </div>
+
+              {/* Trade at Your Prices */}
+              <div>
+                <div className="text-orange-500 mb-3">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                  </svg>
+                </div>
+                <h3 className={`text-lg font-semibold mb-2 ${dark ? 'text-white' : 'text-gray-900'}`}>Trade at Your Preferred Prices</h3>
+                <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Trade crypto with the freedom to buy and sell at your preferred prices. Buy or sell from the existing offers, or create trade advertisements to set your own prices.
+                </p>
+              </div>
+            </div>
+
+            {/* Right - Illustration */}
+            <div className="hidden lg:flex items-center justify-center">
+              <div className="relative">
+                {/* Decorative elements */}
+                <div className={`w-64 h-48 rounded-2xl ${dark ? 'bg-gray-700' : 'bg-gray-200'} flex items-center justify-center`}>
+                  <div className="flex gap-4">
+                    <div className={`w-12 h-12 rounded-full ${dark ? 'bg-gray-600' : 'bg-gray-300'} flex items-center justify-center`}>
+                      <svg className={`w-6 h-6 ${dark ? 'text-gray-400' : 'text-gray-500'}`} fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                       </svg>
-                      <span>15 min</span>
                     </div>
-                    <button
-                      className={`px-8 py-2 rounded-lg font-medium text-sm ${
-                        tradeType === 'buy'
-                          ? 'bg-green-500 hover:bg-green-600 text-white'
-                          : 'bg-red-500 hover:bg-red-600 text-white'
-                      }`}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleTradeClick(ad)
-                      }}
-                    >
-                      {tradeType === 'buy' ? 'Buy' : 'Sell'}
-                    </button>
+                    <div className={`w-12 h-12 rounded-lg ${dark ? 'bg-gray-600' : 'bg-gray-300'} flex items-center justify-center rotate-12`}>
+                      <span className="text-orange-500 font-bold">◇</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Yellow badge */}
+                <div className="absolute -top-4 -right-4 w-20 h-20 bg-orange-500 rounded-2xl flex items-center justify-center rotate-12">
+                  <svg className="w-10 h-10 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                {/* Sparkles */}
+                <div className="absolute -top-8 left-0 text-orange-500 text-2xl">✦</div>
+                <div className="absolute top-0 -left-8 text-orange-400 text-lg">✦</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ============================================ */}
+        {/* P2P Blog Section */}
+        {/* ============================================ */}
+        <div className="mt-16">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className={`text-2xl font-bold ${dark ? 'text-white' : 'text-gray-900'}`}>P2P Blog</h2>
+            <button className="text-orange-500 hover:text-orange-400 text-sm font-medium flex items-center gap-1">
+              View more
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Blog Card 1 */}
+            <div className={`rounded-xl overflow-hidden ${dark ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+              <div className="h-40 bg-gradient-to-br from-orange-600 to-orange-400 flex items-center justify-center p-4">
+                <div className="text-center">
+                  <span className="text-orange-200 text-xs font-medium">CYXTRADE</span>
+                  <h4 className="text-white font-bold text-lg mt-1">P2P MERCHANT PROGRAM</h4>
+                  <p className="text-orange-100 text-xs mt-1">Comprehensive Guide</p>
+                </div>
+              </div>
+              <div className="p-4">
+                <h3 className={`font-semibold mb-2 ${dark ? 'text-white' : 'text-gray-900'}`}>
+                  How to Become a CyxTrade P2P Merchant in 2025 – Complete Guide and Perks Explained
+                </h3>
+                <p className={`text-xs mb-3 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Become a P2P Merchant to boost earnings with 1,000+ payment methods, 120+ fiat currencies, fee rebates, higher ad limits, and priority support.
+                </p>
+                <p className={`text-xs ${dark ? 'text-gray-500' : 'text-gray-400'}`}>2025-11-17</p>
+              </div>
+            </div>
+
+            {/* Blog Card 2 */}
+            <div className={`rounded-xl overflow-hidden ${dark ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+              <div className="h-40 bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center p-4">
+                <div className="text-center">
+                  <span className="text-orange-500 text-xs font-medium">CYXTRADE P2P</span>
+                  <div className="mt-4">
+                    <svg className="w-16 h-16 mx-auto text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
                   </div>
                 </div>
               </div>
+              <div className="p-4">
+                <h3 className={`font-semibold mb-2 ${dark ? 'text-white' : 'text-gray-900'}`}>
+                  CyxTrade P2P Appeals Explained – How to Handle Disputes and Protect Your Funds
+                </h3>
+                <p className={`text-xs mb-3 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  If a transaction doesn't go smoothly, CyxTrade P2P offers the opportunity for buyers and sellers to file an appeal.
+                </p>
+                <p className={`text-xs ${dark ? 'text-gray-500' : 'text-gray-400'}`}>2025-11-07</p>
+              </div>
+            </div>
+
+            {/* Blog Card 3 */}
+            <div className={`rounded-xl overflow-hidden ${dark ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+              <div className="h-40 bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center p-4">
+                <div className="text-center">
+                  <span className="text-orange-500 text-xs font-medium">CYXTRADE P2P</span>
+                  <h4 className="text-white font-bold text-lg mt-2">AD BIDDING</h4>
+                  <p className="text-gray-400 text-xs mt-1">Unlock the Potential with This<br/>Complete Guide for Merchants</p>
+                </div>
+              </div>
+              <div className="p-4">
+                <h3 className={`font-semibold mb-2 ${dark ? 'text-white' : 'text-gray-900'}`}>
+                  How to Use CyxTrade P2P Ad Bidding – A Guide for Merchants
+                </h3>
+                <p className={`text-xs mb-3 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Learn how to boost your crypto ad visibility and attract more buyers by using CyxTrade P2P Ad Bidding as a verified merchant.
+                </p>
+                <p className={`text-xs ${dark ? 'text-gray-500' : 'text-gray-400'}`}>2025-11-05</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ============================================ */}
+        {/* FAQs Section */}
+        {/* ============================================ */}
+        <div className="mt-16 mb-16">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className={`text-2xl font-bold ${dark ? 'text-white' : 'text-gray-900'}`}>FAQs</h2>
+            <div className={`inline-flex rounded-lg p-1 ${dark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+              <button className="px-4 py-1.5 rounded-md text-sm font-medium bg-gray-700 text-white">
+                Beginner
+              </button>
+              <button className={`px-4 py-1.5 rounded-md text-sm font-medium ${dark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>
+                Advanced
+              </button>
+              <button className={`px-4 py-1.5 rounded-md text-sm font-medium ${dark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>
+                Advertisers
+              </button>
+            </div>
+          </div>
+
+          <div className={`divide-y ${dark ? 'divide-gray-700' : 'divide-gray-200'}`}>
+            {[
+              { num: 1, question: 'What is P2P exchange?', expandable: true },
+              { num: 2, question: 'How do I sell Bitcoin locally on CyxTrade P2P?', expandable: true },
+              { num: 3, question: 'Which cryptocurrencies are supported in the P2P trade zone?', expandable: true },
+              { num: 4, question: 'Glossary of P2P trading terms', expandable: false },
+              { num: 5, question: 'How to add new payment methods on CyxTrade P2P?', expandable: false },
+              { num: 6, question: 'How do I buy Bitcoin locally on CyxTrade P2P?', expandable: true },
+              { num: 7, question: 'Why is CyxTrade P2P better than other P2P marketplaces?', expandable: true },
+              { num: 8, question: 'How do I protect myself against fraud? CyxTrade P2P Escrow FTW!', expandable: true },
+              { num: 9, question: 'CyxTrade P2P trading FAQ', expandable: false },
+              { num: 10, question: 'P2P user transaction policy', expandable: false },
+            ].map(faq => (
+              <div
+                key={faq.num}
+                className={`flex items-center justify-between py-5 cursor-pointer transition ${dark ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'}`}
+              >
+                <div className="flex items-center gap-4">
+                  <span className={`w-7 h-7 rounded flex items-center justify-center text-sm ${dark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
+                    {faq.num}
+                  </span>
+                  <span className={`font-medium ${dark ? 'text-white' : 'text-gray-900'}`}>{faq.question}</span>
+                </div>
+                {faq.expandable ? (
+                  <svg className={`w-5 h-5 ${dark ? 'text-gray-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                ) : (
+                  <svg className={`w-5 h-5 ${dark ? 'text-gray-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                )}
+              </div>
             ))}
           </div>
-        )}
+        </div>
       </main>
 
       {/* Currency Selection Modal */}
@@ -742,7 +1618,7 @@ export default function ProMarketplace() {
                   value={currencySearch}
                   onChange={(e) => setCurrencySearch(e.target.value)}
                   placeholder="Search currency"
-                  className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-teal-500"
+                  className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
                   autoFocus
                 />
               </div>
@@ -795,7 +1671,7 @@ export default function ProMarketplace() {
                         <p className="text-gray-500 text-sm">{currency.name}</p>
                       </div>
                       {selectedFiat === currency.code && (
-                        <svg className="w-5 h-5 text-teal-500" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-5 h-5 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                       )}
@@ -831,7 +1707,7 @@ export default function ProMarketplace() {
                             <p className="text-gray-500 text-sm">{currency.name}</p>
                           </div>
                           {selectedFiat === currency.code && (
-                            <svg className="w-5 h-5 text-teal-500" fill="currentColor" viewBox="0 0 20 20">
+                            <svg className="w-5 h-5 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
                           )}
@@ -848,7 +1724,7 @@ export default function ProMarketplace() {
                   <button
                     key={letter}
                     onClick={() => scrollToLetter(letter)}
-                    className="hover:text-teal-500 transition py-0.5"
+                    className="hover:text-orange-500 transition py-0.5"
                   >
                     {letter}
                   </button>
@@ -887,7 +1763,7 @@ export default function ProMarketplace() {
                   value={cryptoSearch}
                   onChange={(e) => setCryptoSearch(e.target.value)}
                   placeholder="Search asset"
-                  className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-teal-500"
+                  className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
                   autoFocus
                 />
               </div>
@@ -902,7 +1778,7 @@ export default function ProMarketplace() {
                       onClick={() => handleSelectCrypto(code)}
                       className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm transition ${
                         selectedAsset === code
-                          ? 'bg-teal-600 border-teal-600 text-white'
+                          ? 'bg-orange-500 border-orange-500 text-white'
                           : 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'
                       }`}
                     >
@@ -941,7 +1817,7 @@ export default function ProMarketplace() {
                     <p className="text-gray-500 text-sm">{crypto.name}</p>
                   </div>
                   {selectedAsset === crypto.code && (
-                    <svg className="w-5 h-5 text-teal-500" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   )}
@@ -985,7 +1861,7 @@ export default function ProMarketplace() {
                   value={paymentSearch}
                   onChange={(e) => setPaymentSearch(e.target.value)}
                   placeholder="Search"
-                  className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-teal-500"
+                  className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
                   autoFocus
                 />
               </div>
@@ -1016,13 +1892,13 @@ export default function ProMarketplace() {
                     onClick={() => handleTogglePayment(method)}
                     className={`px-4 py-3 rounded-lg border text-sm font-medium transition text-left relative ${
                       selectedPayments.includes(method)
-                        ? 'bg-gray-700 border-teal-500 text-white'
+                        ? 'bg-gray-700 border-orange-500 text-white'
                         : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'
                     }`}
                   >
                     {method}
                     {selectedPayments.includes(method) && (
-                      <span className="absolute top-1 right-1 w-4 h-4 bg-teal-500 rounded-full flex items-center justify-center">
+                      <span className="absolute top-1 right-1 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
                         <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
@@ -1097,7 +1973,7 @@ export default function ProMarketplace() {
                     onClick={() => setAmountFilter(value)}
                     className={`py-3 rounded-lg border text-sm font-medium transition ${
                       amountFilter === value
-                        ? 'bg-gray-700 border-teal-500 text-white'
+                        ? 'bg-gray-700 border-orange-500 text-white'
                         : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'
                     }`}
                   >
@@ -1128,6 +2004,107 @@ export default function ProMarketplace() {
           </div>
         </div>
       )}
+
+      {/* Floating Customer Service Button */}
+      <button
+        className="fixed bottom-6 right-6 w-14 h-14 bg-orange-500 hover:bg-orange-600 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-40"
+        title="Customer Service"
+      >
+        <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+      </button>
+
+      {/* Footer */}
+      <footer className="bg-gray-800 border-t border-gray-700 mt-12">
+        <div className="max-w-7xl mx-auto px-4 py-12">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+            {/* Community */}
+            <div>
+              <h3 className="text-white font-semibold mb-4">Community</h3>
+              <div className="flex flex-wrap gap-3 mb-4">
+                <a href="#" className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600 transition">
+                  <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"/></svg>
+                </a>
+                <a href="#" className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600 transition">
+                  <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a12 12 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                </a>
+                <a href="#" className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-600 transition">
+                  <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+              </div>
+              <div className="space-y-2">
+                <button className="flex items-center gap-2 text-gray-400 hover:text-white text-sm">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clipRule="evenodd" /></svg>
+                  English
+                </button>
+                <button className="flex items-center gap-2 text-gray-400 hover:text-white text-sm">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" /></svg>
+                  USD-$
+                </button>
+              </div>
+            </div>
+
+            {/* About Us */}
+            <div>
+              <h3 className="text-white font-semibold mb-4">About Us</h3>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">About</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">Careers</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">News</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">Press</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">Legal</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">Terms</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">Privacy</a></li>
+              </ul>
+            </div>
+
+            {/* Products */}
+            <div>
+              <h3 className="text-white font-semibold mb-4">Products</h3>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">Exchange</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">Buy Crypto</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">P2P Trading</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">Crypto Payments</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">Gift Card</a></li>
+              </ul>
+            </div>
+
+            {/* Business */}
+            <div>
+              <h3 className="text-white font-semibold mb-4">Business</h3>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">P2P Merchant</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">Institutional</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">Labs</a></li>
+              </ul>
+            </div>
+
+            {/* Support */}
+            <div>
+              <h3 className="text-white font-semibold mb-4">Support</h3>
+              <ul className="space-y-2 text-sm">
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">24/7 Chat Support</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">Support Center</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">Fees</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">APIs</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-orange-500">Trading Rules</a></li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="mt-8 pt-8 border-t border-gray-700">
+            <p className="text-gray-500 text-xs">
+              CyxTrade is a globally permissionless P2P fiat exchange protocol. Virtual asset prices can be volatile.
+              The value of your investment may go down or up and you may not get back the amount invested.
+              You are solely responsible for your investment decisions.
+            </p>
+            <p className="text-gray-600 text-xs mt-4">© 2024-2026 CyxTrade. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
