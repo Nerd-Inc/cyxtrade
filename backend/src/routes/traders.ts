@@ -6,8 +6,11 @@ import {
   findTraderByUserId,
   listTraders,
   createTraderApplication,
+  approveTrader,
   updateTraderStatus,
   updateTraderCorridors,
+  updateTraderWalletAddress,
+  getTraderScorecard,
   Corridor
 } from '../services/traderService';
 import { paymentMethodService } from '../services/paymentMethodService';
@@ -42,9 +45,6 @@ function generateTronAddress(): string {
   }
   return address;
 }
-
-// Store generated addresses (in production, use DB)
-const traderAddresses = new Map<string, string>();
 
 // Mock traders for development (when DB is not available)
 const mockTraders = [
@@ -99,18 +99,34 @@ router.get('/', asyncHandler(async (req, res) => {
       offset: offset ? parseInt(offset as string) : undefined
     });
 
-    // Transform for API response
-    traders = result.traders.map(t => ({
-      id: t.id,
-      displayName: t.display_name,
-      status: t.status,
-      corridors: t.corridors,
-      rating: t.rating,
-      totalTrades: t.total_trades,
-      isOnline: t.is_online,
-      bondAmount: t.bond_amount,
-      bondAvailable: t.bond_amount - t.bond_locked
-    }));
+    // Transform for API response with scorecard data
+    traders = result.traders.map(t => {
+      const totalFeedback = (t.positive_feedback || 0) + (t.negative_feedback || 0);
+      const feedbackScore = totalFeedback > 0
+        ? Math.round(((t.positive_feedback || 0) / totalFeedback) * 100)
+        : 100;
+
+      return {
+        id: t.id,
+        displayName: t.display_name,
+        status: t.status,
+        corridors: t.corridors,
+        rating: t.rating,
+        totalTrades: t.total_trades,
+        completedTrades: t.completed_trades || t.total_trades,
+        isOnline: t.is_online,
+        bondAmount: t.bond_amount,
+        bondAvailable: t.bond_amount - t.bond_locked,
+        // Scorecard fields
+        avgReleaseTimeMins: t.avg_release_time_mins,
+        positiveFeedback: t.positive_feedback || 0,
+        negativeFeedback: t.negative_feedback || 0,
+        feedbackScore,
+        trades30d: t.trades_30d || 0,
+        completionRate30d: t.completion_rate_30d,
+        createdAt: t.created_at
+      };
+    });
     total = result.total;
   } catch (dbError) {
     // Database not available - use mock traders
@@ -137,6 +153,7 @@ router.get('/me', authMiddleware, traderMiddleware, asyncHandler(async (req: Aut
   sendSuccess(res, {
     id: trader.id,
     userId: trader.user_id,
+    address: trader.wallet_address,
     displayName: trader.display_name,
     phone: trader.phone,
     status: trader.status,
@@ -168,11 +185,32 @@ router.get('/:id', asyncHandler(async (req, res) => {
     corridors: trader.corridors,
     rating: trader.rating,
     totalTrades: trader.total_trades,
+    completedTrades: trader.completed_trades || trader.total_trades,
     isOnline: trader.is_online,
     bondAmount: trader.bond_amount,
     bondAvailable: trader.bond_amount - trader.bond_locked,
+    // Scorecard fields
+    avgReleaseTimeMins: trader.avg_release_time_mins,
+    avgPayTimeMins: trader.avg_pay_time_mins,
+    positiveFeedback: trader.positive_feedback || 0,
+    negativeFeedback: trader.negative_feedback || 0,
+    trades30d: trader.trades_30d || 0,
+    completionRate30d: trader.completion_rate_30d,
+    totalVolume: trader.total_volume || 0,
     createdAt: trader.created_at
   });
+}));
+
+// GET /api/traders/:id/scorecard - Get detailed trader scorecard (public)
+router.get('/:id/scorecard', asyncHandler(async (req, res) => {
+  const id = getParam(req.params.id);
+
+  const scorecard = await getTraderScorecard(id);
+  if (!scorecard) {
+    throw new AppError(ErrorCode.TRADER_NOT_FOUND);
+  }
+
+  sendSuccess(res, scorecard);
 }));
 
 // POST /api/traders/apply - Apply to become trader (auth required)
@@ -211,47 +249,39 @@ router.post('/register', authMiddleware, asyncHandler(async (req: AuthRequest, r
   }
 
   // Check if already a trader
-  let existingAddress = traderAddresses.get(userId);
-  if (existingAddress) {
-    // Already registered - return existing address
+  const existing = await findTraderByUserId(userId);
+  if (existing) {
+    if (existing.status !== 'active') {
+      await approveTrader(existing.id, userId);
+    }
+
+    let addressForResponse = existing.wallet_address;
+    if (!addressForResponse) {
+      addressForResponse = generateTronAddress();
+      await updateTraderWalletAddress(existing.id, addressForResponse);
+    }
+
     sendSuccess(res, {
       message: 'Already registered',
-      traderId: userId,
-      address: existingAddress,
+      traderId: existing.id,
+      address: addressForResponse,
       isNew: false
     });
     return;
   }
 
-  // Check database for existing trader
-  try {
-    const existing = await findTraderByUserId(userId);
-    if (existing) {
-      throw new AppError(ErrorCode.TRADER_ALREADY_EXISTS, 'You already have a trader account');
-    }
-  } catch (dbError) {
-    // Database not available - continue with mock registration
-    console.log('⚠️ Database not available, using mock registration');
-  }
-
-  // Generate new Tron address for deposits
+  // Generate and persist a new Tron address for deposits
   const address = generateTronAddress();
-  traderAddresses.set(userId, address);
+  console.log(`Generated trader address for ${userId}: ${address}`);
 
-  // In production: Create actual wallet, store encrypted private key
-  console.log(`🔐 Generated trader address for ${userId}: ${address}`);
-
-  // Try to create trader in database
-  try {
-    const defaultCorridor: Corridor = { from: 'AED', to: 'XAF', buyRate: 162, sellRate: 159 };
-    await createTraderApplication(userId, [defaultCorridor]);
-  } catch (dbError) {
-    // Database not available - that's ok for mock
-  }
+  const defaultCorridor: Corridor = { from: 'AED', to: 'XAF', buyRate: 162, sellRate: 159 };
+  const createdTrader = await createTraderApplication(userId, [defaultCorridor]);
+  await updateTraderWalletAddress(createdTrader.id, address);
+  await approveTrader(createdTrader.id, userId);
 
   sendSuccess(res, {
     message: 'Registration successful',
-    traderId: userId,
+    traderId: createdTrader.id,
     address: address,
     isNew: true,
     instructions: {
@@ -270,12 +300,16 @@ router.get('/me/address', authMiddleware, asyncHandler(async (req: AuthRequest, 
     throw new AppError(ErrorCode.NOT_AUTHENTICATED);
   }
 
-  const address = traderAddresses.get(userId);
-  if (!address) {
+  const trader = await findTraderByUserId(userId);
+  if (!trader) {
     throw new AppError(ErrorCode.NOT_A_TRADER, 'You are not registered as a trader');
   }
 
-  sendSuccess(res, { address });
+  if (!trader.wallet_address) {
+    throw new AppError(ErrorCode.NOT_A_TRADER, 'Trader address not found');
+  }
+
+  sendSuccess(res, { address: trader.wallet_address });
 }));
 
 // PUT /api/traders/me - Update trader profile (trader required)
@@ -583,3 +617,4 @@ router.get('/:id/payment-details', authMiddleware, asyncHandler(async (req: Auth
 }));
 
 export default router;
+

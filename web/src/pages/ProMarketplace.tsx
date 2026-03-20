@@ -344,17 +344,17 @@ export default function ProMarketplace() {
     { id: 'adcb', name: 'Abu Dhabi Commercial Bank ADCB', rate: 3.865 },
   ]
 
-  // Express mock traders
+  // Express mock traders with scorecard data
   const EXPRESS_RECOMMENDED_ADS = [
-    { id: 'exp1', name: 'SalimCapital', badge: 'pro', orders: 519, completion: 99.90, rate: 3.790, requiresVerification: true },
-    { id: 'exp2', name: 'HappyCryptoAE', badge: 'pro-verified', orders: 290, completion: 100.00, rate: 3.845, requiresVerification: true },
-    { id: 'exp3', name: 'TRUSTED_CRYPTO_XCHANG', badge: 'diamond', orders: 224, completion: 97.40, rate: 3.839, requiresVerification: true },
+    { id: 'exp1', name: 'SalimCapital', badge: 'pro', orders: 519, completion: 99.90, rate: 3.790, requiresVerification: true, avgReleaseMin: 8, thumbsUp: 98.5, trades30d: 45 },
+    { id: 'exp2', name: 'HappyCryptoAE', badge: 'pro-verified', orders: 290, completion: 100.00, rate: 3.845, requiresVerification: true, avgReleaseMin: 5, thumbsUp: 99.2, trades30d: 32 },
+    { id: 'exp3', name: 'TRUSTED_CRYPTO_XCHANG', badge: 'diamond', orders: 224, completion: 97.40, rate: 3.839, requiresVerification: true, avgReleaseMin: 12, thumbsUp: 96.8, trades30d: 18 },
   ]
 
   const EXPRESS_VERIFICATION_FREE_ADS = [
-    { id: 'exp4', name: 'DTBcrypto', badge: 'diamond', orders: 412, completion: 98.90, rate: 3.714, requiresVerification: false },
-    { id: 'exp5', name: 'ArabDu', badge: 'diamond', orders: 136, completion: 99.30, rate: 3.840, requiresVerification: false },
-    { id: 'exp6', name: 'TrustTradePro', badge: 'diamond', orders: 137, completion: 100.00, rate: 3.897, requiresVerification: false },
+    { id: 'exp4', name: 'DTBcrypto', badge: 'diamond', orders: 412, completion: 98.90, rate: 3.714, requiresVerification: false, avgReleaseMin: 6, thumbsUp: 97.9, trades30d: 38 },
+    { id: 'exp5', name: 'ArabDu', badge: 'diamond', orders: 136, completion: 99.30, rate: 3.840, requiresVerification: false, avgReleaseMin: 15, thumbsUp: 98.1, trades30d: 12 },
+    { id: 'exp6', name: 'TrustTradePro', badge: 'diamond', orders: 137, completion: 100.00, rate: 3.897, requiresVerification: false, avgReleaseMin: 4, thumbsUp: 99.8, trades30d: 15 },
   ]
 
   // Place order countdown effect
@@ -1071,7 +1071,7 @@ export default function ProMarketplace() {
                             </span>
                           )}
                           <div className="flex items-center justify-between">
-                            <div>
+                            <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 <span className="text-white font-medium">{ad.name}</span>
                                 {ad.badge === 'pro' && (
@@ -1087,9 +1087,32 @@ export default function ProMarketplace() {
                                   <span className="text-yellow-500">💎</span>
                                 )}
                               </div>
-                              <p className={`text-sm mt-1 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
-                                {ad.orders} orders | {ad.completion.toFixed(2)} % Completion
-                              </p>
+                              {/* Scorecard stats row */}
+                              <div className={`flex items-center gap-2 text-xs mt-1 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
+                                <span>{ad.orders} orders</span>
+                                <span>|</span>
+                                <span className={ad.completion >= 99 ? 'text-green-400' : ''}>{ad.completion.toFixed(1)}%</span>
+                                <span>|</span>
+                                <span className="flex items-center gap-0.5">
+                                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
+                                  </svg>
+                                  {ad.thumbsUp}%
+                                </span>
+                              </div>
+                              {/* Trust indicators */}
+                              <div className="flex items-center gap-1.5 mt-1.5">
+                                {ad.avgReleaseMin < 10 && (
+                                  <span className="px-1.5 py-0.5 text-[10px] bg-green-500/20 text-green-400 rounded">
+                                    ⚡ ~{ad.avgReleaseMin}m release
+                                  </span>
+                                )}
+                                {ad.trades30d > 20 && (
+                                  <span className="px-1.5 py-0.5 text-[10px] bg-blue-500/20 text-blue-400 rounded">
+                                    📅 {ad.trades30d} this month
+                                  </span>
+                                )}
+                              </div>
                               {idx === 0 && (
                                 <button className={`text-sm mt-1 flex items-center gap-1 ${dark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-600'}`}>
                                   View Ad Requirements
@@ -1425,12 +1448,21 @@ export default function ProMarketplace() {
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
                       </svg>
-                      <span>{ad.thumbsUp}%</span>
+                      <span className={ad.thumbsUp >= 98 ? 'text-green-400' : ''}>{ad.thumbsUp}%</span>
                       <span className={dark ? 'text-gray-600' : 'text-gray-300'}>|</span>
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <span>{ad.responseTime} min</span>
+                      <span className={ad.responseTime <= 10 ? 'text-green-400' : ''}>{ad.responseTime} min</span>
+                      {/* Trust indicators */}
+                      {(ad.responseTime <= 10 || ad.completionRate >= 99.5 || ad.orders >= 500) && (
+                        <>
+                          <span className={dark ? 'text-gray-600' : 'text-gray-300'}>|</span>
+                          {ad.responseTime <= 10 && <span className="text-green-400">⚡</span>}
+                          {ad.completionRate >= 99.5 && <span className="text-yellow-400">🎯</span>}
+                          {ad.orders >= 500 && <span className="text-blue-400">🏆</span>}
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -1,5 +1,5 @@
 import { query, queryOne, transaction } from './db';
-import { updateTraderBond, updateTraderRating } from './traderService';
+import { updateTraderBond, updateTraderRating, updateTraderReleaseTime, updateTraderStats } from './traderService';
 import {
   isBlockchainEnabled,
   createTradeOnChain,
@@ -23,9 +23,10 @@ export interface Trade {
   recipient_name: string | null;
   recipient_phone: string | null;
   recipient_method: string | null;
-  status: 'pending' | 'accepted' | 'paid' | 'delivering' | 'completed' | 'disputed' | 'cancelled';
+  status: 'pending' | 'accepted' | 'paid' | 'delivering' | 'completed' | 'disputed' | 'cancelled' | 'expired';
   bond_locked: number | null;
   created_at: Date;
+  expires_at: Date | null;
   accepted_at: Date | null;
   paid_at: Date | null;
   delivered_at: Date | null;
@@ -126,6 +127,9 @@ export async function listTradesForTrader(
   return { trades, total };
 }
 
+// Trade expires 15 minutes after creation
+const TRADE_EXPIRY_MINUTES = 15;
+
 export async function createTrade(data: {
   userId: string;
   traderId: string;
@@ -138,13 +142,16 @@ export async function createTrade(data: {
   recipientPhone?: string;
   recipientMethod?: string;
 }): Promise<Trade> {
+  // Calculate expiry time (15 minutes from now)
+  const expiresAt = new Date(Date.now() + TRADE_EXPIRY_MINUTES * 60 * 1000);
+
   const rows = await query<Trade>(
     `INSERT INTO trades (
        user_id, trader_id, send_currency, send_amount,
        receive_currency, receive_amount, rate,
-       recipient_name, recipient_phone, recipient_method
+       recipient_name, recipient_phone, recipient_method, expires_at
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      RETURNING *`,
     [
       data.userId,
@@ -157,6 +164,7 @@ export async function createTrade(data: {
       data.recipientName || null,
       data.recipientPhone || null,
       data.recipientMethod || null,
+      expiresAt,
     ]
   );
 
@@ -366,6 +374,19 @@ export async function completeTrade(tradeId: string, userId: string): Promise<Tr
 
     return result.rows[0];
   });
+
+  // Update trader scorecard metrics (non-blocking)
+  if (completedTrade) {
+    try {
+      const traderId = completedTrade.trader_id;
+      await Promise.all([
+        updateTraderReleaseTime(traderId),
+        updateTraderStats(traderId)
+      ]);
+    } catch (statsError) {
+      console.warn('[Trade] Failed to update trader stats:', statsError);
+    }
+  }
 
   // Complete trade on blockchain
   if (completedTrade && isBlockchainEnabled()) {
