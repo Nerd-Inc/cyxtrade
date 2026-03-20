@@ -485,7 +485,7 @@ interface OrdersState {
   markPaid: (id: string) => Promise<boolean>
   releaseOrder: (id: string) => Promise<boolean>
   cancelOrder: (id: string) => Promise<boolean>
-  openDispute: (id: string, reason: string) => Promise<boolean>
+  openDispute: (id: string, claimType: string, reason: string) => Promise<boolean>
   clearError: () => void
 }
 
@@ -619,13 +619,13 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
     }
   },
 
-  openDispute: async (id, reason) => {
+  openDispute: async (id, claimType, reason) => {
     set({ isLoading: true, error: null })
     try {
       const res = await fetch(`${API_URL}/pro/orders/${id}/dispute`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ reason })
+        body: JSON.stringify({ claimType, reason })
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error?.message || 'Failed to open dispute')

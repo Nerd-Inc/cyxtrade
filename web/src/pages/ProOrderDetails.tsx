@@ -5,6 +5,7 @@ import { useOrdersStore, useWalletStore } from '../store/pro'
 import ScamWarningModal, { WarningBanner, ReportSuspiciousModal } from '../components/ScamWarningModal'
 import { useRiskAssessment } from '../hooks/useRiskAssessment'
 import FeeBreakdown from '../components/FeeBreakdown'
+import DisputeForm, { type DisputeClaimType } from '../components/DisputeForm'
 
 export default function ProOrderDetails() {
   const { id } = useParams<{ id: string }>()
@@ -15,8 +16,7 @@ export default function ProOrderDetails() {
 
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
-  const [disputeReason, setDisputeReason] = useState('')
-  const [showDisputeModal, setShowDisputeModal] = useState(false)
+  const [showDisputeForm, setShowDisputeForm] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState('')
 
   // Risk assessment
@@ -126,15 +126,14 @@ export default function ProOrderDetails() {
     }
   }
 
-  const handleOpenDispute = async () => {
-    if (!id || !disputeReason.trim()) return
+  const handleOpenDispute = async (data: { claimType: DisputeClaimType; reason: string }) => {
+    if (!id) return
 
     setActionLoading(true)
-    const success = await openDispute(id, disputeReason)
+    const success = await openDispute(id, data.claimType, data.reason)
     setActionLoading(false)
     if (success) {
-      setShowDisputeModal(false)
-      setDisputeReason('')
+      setShowDisputeForm(false)
       fetchOrder(id)
     }
   }
@@ -416,7 +415,7 @@ export default function ProOrderDetails() {
           {/* Open Dispute */}
           {['paid'].includes(currentOrder.status) && (
             <button
-              onClick={() => setShowDisputeModal(true)}
+              onClick={() => setShowDisputeForm(true)}
               className="w-full border border-red-500 text-red-500 py-3 rounded-xl font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 transition"
             >
               Open Dispute
@@ -431,38 +430,15 @@ export default function ProOrderDetails() {
           )}
         </div>
 
-        {/* Dispute Modal */}
-        {showDisputeModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Open Dispute</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                Please describe the issue you're experiencing with this order. An arbitrator will review your case.
-              </p>
-              <textarea
-                value={disputeReason}
-                onChange={(e) => setDisputeReason(e.target.value)}
-                placeholder="Describe the issue..."
-                rows={4}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white mb-4"
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDisputeModal(false)}
-                  className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2 rounded-lg font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleOpenDispute}
-                  disabled={actionLoading || !disputeReason.trim()}
-                  className="flex-1 bg-red-600 text-white py-2 rounded-lg font-medium disabled:opacity-50"
-                >
-                  {actionLoading ? 'Submitting...' : 'Submit Dispute'}
-                </button>
-              </div>
-            </div>
-          </div>
+        {/* Dispute Form Modal */}
+        {showDisputeForm && currentOrder && (
+          <DisputeForm
+            orderId={currentOrder.id}
+            userRole={isBuyer ? 'buyer' : 'seller'}
+            onSubmit={handleOpenDispute}
+            onCancel={() => setShowDisputeForm(false)}
+            isLoading={actionLoading}
+          />
         )}
       </main>
 

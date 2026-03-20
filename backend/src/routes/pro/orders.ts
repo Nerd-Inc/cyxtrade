@@ -25,10 +25,16 @@ import {
   hasUserLeftFeedback,
 } from '../../services/p2pSocialService';
 import { findTraderByUserId } from '../../services/traderService';
+import {
+  getAvailableClaimTypes,
+  getEvidenceChecklist,
+  VALID_CLAIM_TYPES,
+} from '../../services/disputeService';
 import { query } from '../../services/db';
 import { AppError, ErrorCode } from '../../utils/errors';
 import { sendSuccess } from '../../utils/response';
 import { asyncHandler } from '../../middleware/errorHandler';
+import type { DisputeClaimType } from '../../types';
 
 const router = Router();
 
@@ -294,6 +300,51 @@ router.put('/:id/cancel', authMiddleware, asyncHandler(async (req: AuthRequest, 
   });
 }));
 
+// GET /api/pro/orders/disputes/claim-types - Get available dispute claim types
+router.get('/disputes/claim-types', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError(ErrorCode.NOT_AUTHENTICATED);
+  }
+
+  const orderId = req.query.orderId as string | undefined;
+  let userRole: 'buyer' | 'seller' | null = null;
+
+  // Determine user role if order ID provided
+  if (orderId) {
+    const order = await findOrderById(orderId);
+    if (order) {
+      const trader = await findTraderByUserId(userId);
+      userRole = order.user_id === userId ? 'buyer' : (trader && trader.id === order.trader_id ? 'seller' : null);
+    }
+  }
+
+  const claimTypes = await getAvailableClaimTypes(userRole);
+
+  sendSuccess(res, { claimTypes });
+}));
+
+// GET /api/pro/orders/disputes/claim-types/:type/evidence - Get evidence checklist for claim type
+router.get('/disputes/claim-types/:type/evidence', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError(ErrorCode.NOT_AUTHENTICATED);
+  }
+
+  const claimType = getParam(req.params.type) as DisputeClaimType;
+
+  if (!VALID_CLAIM_TYPES.includes(claimType)) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid claim type', {
+      field: 'type',
+      validTypes: VALID_CLAIM_TYPES
+    });
+  }
+
+  const checklist = await getEvidenceChecklist(claimType);
+
+  sendSuccess(res, { checklist });
+}));
+
 // POST /api/pro/orders/:id/dispute - Open dispute
 router.post('/:id/dispute', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
   const userId = req.user?.id;
@@ -302,23 +353,33 @@ router.post('/:id/dispute', authMiddleware, asyncHandler(async (req: AuthRequest
   }
 
   const orderId = getParam(req.params.id);
-  const { reason } = req.body;
+  const { claimType, reason } = req.body;
 
-  if (!reason) {
-    throw new AppError(ErrorCode.MISSING_FIELD, 'Reason is required', { field: 'reason' });
+  // Validate claim type
+  if (!claimType || !VALID_CLAIM_TYPES.includes(claimType)) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid or missing claim type', {
+      field: 'claimType',
+      validTypes: VALID_CLAIM_TYPES
+    });
   }
 
-  const order = await openDispute(orderId, userId, reason);
+  if (!reason || reason.trim().length < 20) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Reason must be at least 20 characters', { field: 'reason' });
+  }
+
+  const order = await openDispute(orderId, userId, claimType, reason);
 
   // Get dispute ID
-  const dispute = await query<{ id: string }>(
-    'SELECT id FROM disputes WHERE order_id = $1 ORDER BY created_at DESC LIMIT 1',
+  const dispute = await query<{ id: string; claim_type: string; evidence_deadline: string }>(
+    'SELECT id, claim_type, evidence_deadline FROM disputes WHERE order_id = $1 ORDER BY created_at DESC LIMIT 1',
     [orderId]
   );
 
   sendSuccess(res, {
     message: 'Dispute opened',
     disputeId: dispute[0]?.id,
+    claimType: dispute[0]?.claim_type,
+    evidenceDeadline: dispute[0]?.evidence_deadline,
     status: order.status,
   });
 }));

@@ -820,7 +820,12 @@ export async function declineOrder(orderId: string, traderId: string, reason?: s
 /**
  * Open dispute on order
  */
-export async function openDispute(orderId: string, userId: string, reason: string): Promise<Order> {
+export async function openDispute(
+  orderId: string,
+  userId: string,
+  claimType: string,
+  reason: string
+): Promise<Order> {
   return transaction(async (client) => {
     const order = await clientQueryOne<Order>(
       client,
@@ -860,14 +865,14 @@ export async function openDispute(orderId: string, userId: string, reason: strin
       throw new AppError(ErrorCode.DISPUTE_EXISTS, 'Dispute already exists for this order')
     }
 
-    // Create dispute
+    // Create dispute with claim type
     const evidenceDeadline = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()  // 48 hours
 
     await clientQuery(
       client,
-      `INSERT INTO disputes (order_id, opened_by, reason, evidence_deadline)
-       VALUES ($1, $2, $3, $4)`,
-      [orderId, userId, reason, evidenceDeadline]
+      `INSERT INTO disputes (order_id, opened_by, claim_type, reason, evidence_deadline)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [orderId, userId, claimType, reason, evidenceDeadline]
     )
 
     // Update order status

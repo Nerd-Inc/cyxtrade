@@ -45,6 +45,14 @@ export type DisputeResolution = 'buyer_wins' | 'seller_wins' | 'split' | 'cancel
 
 export type EvidenceType = 'screenshot' | 'document' | 'message' | 'other'
 
+export type DisputeClaimType =
+  | 'item_not_received'
+  | 'not_as_described'
+  | 'payment_not_received'
+  | 'wrong_amount'
+  | 'unauthorized_transaction'
+  | 'other'
+
 export type AssetType = 'crypto' | 'fiat'
 
 export type WalletTransactionType =
@@ -446,6 +454,7 @@ export interface Dispute {
   id: string
   order_id: string
   opened_by: string
+  claim_type: DisputeClaimType
   reason: string
   status: DisputeStatus
   resolution: DisputeResolution | null
@@ -463,7 +472,29 @@ export interface Dispute {
 
 export interface CreateDisputeDTO {
   order_id: string
+  claim_type: DisputeClaimType
   reason: string
+  initial_evidence?: CreateEvidenceDTO[]
+}
+
+// Claim type info with evidence requirements
+export interface EvidenceRequirement {
+  category: string
+  label: string
+  description: string
+  evidenceType: EvidenceType
+}
+
+export interface DisputeClaimTypeInfo {
+  id: DisputeClaimType
+  name: string
+  description: string
+  required_evidence: EvidenceRequirement[]
+  optional_evidence: EvidenceRequirement[]
+  available_for_buyer: boolean
+  available_for_seller: boolean
+  is_active: boolean
+  display_order: number
 }
 
 // ============================================================================
@@ -475,6 +506,8 @@ export interface DisputeEvidence {
   dispute_id: string
   submitted_by: string
   evidence_type: EvidenceType
+  evidence_category: string | null
+  is_required: boolean
   title: string | null
   description: string | null
   file_url: string | null
@@ -485,8 +518,10 @@ export interface DisputeEvidence {
 }
 
 export interface CreateEvidenceDTO {
-  dispute_id: string
+  dispute_id?: string
   evidence_type: EvidenceType
+  evidence_category?: string
+  is_required?: boolean
   title?: string
   description?: string
   file_url?: string
