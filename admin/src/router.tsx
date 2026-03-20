@@ -5,6 +5,8 @@ import { DashboardPage } from './pages/DashboardPage';
 import { DisputeListPage } from './pages/DisputeListPage';
 import { DisputeDetailPage } from './pages/DisputeDetailPage';
 import { TraderListPage } from './pages/TraderListPage';
+import { TraderDetailPage } from './pages/TraderDetailPage';
+import { AuditLogPage } from './pages/AuditLogPage';
 
 export const router = createBrowserRouter([
   {
@@ -30,6 +32,14 @@ export const router = createBrowserRouter([
       {
         path: 'traders',
         element: <TraderListPage />,
+      },
+      {
+        path: 'traders/:id',
+        element: <TraderDetailPage />,
+      },
+      {
+        path: 'audit',
+        element: <AuditLogPage />,
       },
       {
         path: '*',

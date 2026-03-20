@@ -5,6 +5,7 @@ const navItems = [
   { path: '/', label: 'Dashboard', icon: '📊' },
   { path: '/disputes', label: 'Disputes', icon: '⚠️' },
   { path: '/traders', label: 'Traders', icon: '👥' },
+  { path: '/audit', label: 'Audit Log', icon: '📋' },
 ];
 
 export function Layout() {

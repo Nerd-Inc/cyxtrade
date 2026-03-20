@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { AuthRequest, adminMiddleware } from '../middleware/auth';
+import { AuthRequest, adminMiddleware, roleMiddleware } from '../middleware/auth';
 import { query, queryOne, transaction } from '../services/db';
 import { approveTrader, rejectTrader } from '../services/traderService';
 import { asyncHandler } from '../middleware/errorHandler';
@@ -9,6 +9,20 @@ import {
   isBlockchainEnabled,
   resolveDisputeOnChain,
 } from '../services/blockchainService';
+import {
+  logAction,
+  logTraderApproval,
+  logTraderRejection,
+  logTraderSuspension,
+  logTierChange,
+  logBulkAction,
+  logDisputeResolution,
+  getAuditLog,
+  getEntityHistory,
+  getActivityFeed,
+  getActionCounts
+} from '../services/auditService';
+import { getAllRoles, getAdminUsers, assignRole, removeRole } from '../services/rbacService';
 
 const router = Router();
 
@@ -150,15 +164,19 @@ router.get('/traders/pending', asyncHandler(async (req: AuthRequest, res) => {
 }));
 
 // PUT /api/admin/traders/:id/approve - Approve trader
-router.put('/traders/:id/approve', asyncHandler(async (req: AuthRequest, res) => {
+router.put('/traders/:id/approve', roleMiddleware('traders', 'approve'), asyncHandler(async (req: AuthRequest, res) => {
   const id = req.params.id as string;
   const adminId = req.user!.id;
+  const { reason } = req.body as { reason?: string };
 
   const trader = await approveTrader(id, adminId);
 
   if (!trader) {
     throw new AppError(ErrorCode.TRADER_NOT_FOUND, 'Trader not found or already processed');
   }
+
+  // Log the action
+  await logTraderApproval(adminId, id, reason, req.ip);
 
   sendSuccess(res, {
     id: trader.id,
@@ -168,8 +186,9 @@ router.put('/traders/:id/approve', asyncHandler(async (req: AuthRequest, res) =>
 }));
 
 // PUT /api/admin/traders/:id/reject - Reject trader
-router.put('/traders/:id/reject', asyncHandler(async (req: AuthRequest, res) => {
+router.put('/traders/:id/reject', roleMiddleware('traders', 'reject'), asyncHandler(async (req: AuthRequest, res) => {
   const id = req.params.id as string;
+  const adminId = req.user!.id;
   const { reason } = req.body as { reason?: string };
 
   const trader = await rejectTrader(id, reason);
@@ -177,6 +196,9 @@ router.put('/traders/:id/reject', asyncHandler(async (req: AuthRequest, res) => 
   if (!trader) {
     throw new AppError(ErrorCode.TRADER_NOT_FOUND, 'Trader not found or already processed');
   }
+
+  // Log the action
+  await logTraderRejection(adminId, id, reason || 'No reason provided', req.ip);
 
   sendSuccess(res, {
     id: trader.id,
@@ -186,9 +208,10 @@ router.put('/traders/:id/reject', asyncHandler(async (req: AuthRequest, res) => 
 }));
 
 // PUT /api/admin/traders/:id/suspend - Suspend trader
-router.put('/traders/:id/suspend', asyncHandler(async (req: AuthRequest, res) => {
+router.put('/traders/:id/suspend', roleMiddleware('traders', 'suspend'), asyncHandler(async (req: AuthRequest, res) => {
   const { id } = req.params;
-  const { reason } = req.body;
+  const { reason } = req.body as { reason?: string };
+  const adminId = req.user!.id;
 
   const rows = await query(
     `UPDATE traders
@@ -202,10 +225,126 @@ router.put('/traders/:id/suspend', asyncHandler(async (req: AuthRequest, res) =>
     throw new AppError(ErrorCode.TRADER_NOT_FOUND, 'Trader not found or not active');
   }
 
+  // Log the action
+  await logTraderSuspension(adminId, id, reason || 'No reason provided', req.ip);
+
   sendSuccess(res, {
     id: rows[0].id,
     status: 'suspended',
     message: 'Trader suspended',
+  });
+}));
+
+// PUT /api/admin/traders/:id/activate - Reactivate suspended trader
+router.put('/traders/:id/activate', roleMiddleware('traders', 'activate'), asyncHandler(async (req: AuthRequest, res) => {
+  const { id } = req.params;
+  const { reason } = req.body as { reason?: string };
+  const adminId = req.user!.id;
+
+  const rows = await query(
+    `UPDATE traders
+     SET status = 'active', updated_at = NOW()
+     WHERE id = $1 AND status = 'suspended'
+     RETURNING *`,
+    [id]
+  );
+
+  if (!rows[0]) {
+    throw new AppError(ErrorCode.TRADER_NOT_FOUND, 'Trader not found or not suspended');
+  }
+
+  // Log the action
+  await logAction({
+    adminId,
+    action: 'activate',
+    entityType: 'trader',
+    entityId: id,
+    newValue: { status: 'active' },
+    reason,
+    ipAddress: req.ip
+  });
+
+  sendSuccess(res, {
+    id: rows[0].id,
+    status: 'active',
+    message: 'Trader reactivated',
+  });
+}));
+
+// POST /api/admin/traders/bulk - Bulk trader actions
+router.post('/traders/bulk', roleMiddleware('traders', 'bulk'), asyncHandler(async (req: AuthRequest, res) => {
+  const { action, traderIds, reason } = req.body as {
+    action: 'approve' | 'reject' | 'suspend';
+    traderIds: string[];
+    reason?: string;
+  };
+  const adminId = req.user!.id;
+
+  if (!['approve', 'reject', 'suspend'].includes(action)) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid action');
+  }
+
+  if (!Array.isArray(traderIds) || traderIds.length === 0) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'No traders specified');
+  }
+
+  if (traderIds.length > 100) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Maximum 100 traders per bulk action');
+  }
+
+  const results: Array<{ id: string; success: boolean; error?: string }> = [];
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const traderId of traderIds) {
+    try {
+      if (action === 'approve') {
+        const trader = await approveTrader(traderId, adminId);
+        if (trader) {
+          results.push({ id: traderId, success: true });
+          successCount++;
+        } else {
+          results.push({ id: traderId, success: false, error: 'Not found or already processed' });
+          failCount++;
+        }
+      } else if (action === 'reject') {
+        const trader = await rejectTrader(traderId, reason);
+        if (trader) {
+          results.push({ id: traderId, success: true });
+          successCount++;
+        } else {
+          results.push({ id: traderId, success: false, error: 'Not found or already processed' });
+          failCount++;
+        }
+      } else if (action === 'suspend') {
+        const rows = await query(
+          `UPDATE traders SET status = 'suspended', updated_at = NOW()
+           WHERE id = $1 AND status = 'active' RETURNING id`,
+          [traderId]
+        );
+        if (rows[0]) {
+          results.push({ id: traderId, success: true });
+          successCount++;
+        } else {
+          results.push({ id: traderId, success: false, error: 'Not found or not active' });
+          failCount++;
+        }
+      }
+    } catch (error: any) {
+      results.push({ id: traderId, success: false, error: error.message });
+      failCount++;
+    }
+  }
+
+  // Log the bulk action
+  const bulkAction = action === 'approve' ? 'bulk_approve' : action === 'reject' ? 'bulk_reject' : 'bulk_suspend';
+  await logBulkAction(adminId, bulkAction, traderIds, successCount, failCount, reason, req.ip);
+
+  sendSuccess(res, {
+    action,
+    processed: successCount,
+    failed: failCount,
+    results,
   });
 }));
 
@@ -470,6 +609,381 @@ router.get('/bonds', asyncHandler(async (req: AuthRequest, res) => {
     totalLocked: parseFloat(stats?.total_locked || '0'),
     totalAvailable: parseFloat(stats?.total_available || '0'),
   });
+}));
+
+// ============================================================================
+// TIER MANAGEMENT
+// ============================================================================
+
+// PUT /api/admin/traders/:id/tier - Change trader tier
+router.put('/traders/:id/tier', roleMiddleware('traders', 'tier'), asyncHandler(async (req: AuthRequest, res) => {
+  const { id } = req.params;
+  const { tier, reason } = req.body as { tier: string; reason: string };
+  const adminId = req.user!.id;
+
+  const validTiers = ['observer', 'starter', 'verified', 'trusted', 'anchor'];
+  if (!validTiers.includes(tier)) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid tier');
+  }
+
+  if (!reason) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Reason is required for tier changes');
+  }
+
+  // Get current trader
+  const trader = await queryOne<{ id: string; tier: string }>(`SELECT id, tier FROM traders WHERE id = $1`, [id]);
+  if (!trader) {
+    throw new AppError(ErrorCode.TRADER_NOT_FOUND, 'Trader not found');
+  }
+
+  const oldTier = trader.tier || 'observer';
+
+  // Update trader tier
+  await query(`UPDATE traders SET tier = $1, updated_at = NOW() WHERE id = $2`, [tier, id]);
+
+  // Record tier history
+  await query(
+    `INSERT INTO trader_tier_history (trader_id, old_tier, new_tier, reason, changed_by)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [id, oldTier, tier, reason, adminId]
+  );
+
+  // Log the action
+  await logTierChange(adminId, id, oldTier, tier, reason, req.ip);
+
+  sendSuccess(res, {
+    id,
+    oldTier,
+    newTier: tier,
+    message: 'Trader tier updated',
+  });
+}));
+
+// GET /api/admin/traders/:id/tier-history - Get trader tier history
+router.get('/traders/:id/tier-history', roleMiddleware('traders', 'read'), asyncHandler(async (req: AuthRequest, res) => {
+  const { id } = req.params;
+
+  const history = await query(
+    `SELECT th.*, u.display_name as changed_by_name
+     FROM trader_tier_history th
+     LEFT JOIN users u ON th.changed_by = u.id
+     WHERE th.trader_id = $1
+     ORDER BY th.created_at DESC`,
+    [id]
+  );
+
+  sendSuccess(res, {
+    history: history.map(h => ({
+      id: h.id,
+      oldTier: h.old_tier,
+      newTier: h.new_tier,
+      reason: h.reason,
+      changedBy: h.changed_by,
+      changedByName: h.changed_by_name,
+      createdAt: h.created_at,
+    })),
+  });
+}));
+
+// ============================================================================
+// RESTRICTIONS
+// ============================================================================
+
+// GET /api/admin/traders/:id/restrictions - Get trader restrictions
+router.get('/traders/:id/restrictions', roleMiddleware('traders', 'read'), asyncHandler(async (req: AuthRequest, res) => {
+  const { id } = req.params;
+  const { includeInactive } = req.query;
+
+  const whereClause = includeInactive === 'true' ? '' : 'AND r.is_active = true';
+
+  const restrictions = await query(
+    `SELECT r.*, u.display_name as applied_by_name, ru.display_name as removed_by_name
+     FROM trader_restrictions r
+     LEFT JOIN users u ON r.applied_by = u.id
+     LEFT JOIN users ru ON r.removed_by = ru.id
+     WHERE r.trader_id = $1 ${whereClause}
+     ORDER BY r.created_at DESC`,
+    [id]
+  );
+
+  sendSuccess(res, {
+    restrictions: restrictions.map(r => ({
+      id: r.id,
+      restrictionType: r.restriction_type,
+      value: r.value,
+      reason: r.reason,
+      appliedBy: r.applied_by,
+      appliedByName: r.applied_by_name,
+      expiresAt: r.expires_at,
+      isActive: r.is_active,
+      createdAt: r.created_at,
+      removedAt: r.removed_at,
+      removedBy: r.removed_by,
+      removedByName: r.removed_by_name,
+    })),
+  });
+}));
+
+// POST /api/admin/traders/:id/restrictions - Add restriction
+router.post('/traders/:id/restrictions', roleMiddleware('traders', 'restrict'), asyncHandler(async (req: AuthRequest, res) => {
+  const { id } = req.params;
+  const { restrictionType, value, reason, expiresAt } = req.body as {
+    restrictionType: string;
+    value?: any;
+    reason: string;
+    expiresAt?: string;
+  };
+  const adminId = req.user!.id;
+
+  const validTypes = ['volume_limit', 'corridor_limit', 'no_new_trades', 'under_review', 'kyc_required', 'bond_hold'];
+  if (!validTypes.includes(restrictionType)) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid restriction type');
+  }
+
+  if (!reason) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Reason is required');
+  }
+
+  // Check trader exists
+  const trader = await queryOne<{ id: string }>(`SELECT id FROM traders WHERE id = $1`, [id]);
+  if (!trader) {
+    throw new AppError(ErrorCode.TRADER_NOT_FOUND, 'Trader not found');
+  }
+
+  const result = await queryOne<{ id: string }>(
+    `INSERT INTO trader_restrictions (trader_id, restriction_type, value, reason, applied_by, expires_at)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id`,
+    [id, restrictionType, value ? JSON.stringify(value) : null, reason, adminId, expiresAt || null]
+  );
+
+  // Log the action
+  await logAction({
+    adminId,
+    action: 'restriction_add',
+    entityType: 'trader',
+    entityId: id,
+    newValue: { restrictionType, value, reason },
+    ipAddress: req.ip
+  });
+
+  sendSuccess(res, {
+    id: result!.id,
+    message: 'Restriction added',
+  });
+}));
+
+// DELETE /api/admin/traders/:id/restrictions/:restrictionId - Remove restriction
+router.delete('/traders/:id/restrictions/:restrictionId', roleMiddleware('traders', 'restrict'), asyncHandler(async (req: AuthRequest, res) => {
+  const { id, restrictionId } = req.params;
+  const adminId = req.user!.id;
+
+  const result = await queryOne<{ id: string; restriction_type: string }>(
+    `UPDATE trader_restrictions
+     SET is_active = false, removed_at = NOW(), removed_by = $3
+     WHERE id = $1 AND trader_id = $2 AND is_active = true
+     RETURNING id, restriction_type`,
+    [restrictionId, id, adminId]
+  );
+
+  if (!result) {
+    throw createNotFoundError('Restriction');
+  }
+
+  // Log the action
+  await logAction({
+    adminId,
+    action: 'restriction_remove',
+    entityType: 'trader',
+    entityId: id,
+    oldValue: { restrictionId, restrictionType: result.restriction_type },
+    ipAddress: req.ip
+  });
+
+  sendSuccess(res, {
+    message: 'Restriction removed',
+  });
+}));
+
+// ============================================================================
+// AUDIT LOG
+// ============================================================================
+
+// GET /api/admin/audit - Get audit log
+router.get('/audit', roleMiddleware('audit', 'read'), asyncHandler(async (req: AuthRequest, res) => {
+  const { adminId, action, entityType, entityId, startDate, endDate, search, limit = '50', offset = '0' } = req.query;
+
+  const result = await getAuditLog({
+    adminId: adminId as string,
+    action: action as any,
+    entityType: entityType as any,
+    entityId: entityId as string,
+    startDate: startDate as string,
+    endDate: endDate as string,
+    search: search as string,
+    limit: parseInt(limit as string, 10),
+    offset: parseInt(offset as string, 10),
+  });
+
+  sendSuccess(res, result);
+}));
+
+// GET /api/admin/audit/entity/:type/:id - Get entity history
+router.get('/audit/entity/:type/:id', roleMiddleware('audit', 'read'), asyncHandler(async (req: AuthRequest, res) => {
+  const { type, id } = req.params;
+  const { limit = '50' } = req.query;
+
+  const history = await getEntityHistory(type as any, id, parseInt(limit as string, 10));
+
+  sendSuccess(res, { history });
+}));
+
+// GET /api/admin/audit/counts - Get action counts
+router.get('/audit/counts', roleMiddleware('audit', 'read'), asyncHandler(async (req: AuthRequest, res) => {
+  const { adminId, startDate, endDate } = req.query;
+
+  const counts = await getActionCounts(
+    adminId as string,
+    startDate as string,
+    endDate as string
+  );
+
+  sendSuccess(res, { counts });
+}));
+
+// ============================================================================
+// DASHBOARD
+// ============================================================================
+
+// GET /api/admin/dashboard/activity - Get recent activity feed
+router.get('/dashboard/activity', asyncHandler(async (req: AuthRequest, res) => {
+  const { limit = '20' } = req.query;
+
+  const activity = await getActivityFeed(parseInt(limit as string, 10));
+
+  sendSuccess(res, { activity });
+}));
+
+// GET /api/admin/dashboard/kpis - Get dashboard KPIs
+router.get('/dashboard/kpis', asyncHandler(async (req: AuthRequest, res) => {
+  const [
+    pendingResult,
+    tierResult,
+    volumeResult,
+    disputeResult,
+    alertsResult,
+  ] = await Promise.all([
+    // Pending traders
+    queryOne<{ count: string }>(`SELECT COUNT(*) as count FROM traders WHERE status = 'pending'`),
+    // Tier distribution
+    query<{ tier: string; count: string }>(`
+      SELECT COALESCE(tier, 'observer') as tier, COUNT(*) as count
+      FROM traders WHERE status = 'active'
+      GROUP BY tier
+    `),
+    // Volume today
+    queryOne<{ volume: string; count: string }>(`
+      SELECT
+        COALESCE(SUM(send_amount), 0) as volume,
+        COUNT(*) as count
+      FROM trades
+      WHERE status = 'completed'
+        AND created_at > NOW() - INTERVAL '24 hours'
+    `),
+    // Dispute rate (last 7 days)
+    queryOne<{ total: string; disputed: string }>(`
+      SELECT
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE id IN (SELECT trade_id FROM disputes)) as disputed
+      FROM trades
+      WHERE created_at > NOW() - INTERVAL '7 days'
+    `),
+    // Active alerts (restrictions that need attention)
+    queryOne<{ count: string }>(`
+      SELECT COUNT(*) as count FROM trader_restrictions
+      WHERE is_active = true AND restriction_type = 'under_review'
+    `),
+  ]);
+
+  const tierDistribution = tierResult.reduce((acc, r) => {
+    acc[r.tier] = parseInt(r.count, 10);
+    return acc;
+  }, {} as Record<string, number>);
+
+  const totalTrades = parseInt(disputeResult?.total || '0', 10);
+  const disputedTrades = parseInt(disputeResult?.disputed || '0', 10);
+  const disputeRate = totalTrades > 0 ? (disputedTrades / totalTrades) * 100 : 0;
+
+  sendSuccess(res, {
+    pendingTraders: parseInt(pendingResult?.count || '0', 10),
+    activeAlerts: parseInt(alertsResult?.count || '0', 10),
+    volumeToday: parseFloat(volumeResult?.volume || '0'),
+    tradesToday: parseInt(volumeResult?.count || '0', 10),
+    disputeRate: Math.round(disputeRate * 100) / 100,
+    tierDistribution,
+  });
+}));
+
+// ============================================================================
+// ROLE MANAGEMENT
+// ============================================================================
+
+// GET /api/admin/roles - Get all roles
+router.get('/roles', roleMiddleware('roles', 'read'), asyncHandler(async (req: AuthRequest, res) => {
+  const roles = await getAllRoles();
+  sendSuccess(res, { roles });
+}));
+
+// GET /api/admin/admins - Get all admin users
+router.get('/admins', roleMiddleware('roles', 'read'), asyncHandler(async (req: AuthRequest, res) => {
+  const admins = await getAdminUsers();
+  sendSuccess(res, { admins });
+}));
+
+// POST /api/admin/users/:id/role - Assign role to user
+router.post('/users/:id/role', roleMiddleware('roles', 'assign'), asyncHandler(async (req: AuthRequest, res) => {
+  const { id } = req.params;
+  const { roleId } = req.body as { roleId: string };
+  const adminId = req.user!.id;
+
+  if (!['owner', 'manager', 'operator'].includes(roleId)) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid role');
+  }
+
+  await assignRole(id, roleId as any, adminId);
+
+  // Log the action
+  await logAction({
+    adminId,
+    action: 'role_assign',
+    entityType: 'user',
+    entityId: id,
+    newValue: { role: roleId },
+    ipAddress: req.ip
+  });
+
+  sendSuccess(res, { message: 'Role assigned' });
+}));
+
+// DELETE /api/admin/users/:id/role - Remove role from user
+router.delete('/users/:id/role', roleMiddleware('roles', 'assign'), asyncHandler(async (req: AuthRequest, res) => {
+  const { id } = req.params;
+  const adminId = req.user!.id;
+
+  await removeRole(id, adminId);
+
+  // Log the action
+  await logAction({
+    adminId,
+    action: 'role_assign',
+    entityType: 'user',
+    entityId: id,
+    newValue: { role: null },
+    reason: 'Role removed',
+    ipAddress: req.ip
+  });
+
+  sendSuccess(res, { message: 'Role removed' });
 }));
 
 export default router;

@@ -122,3 +122,114 @@ export interface ApiResponse<T> {
     message: string;
   };
 }
+
+// Admin Roles
+export type RoleId = 'owner' | 'manager' | 'operator';
+
+export interface AdminRole {
+  id: RoleId;
+  name: string;
+  description: string;
+  permissions: Record<string, string[]>;
+  createdAt: string;
+}
+
+export interface AdminUser {
+  id: string;
+  displayName: string | null;
+  email: string | null;
+  phone: string;
+  isAdmin: boolean;
+  adminRole: RoleId | null;
+  roleName: string | null;
+}
+
+// Audit Log
+export type AuditAction =
+  | 'approve'
+  | 'reject'
+  | 'suspend'
+  | 'activate'
+  | 'tier_change'
+  | 'restriction_add'
+  | 'restriction_remove'
+  | 'bulk_approve'
+  | 'bulk_reject'
+  | 'bulk_suspend'
+  | 'dispute_resolve'
+  | 'role_assign';
+
+export type AuditEntityType = 'trader' | 'dispute' | 'user' | 'role' | 'system';
+
+export interface AuditLogEntry {
+  id: string;
+  adminId: string;
+  adminName?: string;
+  adminEmail?: string;
+  action: AuditAction;
+  entityType: AuditEntityType;
+  entityId: string | null;
+  oldValue: Record<string, unknown> | null;
+  newValue: Record<string, unknown> | null;
+  reason: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+// Tier History
+export interface TierHistoryEntry {
+  id: string;
+  oldTier: string | null;
+  newTier: string;
+  reason: string | null;
+  changedBy: string;
+  changedByName: string | null;
+  createdAt: string;
+}
+
+// Restrictions
+export type RestrictionType =
+  | 'volume_limit'
+  | 'corridor_limit'
+  | 'no_new_trades'
+  | 'under_review'
+  | 'kyc_required'
+  | 'bond_hold';
+
+export interface Restriction {
+  id: string;
+  restrictionType: RestrictionType;
+  value: unknown;
+  reason: string | null;
+  appliedBy: string;
+  appliedByName: string | null;
+  expiresAt: string | null;
+  isActive: boolean;
+  createdAt: string;
+  removedAt: string | null;
+  removedBy: string | null;
+  removedByName: string | null;
+}
+
+// Bulk Actions
+export interface BulkActionResult {
+  action: 'approve' | 'reject' | 'suspend';
+  processed: number;
+  failed: number;
+  results: Array<{
+    id: string;
+    success: boolean;
+    error?: string;
+  }>;
+}
+
+// Dashboard KPIs
+export interface DashboardKPIs {
+  pendingTraders: number;
+  activeAlerts: number;
+  volumeToday: number;
+  tradesToday: number;
+  disputeRate: number;
+  tierDistribution: Record<string, number>;
+}
