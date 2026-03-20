@@ -139,7 +139,8 @@ cyxtrade/
 │       ├── services/      # Business logic
 │       │   ├── db.ts, blockchainService.ts
 │       │   ├── walletService.ts      # Pro wallet operations
-│       │   └── p2pOrderService.ts    # Pro order/escrow logic
+│       │   ├── p2pOrderService.ts    # Pro order/escrow logic
+│       │   └── disputeService.ts     # Dispute claim types & validation
 │       ├── middleware/    # Auth, error handling
 │       └── utils/         # errors.ts, response.ts
 │
@@ -153,8 +154,13 @@ cyxtrade/
 │
 ├── web/                   # React web app (Vite + React 19)
 │   └── src/
+│       ├── components/    # Reusable components
+│       │   ├── DisputeForm.tsx       # Multi-step dispute wizard
+│       │   ├── FeeBreakdown.tsx      # Fee transparency component
+│       │   ├── ScamWarningModal.tsx  # Risk assessment warnings
+│       │   └── TrustScorecard.tsx    # Trader reputation display
 │       ├── pages/         # Page components
-│       │   ├── AppHome.tsx, Login.tsx, SendMoney.tsx, etc.
+│       │   ├── AppHome.tsx, Login.tsx, etc.
 │       │   ├── ProMarketplace.tsx    # Pro P2P marketplace
 │       │   ├── ProWallet.tsx         # Pro wallet management
 │       │   ├── ProOrders.tsx         # Pro order list
@@ -210,6 +216,11 @@ cyxtrade/
   - [x] P2P ads (create, update, delete, browse)
   - [x] P2P orders with escrow (lock, release, refund)
   - [x] Pro frontend (React + Zustand)
+- [x] **Trust & Safety Features**
+  - [x] Trader Trust Scorecard (reputation visibility)
+  - [x] In-app Scam Warnings (risk assessment, suspicious activity reporting)
+  - [x] Fee & Payout Transparency (fee breakdown, rate comparison)
+  - [x] Standardized Dispute Claim Taxonomy (6 claim types, evidence checklists)
 
 ### Smart Contracts (Shasta Testnet)
 
@@ -253,6 +264,25 @@ cyxtrade/
 5. **Resolution** → Smart contract executes automatically
 
 Arbitrators stake 500+ USDT. Corrupt voting = stake slashed.
+
+### Dispute Claim Types
+
+Standardized claim taxonomy (PayPal-style) with role-based filtering:
+
+| Code | Name | For | Description |
+|------|------|-----|-------------|
+| `item_not_received` | Item/Funds Not Received | Buyer | Payment sent but never received goods/crypto/fiat |
+| `not_as_described` | Not as Described | Buyer | Received differs from promised |
+| `payment_not_received` | Payment Not Received | Seller | Buyer's payment never arrived |
+| `wrong_amount` | Wrong Amount | Both | Different amount than agreed |
+| `unauthorized_transaction` | Unauthorized Transaction | Both | Transaction made without consent |
+| `other` | Other Issue | Both | Fallback category |
+
+Each claim type has required/optional evidence checklists stored in `dispute_claim_types` table.
+
+**Key Files:**
+- `backend/src/services/disputeService.ts` - Claim type validation and evidence checklists
+- `web/src/components/DisputeForm.tsx` - Multi-step dispute wizard (claim → details → review)
 
 ---
 
@@ -306,7 +336,9 @@ CyxTrade Pro is the advanced P2P trading mode for users familiar with Binance P2
 - `PUT /:id/paid` - Mark as paid
 - `PUT /:id/release` - Release crypto
 - `PUT /:id/cancel` - Cancel order
-- `POST /:id/dispute` - Open dispute
+- `POST /:id/dispute` - Open dispute (requires `claimType`)
+- `GET /disputes/claim-types` - List available claim types
+- `GET /disputes/claim-types/:type/evidence` - Evidence checklist for claim type
 
 ### Pro Frontend Routes (`/pro/`)
 
