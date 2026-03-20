@@ -173,6 +173,19 @@ cyxtrade/
 │       └── router.tsx     # React Router config
 │
 └── admin/                 # React admin panel
+    └── src/
+        ├── components/    # Reusable components
+        │   ├── Layout.tsx           # Sidebar navigation
+        │   └── BulkActionBar.tsx    # Floating bulk action bar
+        ├── pages/         # Page components
+        │   ├── DashboardPage.tsx    # KPIs, activity feed, pending items
+        │   ├── TraderListPage.tsx   # Trader table with selection & bulk ops
+        │   ├── TraderDetailPage.tsx # Trader details with tabs
+        │   ├── DisputeListPage.tsx  # Dispute management
+        │   └── AuditLogPage.tsx     # Searchable audit log
+        ├── services/api.ts          # API client
+        ├── store/auth.ts            # Auth state
+        └── types/index.ts           # TypeScript types
 ```
 
 ---
@@ -221,6 +234,13 @@ cyxtrade/
   - [x] In-app Scam Warnings (risk assessment, suspicious activity reporting)
   - [x] Fee & Payout Transparency (fee breakdown, rate comparison)
   - [x] Standardized Dispute Claim Taxonomy (6 claim types, evidence checklists)
+- [x] **Trader Back Office** - Admin panel with RBAC and bulk operations
+  - [x] Role-based access control (owner, manager, operator)
+  - [x] Bulk trader actions (approve/reject/suspend multiple)
+  - [x] Tier management with history tracking
+  - [x] Trader restrictions system
+  - [x] Comprehensive audit logging
+  - [x] Dashboard KPIs and activity feed
 
 ### Smart Contracts (Shasta Testnet)
 
@@ -532,6 +552,76 @@ try {
   showErrorSnackBar(context, e, onRetry: _retryMethod);
 }
 ```
+
+---
+
+## Trader Back Office (Admin Panel)
+
+Role-based admin panel for trader management, following Mercury/Stellas/9jaPay patterns.
+
+### Admin Roles & Permissions
+
+| Role | Traders | Disputes | Reports | Audit | Roles |
+|------|---------|----------|---------|-------|-------|
+| **Owner** | Full access | Resolve | Read/Export | Read | Assign |
+| **Manager** | Approve/Reject/Suspend/Tier | Resolve | Read/Export | Read | - |
+| **Operator** | Approve/Reject | Read | Read | - | - |
+
+### Admin API Routes (`/api/admin/`)
+
+**Trader Management:**
+- `GET /traders` - List with filters (status, tier, search)
+- `GET /traders/:id` - Trader details
+- `PUT /traders/:id/approve` - Approve trader
+- `PUT /traders/:id/reject` - Reject trader
+- `PUT /traders/:id/suspend` - Suspend trader
+- `PUT /traders/:id/activate` - Reactivate trader
+- `POST /traders/bulk` - Bulk approve/reject/suspend
+
+**Tier Management:**
+- `PUT /traders/:id/tier` - Change tier (requires reason)
+- `GET /traders/:id/tier-history` - Tier change history
+
+**Restrictions:**
+- `GET /traders/:id/restrictions` - List restrictions
+- `POST /traders/:id/restrictions` - Add restriction
+- `DELETE /traders/:id/restrictions/:id` - Remove restriction
+
+Restriction types: `volume_limit`, `corridor_limit`, `no_new_trades`, `under_review`, `kyc_required`, `bond_hold`
+
+**Audit Log:**
+- `GET /audit` - Full audit log with filters
+- `GET /audit/entity/:type/:id` - Entity history
+- `GET /audit/counts` - Action statistics
+
+**Dashboard:**
+- `GET /dashboard/kpis` - Key performance indicators
+- `GET /dashboard/activity` - Recent activity feed
+
+### Admin Frontend Routes
+
+| Route | Page | Description |
+|-------|------|-------------|
+| `/` | Dashboard | KPIs, tier distribution, activity feed |
+| `/traders` | TraderList | Table with selection, bulk actions |
+| `/traders/:id` | TraderDetail | Tabs: Overview, Tier, Restrictions, Audit |
+| `/disputes` | DisputeList | Dispute management |
+| `/disputes/:id` | DisputeDetail | Evidence review, resolution |
+| `/audit` | AuditLog | Searchable/filterable audit history |
+
+### Key Files
+
+**Backend:**
+- `backend/src/services/rbacService.ts` - Role/permission checking
+- `backend/src/services/auditService.ts` - Audit logging
+- `backend/src/middleware/auth.ts` - `roleMiddleware()`, `requirePermissions()`
+- `backend/src/routes/admin.ts` - All admin endpoints
+- `backend/migrations/004_admin_rbac_audit.sql` - Database schema
+
+**Admin Panel:**
+- `admin/src/components/BulkActionBar.tsx` - Floating action bar
+- `admin/src/pages/TraderDetailPage.tsx` - Tabbed trader view
+- `admin/src/pages/AuditLogPage.tsx` - Audit log viewer
 
 ---
 
