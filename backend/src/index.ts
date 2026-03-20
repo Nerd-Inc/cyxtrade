@@ -21,6 +21,9 @@ import uploadRoutes from './routes/uploads';
 import keyRoutes from './routes/keys';
 import relayRoutes from './routes/relay';
 import bootstrapRoutes from './routes/bootstrap';
+import marketRoutes from './routes/market';
+import proRoutes from './routes/pro';
+import riskRoutes from './routes/risk';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -71,6 +74,9 @@ app.use('/api/uploads', authMiddleware, uploadRoutes);
 app.use('/api/keys', keyRoutes);  // Key exchange for E2E encryption
 app.use('/api/relay', authMiddleware, relayRoutes);  // Offline message queue
 app.use('/api/bootstrap', bootstrapRoutes);  // P2P peer discovery
+app.use('/api/market', marketRoutes);  // External market reference rates
+app.use('/api/pro', proRoutes);  // CyxTrade Pro - P2P marketplace
+app.use('/api/risk', riskRoutes);  // Risk assessment and scam warnings
 
 // Error handling
 app.use(errorHandler);

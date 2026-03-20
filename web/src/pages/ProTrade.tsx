@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
-import { useAdsStore, useOrdersStore, useWalletStore, type P2PAd } from '../store/pro'
+import { useAdsStore, useOrdersStore, useWalletStore } from '../store/pro'
+import ScamWarningModal, { WarningBanner, ReportSuspiciousModal } from '../components/ScamWarningModal'
+import { useRiskAssessment } from '../hooks/useRiskAssessment'
 
 export default function ProTrade() {
   const { id } = useParams<{ id: string }>()
@@ -16,6 +18,12 @@ export default function ProTrade() {
   const [selectedPayment, setSelectedPayment] = useState('')
   const [agreedTerms, setAgreedTerms] = useState(false)
 
+  // Risk assessment
+  const { assessment, assessTrade, reportSuspicious } = useRiskAssessment()
+  const [showRiskWarning, setShowRiskWarning] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(false)
+  const [riskChecked, setRiskChecked] = useState(false)
+
   useEffect(() => {
     if (id) {
       fetchAd(id)
@@ -28,6 +36,28 @@ export default function ProTrade() {
       setSelectedPayment(currentAd.paymentMethods[0])
     }
   }, [currentAd, selectedPayment])
+
+  // Risk assessment when ad loads
+  useEffect(() => {
+    const checkRisk = async () => {
+      if (!currentAd || !currentAd.traderUserId || riskChecked) return
+
+      const result = await assessTrade({
+        traderId: currentAd.traderUserId,
+        paymentMethodType: currentAd.paymentMethods[0]?.toLowerCase().includes('bank') ? 'bank' : 'mobile_money',
+        paymentIdentifier: undefined // Will check trader reputation only
+      })
+
+      setRiskChecked(true)
+
+      // Show warning modal if high/critical risk
+      if (result && result.requiresConfirmation) {
+        setShowRiskWarning(true)
+      }
+    }
+
+    checkRisk()
+  }, [currentAd?.id])
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -100,13 +130,27 @@ export default function ProTrade() {
               </span>
             </div>
 
-            <button
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              {isLoggingOut ? 'Logging out...' : 'Logout'}
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Report Suspicious Activity */}
+              {currentAd && (
+                <button
+                  onClick={() => setShowReportModal(true)}
+                  className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-red-500 hover:border-red-500/50 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                  title="Report Suspicious Activity"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </button>
+              )}
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                {isLoggingOut ? 'Logging out...' : 'Logout'}
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -118,6 +162,15 @@ export default function ProTrade() {
             {error}
             <button onClick={clearError} className="ml-2 underline">Dismiss</button>
           </div>
+        )}
+
+        {/* Risk Warning Banner */}
+        {assessment && assessment.warnings.length > 0 && (
+          <WarningBanner
+            warnings={assessment.warnings}
+            onViewDetails={() => setShowRiskWarning(true)}
+            className="mb-6"
+          />
         )}
 
         {/* Trade Type Banner */}
@@ -308,6 +361,37 @@ export default function ProTrade() {
           </p>
         </div>
       </main>
+
+      {/* Scam Warning Modal */}
+      {assessment && (
+        <ScamWarningModal
+          isOpen={showRiskWarning}
+          onClose={() => setShowRiskWarning(false)}
+          onProceed={() => setShowRiskWarning(false)}
+          onCancel={() => navigate('/pro')}
+          assessment={assessment}
+          actionLabel="Continue Trading"
+        />
+      )}
+
+      {/* Report Suspicious Activity Modal */}
+      {currentAd && (
+        <ReportSuspiciousModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          onSubmit={async (data) => {
+            await reportSuspicious({
+              tradeId: currentAd.id, // Using ad ID as reference
+              methodType: currentAd.paymentMethods[0]?.toLowerCase().includes('bank') ? 'bank' : 'mobile_money',
+              identifier: currentAd.traderUserId || '',
+              ...data
+            })
+          }}
+          tradeId={currentAd.id}
+          methodType={currentAd.paymentMethods[0]?.toLowerCase().includes('bank') ? 'bank' : 'mobile_money'}
+          identifier={currentAd.traderUserId || ''}
+        />
+      )}
     </div>
   )
 }

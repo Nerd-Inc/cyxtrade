@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
-import { useOrdersStore, useWalletStore, type P2POrder } from '../store/pro'
+import { useOrdersStore, useWalletStore } from '../store/pro'
+import ScamWarningModal, { WarningBanner, ReportSuspiciousModal } from '../components/ScamWarningModal'
+import { useRiskAssessment } from '../hooks/useRiskAssessment'
 
 export default function ProOrderDetails() {
   const { id } = useParams<{ id: string }>()
@@ -16,11 +18,47 @@ export default function ProOrderDetails() {
   const [showDisputeModal, setShowDisputeModal] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState('')
 
+  // Risk assessment
+  const { assessment, assessTrade, reportSuspicious } = useRiskAssessment()
+  const [showRiskWarning, setShowRiskWarning] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(false)
+  const [riskChecked, setRiskChecked] = useState(false)
+
   useEffect(() => {
     if (id) {
       fetchOrder(id)
     }
   }, [id, fetchOrder])
+
+  // Risk assessment when order loads
+  useEffect(() => {
+    const checkRisk = async () => {
+      if (!currentOrder || riskChecked) return
+
+      // Check risk of counterparty
+      const counterpartyId = currentOrder.buyerUserId === user?.id
+        ? currentOrder.sellerUserId
+        : currentOrder.buyerUserId
+
+      if (!counterpartyId) return
+
+      const result = await assessTrade({
+        traderId: counterpartyId,
+        paymentMethodType: currentOrder.paymentMethod?.toLowerCase().includes('bank') ? 'bank' : 'mobile_money',
+        paymentIdentifier: undefined,
+        amount: currentOrder.fiatAmount
+      })
+
+      setRiskChecked(true)
+
+      // Show warning modal if high/critical risk and order is still active
+      if (result && result.requiresConfirmation && ['pending', 'payment_pending'].includes(currentOrder.status)) {
+        setShowRiskWarning(true)
+      }
+    }
+
+    checkRisk()
+  }, [currentOrder?.id])
 
   useEffect(() => {
     if (!currentOrder || !['pending', 'payment_pending', 'paid', 'releasing'].includes(currentOrder.status)) return
@@ -169,13 +207,27 @@ export default function ProOrderDetails() {
               </span>
             </div>
 
-            <button
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              {isLoggingOut ? 'Logging out...' : 'Logout'}
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Report Suspicious Activity */}
+              {currentOrder && !['completed', 'cancelled', 'expired'].includes(currentOrder.status) && (
+                <button
+                  onClick={() => setShowReportModal(true)}
+                  className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-400 hover:text-red-500 hover:border-red-500/50 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                  title="Report Suspicious Activity"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </button>
+              )}
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                {isLoggingOut ? 'Logging out...' : 'Logout'}
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -187,6 +239,15 @@ export default function ProOrderDetails() {
             {error}
             <button onClick={clearError} className="ml-2 underline">Dismiss</button>
           </div>
+        )}
+
+        {/* Risk Warning Banner */}
+        {assessment && assessment.warnings.length > 0 && !['completed', 'cancelled', 'expired'].includes(currentOrder.status) && (
+          <WarningBanner
+            warnings={assessment.warnings}
+            onViewDetails={() => setShowRiskWarning(true)}
+            className="mb-6"
+          />
         )}
 
         {/* Order Header */}
@@ -403,6 +464,40 @@ export default function ProOrderDetails() {
           </div>
         )}
       </main>
+
+      {/* Scam Warning Modal */}
+      {assessment && (
+        <ScamWarningModal
+          isOpen={showRiskWarning}
+          onClose={() => setShowRiskWarning(false)}
+          onProceed={() => setShowRiskWarning(false)}
+          onCancel={() => navigate('/pro/orders')}
+          assessment={assessment}
+          actionLabel="Continue with Order"
+        />
+      )}
+
+      {/* Report Suspicious Activity Modal */}
+      {currentOrder && (
+        <ReportSuspiciousModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          onSubmit={async (data) => {
+            const counterpartyId = currentOrder.buyerUserId === user?.id
+              ? currentOrder.sellerUserId
+              : currentOrder.buyerUserId
+            await reportSuspicious({
+              tradeId: currentOrder.id,
+              methodType: currentOrder.paymentMethod?.toLowerCase().includes('bank') ? 'bank' : 'mobile_money',
+              identifier: counterpartyId || '',
+              ...data
+            })
+          }}
+          tradeId={currentOrder.id}
+          methodType={currentOrder.paymentMethod?.toLowerCase().includes('bank') ? 'bank' : 'mobile_money'}
+          identifier={isBuyer ? currentOrder.sellerUserId : currentOrder.buyerUserId}
+        />
+      )}
     </div>
   )
 }
