@@ -1,20 +1,18 @@
 import { Router } from 'express';
 import { AuthRequest, authMiddleware, traderMiddleware } from '../../middleware/auth';
 import {
-  createOrder,
+  createProOrder,
   findOrderById,
   findOrderByNumber,
-  listUserOrders,
-  listTraderOrders,
+  listOrders,
   markOrderPaid,
-  releaseOrder,
+  releaseEscrow,
   completeOrder,
   cancelOrder,
-  openOrderDispute,
+  openDispute,
   getUserOrderStats,
   getTraderOrderStats,
-  CreateOrderDTO,
-} from '../../services/p2pOrderService';
+} from '../../services/orderService';
 import {
   getOrderMessages,
   sendMessage,
@@ -27,6 +25,7 @@ import {
   hasUserLeftFeedback,
 } from '../../services/p2pSocialService';
 import { findTraderByUserId } from '../../services/traderService';
+import { query } from '../../services/db';
 import { AppError, ErrorCode } from '../../utils/errors';
 import { sendSuccess } from '../../utils/response';
 import { asyncHandler } from '../../middleware/errorHandler';
@@ -50,20 +49,21 @@ router.post('/', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
     throw new AppError(ErrorCode.NOT_AUTHENTICATED);
   }
 
-  const data: CreateOrderDTO = {
-    ad_id: req.body.adId,
-    amount: req.body.amount,
-    payment_method_id: req.body.paymentMethodId,
-  };
+  const { adId, amount, paymentMethodId, type } = req.body;
 
-  if (!data.ad_id) {
+  if (!adId) {
     throw new AppError(ErrorCode.MISSING_FIELD, 'Ad ID is required', { field: 'adId' });
   }
-  if (!data.amount || data.amount <= 0) {
+  if (!amount || amount <= 0) {
     throw new AppError(ErrorCode.VALIDATION_ERROR, 'Amount must be positive');
   }
 
-  const order = await createOrder(userId, data);
+  const order = await createProOrder(userId, {
+    ad_id: adId,
+    amount,
+    payment_method_id: paymentMethodId,
+    type: type || 'buy',
+  });
 
   sendSuccess(res, {
     message: 'Order created successfully',
@@ -72,10 +72,10 @@ router.post('/', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
       orderNumber: order.order_number,
       type: order.type,
       asset: order.asset,
-      fiatCurrency: order.fiat_currency,
-      amount: order.amount,
-      price: order.price,
-      totalFiat: order.total_fiat,
+      fiatCurrency: order.receive_currency,
+      amount: order.crypto_amount,
+      price: order.rate,
+      totalFiat: order.send_amount,
       status: order.status,
       expiresAt: order.expires_at,
       createdAt: order.created_at,
@@ -92,23 +92,27 @@ router.get('/', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
 
   const { status, limit, offset } = req.query;
 
-  const result = await listUserOrders(userId, {
-    status: status as string,
-    limit: limit ? parseInt(limit as string) : undefined,
-    offset: offset ? parseInt(offset as string) : undefined,
-  });
+  const orders = await listOrders(
+    {
+      mode: 'pro',
+      user_id: userId,
+      status: status as any,
+    },
+    limit ? parseInt(limit as string) : 20,
+    offset ? parseInt(offset as string) : 0
+  );
 
-  const orders = result.orders.map((order) => ({
+  const formattedOrders = orders.map((order) => ({
     id: order.id,
     orderNumber: order.order_number,
     type: order.type,
     asset: order.asset,
-    fiatCurrency: order.fiat_currency,
-    amount: order.amount,
-    price: order.price,
-    totalFiat: order.total_fiat,
+    fiatCurrency: order.receive_currency,
+    amount: order.crypto_amount,
+    price: order.rate,
+    totalFiat: order.send_amount,
     status: order.status,
-    traderName: order.trader_display_name,
+    traderName: order.trader_name,
     traderRating: order.trader_rating,
     expiresAt: order.expires_at,
     createdAt: order.created_at,
@@ -117,7 +121,7 @@ router.get('/', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
     completedAt: order.completed_at,
   }));
 
-  sendSuccess(res, { orders, total: result.total });
+  sendSuccess(res, { orders: formattedOrders, total: formattedOrders.length });
 }));
 
 // GET /api/pro/orders/stats - Get user's order stats
@@ -127,13 +131,13 @@ router.get('/stats', authMiddleware, asyncHandler(async (req: AuthRequest, res) 
     throw new AppError(ErrorCode.NOT_AUTHENTICATED);
   }
 
-  const stats = await getUserOrderStats(userId);
+  const stats = await getUserOrderStats(userId, 'pro');
 
   sendSuccess(res, {
-    totalOrders: stats.total_orders,
-    completedOrders: stats.completed_orders,
-    totalVolume: stats.total_volume,
-    completionRate: stats.completion_rate,
+    totalOrders: stats.total,
+    completedOrders: stats.completed,
+    totalVolume: stats.totalVolume,
+    completionRate: stats.total > 0 ? (stats.completed / stats.total) * 100 : 100,
   });
 }));
 
@@ -186,7 +190,7 @@ router.get('/:id', authMiddleware, asyncHandler(async (req: AuthRequest, res) =>
   }
 
   if (!order) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Order not found');
+    throw new AppError(ErrorCode.ORDER_NOT_FOUND, 'Order not found');
   }
 
   // Check if user is participant
@@ -204,25 +208,31 @@ router.get('/:id', authMiddleware, asyncHandler(async (req: AuthRequest, res) =>
     id: order.id,
     orderNumber: order.order_number,
     adId: order.ad_id,
+    mode: order.mode,
     type: order.type,
     asset: order.asset,
-    fiatCurrency: order.fiat_currency,
-    amount: order.amount,
-    price: order.price,
-    totalFiat: order.total_fiat,
+    fiatCurrency: order.receive_currency,
+    amount: order.crypto_amount,
+    price: order.rate,
+    totalFiat: order.send_amount,
+    feeAmount: order.fee_amount,
     status: order.status,
-    traderName: order.trader_display_name,
+    traderName: order.trader_name,
     traderRating: order.trader_rating,
-    userName: order.user_display_name,
+    userName: order.user_name,
     paymentMethod: order.payment_method,
     paymentReference: order.payment_reference,
     paymentProofUrl: order.payment_proof_url,
+    escrowAmount: order.escrow_amount,
+    escrowAsset: order.escrow_asset,
+    escrowLockedAt: order.escrow_locked_at,
+    escrowReleasedAt: order.escrow_released_at,
     expiresAt: order.expires_at,
     createdAt: order.created_at,
     paidAt: order.paid_at,
     releasedAt: order.released_at,
     completedAt: order.completed_at,
-    canceledAt: order.canceled_at,
+    cancelledAt: order.cancelled_at,
     cancelReason: order.cancel_reason,
     hasFeedback,
     isTrader: trader && trader.id === order.trader_id,
@@ -239,11 +249,7 @@ router.put('/:id/pay', authMiddleware, asyncHandler(async (req: AuthRequest, res
   const orderId = getParam(req.params.id);
   const { reference, proofUrl } = req.body;
 
-  const order = await markOrderPaid(orderId, userId, { reference, proofUrl });
-
-  if (!order) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Order not found or cannot be marked as paid');
-  }
+  const order = await markOrderPaid(orderId, userId, reference, proofUrl);
 
   sendSuccess(res, {
     message: 'Order marked as paid',
@@ -261,10 +267,6 @@ router.put('/:id/complete', authMiddleware, asyncHandler(async (req: AuthRequest
 
   const orderId = getParam(req.params.id);
   const order = await completeOrder(orderId, userId);
-
-  if (!order) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Order not found or cannot be completed');
-  }
 
   sendSuccess(res, {
     message: 'Order completed successfully',
@@ -285,14 +287,10 @@ router.put('/:id/cancel', authMiddleware, asyncHandler(async (req: AuthRequest, 
 
   const order = await cancelOrder(orderId, userId, reason);
 
-  if (!order) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Order not found or cannot be cancelled');
-  }
-
   sendSuccess(res, {
     message: 'Order cancelled',
     status: order.status,
-    canceledAt: order.canceled_at,
+    cancelledAt: order.cancelled_at,
   });
 }));
 
@@ -310,16 +308,18 @@ router.post('/:id/dispute', authMiddleware, asyncHandler(async (req: AuthRequest
     throw new AppError(ErrorCode.MISSING_FIELD, 'Reason is required', { field: 'reason' });
   }
 
-  const result = await openOrderDispute(orderId, userId, reason);
+  const order = await openDispute(orderId, userId, reason);
 
-  if (!result) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Order not found or cannot open dispute');
-  }
+  // Get dispute ID
+  const dispute = await query<{ id: string }>(
+    'SELECT id FROM disputes WHERE order_id = $1 ORDER BY created_at DESC LIMIT 1',
+    [orderId]
+  );
 
   sendSuccess(res, {
     message: 'Dispute opened',
-    disputeId: result.disputeId,
-    status: result.order.status,
+    disputeId: dispute[0]?.id,
+    status: order.status,
   });
 }));
 
@@ -454,23 +454,27 @@ router.get('/trader/list', authMiddleware, traderMiddleware, asyncHandler(async 
 
   const { status, limit, offset } = req.query;
 
-  const result = await listTraderOrders(trader.id, {
-    status: status as string,
-    limit: limit ? parseInt(limit as string) : undefined,
-    offset: offset ? parseInt(offset as string) : undefined,
-  });
+  const orders = await listOrders(
+    {
+      mode: 'pro',
+      trader_id: trader.id,
+      status: status as any,
+    },
+    limit ? parseInt(limit as string) : 20,
+    offset ? parseInt(offset as string) : 0
+  );
 
-  const orders = result.orders.map((order) => ({
+  const formattedOrders = orders.map((order) => ({
     id: order.id,
     orderNumber: order.order_number,
     type: order.type,
     asset: order.asset,
-    fiatCurrency: order.fiat_currency,
-    amount: order.amount,
-    price: order.price,
-    totalFiat: order.total_fiat,
+    fiatCurrency: order.receive_currency,
+    amount: order.crypto_amount,
+    price: order.rate,
+    totalFiat: order.send_amount,
     status: order.status,
-    userName: order.user_display_name,
+    userName: order.user_name,
     expiresAt: order.expires_at,
     createdAt: order.created_at,
     paidAt: order.paid_at,
@@ -478,7 +482,7 @@ router.get('/trader/list', authMiddleware, traderMiddleware, asyncHandler(async 
     completedAt: order.completed_at,
   }));
 
-  sendSuccess(res, { orders, total: result.total });
+  sendSuccess(res, { orders: formattedOrders, total: formattedOrders.length });
 }));
 
 // GET /api/pro/orders/trader/stats - Get trader's order stats
@@ -493,14 +497,14 @@ router.get('/trader/stats', authMiddleware, traderMiddleware, asyncHandler(async
     throw new AppError(ErrorCode.NOT_A_TRADER);
   }
 
-  const stats = await getTraderOrderStats(trader.id);
+  const stats = await getTraderOrderStats(trader.id, 'pro');
 
   sendSuccess(res, {
-    totalOrders: stats.total_orders,
-    activeOrders: stats.active_orders,
-    completedOrders: stats.completed_orders,
-    totalVolume: stats.total_volume,
-    avgReleaseTime: stats.avg_release_time_minutes,
+    totalOrders: stats.total,
+    activeOrders: stats.active,
+    completedOrders: stats.completed,
+    totalVolume: stats.totalVolume,
+    avgReleaseTime: stats.avgCompletionTime,
   });
 }));
 
@@ -517,11 +521,7 @@ router.put('/:id/release', authMiddleware, traderMiddleware, asyncHandler(async 
   }
 
   const orderId = getParam(req.params.id);
-  const order = await releaseOrder(orderId, trader.id);
-
-  if (!order) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Order not found or cannot be released');
-  }
+  const order = await releaseEscrow(orderId, trader.id);
 
   sendSuccess(res, {
     message: 'Crypto released to buyer',

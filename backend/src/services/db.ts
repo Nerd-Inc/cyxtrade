@@ -1,7 +1,9 @@
-import { Pool, PoolClient } from 'pg';
-import dotenv from 'dotenv';
+import { Pool, PoolClient } from 'pg'
+import dotenv from 'dotenv'
+import fs from 'fs'
+import path from 'path'
 
-dotenv.config();
+dotenv.config()
 
 // Create connection pool
 const pool = new Pool({
@@ -10,556 +12,472 @@ const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
-});
+})
 
 // Test connection on startup
 pool.on('connect', () => {
-  console.log('📦 Connected to PostgreSQL');
-});
+  console.log('📦 Connected to PostgreSQL')
+})
 
 pool.on('error', (err: Error) => {
-  console.error('❌ PostgreSQL error:', err);
-});
+  console.error('❌ PostgreSQL error:', err)
+})
 
-// Query helper
+// ============================================================================
+// Query Helpers
+// ============================================================================
+
+/**
+ * Execute a query and return all rows
+ */
 export async function query<T = any>(text: string, params?: any[]): Promise<T[]> {
-  const start = Date.now();
-  const result = await pool.query(text, params);
-  const duration = Date.now() - start;
+  const start = Date.now()
+  const result = await pool.query(text, params)
+  const duration = Date.now() - start
 
-  if (process.env.NODE_ENV === 'development') {
-    console.log('📝 Query:', { text: text.substring(0, 50), duration: `${duration}ms`, rows: result.rowCount });
+  if (process.env.NODE_ENV === 'development' && process.env.LOG_QUERIES === 'true') {
+    console.log('📝 Query:', { text: text.substring(0, 80), duration: `${duration}ms`, rows: result.rowCount })
   }
 
-  return result.rows as T[];
+  return result.rows as T[]
 }
 
-// Single row helper
+/**
+ * Execute a query and return single row or null
+ */
 export async function queryOne<T = any>(text: string, params?: any[]): Promise<T | null> {
-  const rows = await query<T>(text, params);
-  return rows[0] || null;
+  const rows = await query<T>(text, params)
+  return rows[0] || null
 }
 
-// Transaction helper
+/**
+ * Execute multiple queries in a transaction
+ */
 export async function transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
-  const client = await pool.connect();
+  const client = await pool.connect()
   try {
-    await client.query('BEGIN');
-    const result = await callback(client);
-    await client.query('COMMIT');
-    return result;
+    await client.query('BEGIN')
+    const result = await callback(client)
+    await client.query('COMMIT')
+    return result
   } catch (e) {
-    await client.query('ROLLBACK');
-    throw e;
+    await client.query('ROLLBACK')
+    throw e
   } finally {
-    client.release();
+    client.release()
   }
 }
 
-// Initialize database schema
+/**
+ * Execute a query within a transaction client
+ */
+export async function clientQuery<T = any>(client: PoolClient, text: string, params?: any[]): Promise<T[]> {
+  const result = await client.query(text, params)
+  return result.rows as T[]
+}
+
+/**
+ * Execute a query within a transaction client and return single row
+ */
+export async function clientQueryOne<T = any>(client: PoolClient, text: string, params?: any[]): Promise<T | null> {
+  const rows = await clientQuery<T>(client, text, params)
+  return rows[0] || null
+}
+
+// ============================================================================
+// Database Initialization
+// ============================================================================
+
+/**
+ * Check if schema is initialized by checking for users table
+ */
+async function isSchemaInitialized(): Promise<boolean> {
+  try {
+    const result = await queryOne<{ exists: boolean }>(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_name = 'users'
+      )
+    `)
+    return result?.exists || false
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Check if we're using unified schema (has 'orders' table instead of 'trades')
+ */
+async function isUnifiedSchema(): Promise<boolean> {
+  try {
+    const result = await queryOne<{ exists: boolean }>(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_name = 'orders'
+      )
+    `)
+    return result?.exists || false
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Run migration from file
+ */
+async function runMigration(migrationPath: string): Promise<void> {
+  console.log(`🔄 Running migration: ${path.basename(migrationPath)}`)
+  const sql = fs.readFileSync(migrationPath, 'utf-8')
+
+  // Split by semicolons but preserve function bodies
+  const statements = sql
+    .split(/;(?=(?:[^']*'[^']*')*[^']*$)/g)
+    .map(s => s.trim())
+    .filter(s => s.length > 0 && !s.startsWith('--'))
+
+  for (const statement of statements) {
+    if (statement.trim()) {
+      try {
+        await query(statement)
+      } catch (err: any) {
+        // Ignore "already exists" errors
+        if (!err.message?.includes('already exists') &&
+            !err.message?.includes('duplicate key')) {
+          console.error(`Migration error: ${err.message}`)
+          console.error(`Statement: ${statement.substring(0, 100)}...`)
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Initialize database - runs migrations if needed
+ */
 export async function initializeDatabase(): Promise<void> {
-  console.log('🔧 Initializing database schema...');
+  console.log('🔧 Initializing database...')
 
   try {
-    // UUID helpers used by default values.
-    await query(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`);
-    await query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+    // Enable required extensions
+    await query(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`)
+    await query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`)
 
-    // Create tables if they don't exist
-    await query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        phone VARCHAR(20) UNIQUE,
-        phone_verified BOOLEAN DEFAULT FALSE,
-        public_key VARCHAR(64) UNIQUE,
-        public_key_fingerprint VARCHAR(16),
-        key_registered_at TIMESTAMP,
-        display_name VARCHAR(100),
-        avatar_url VARCHAR(500),
-        is_trader BOOLEAN DEFAULT FALSE,
-        is_admin BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
+    const schemaExists = await isSchemaInitialized()
+    const isUnified = await isUnifiedSchema()
 
-    // Ensure keypair-auth columns exist on older databases.
-    await query(`ALTER TABLE users ALTER COLUMN phone DROP NOT NULL`);
-    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS public_key VARCHAR(64)`);
-    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS public_key_fingerprint VARCHAR(16)`);
-    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS key_registered_at TIMESTAMP`);
-    await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_public_key_unique ON users(public_key)`);
+    if (!schemaExists) {
+      // Fresh install - run unified schema migration
+      console.log('📦 Fresh database detected, running unified schema migration...')
 
-    await query(`
-      CREATE TABLE IF NOT EXISTS traders (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE,
-        wallet_address VARCHAR(42),
-        status VARCHAR(20) DEFAULT 'pending',
-        bond_amount DECIMAL(12,2) DEFAULT 0,
-        bond_locked DECIMAL(12,2) DEFAULT 0,
-        corridors JSONB DEFAULT '[]',
-        rating DECIMAL(3,2) DEFAULT 0,
-        total_trades INTEGER DEFAULT 0,
-        is_online BOOLEAN DEFAULT FALSE,
-        approved_at TIMESTAMP,
-        approved_by UUID REFERENCES users(id),
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
+      const migrationPath = path.join(__dirname, '../../migrations/001_unified_schema.sql')
+      if (fs.existsSync(migrationPath)) {
+        await runMigration(migrationPath)
+        console.log('✅ Unified schema migration complete')
+      } else {
+        console.log('⚠️ Migration file not found, running inline schema...')
+        await runInlineSchema()
+      }
+    } else if (!isUnified) {
+      // Legacy schema exists - need to migrate
+      console.log('⚠️ Legacy schema detected. Run migration to upgrade.')
+      console.log('   For now, running in compatibility mode...')
+      // TODO: Add migration from old schema to unified schema
+    } else {
+      console.log('✅ Unified schema already initialized')
+    }
 
-    await query(`ALTER TABLE traders ADD COLUMN IF NOT EXISTS wallet_address VARCHAR(42)`);
-
-    // Trader payment methods
-    await query(`
-      CREATE TABLE IF NOT EXISTS trader_payment_methods (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        trader_id UUID NOT NULL REFERENCES traders(id) ON DELETE CASCADE,
-        method_type VARCHAR(20) NOT NULL,
-        provider VARCHAR(50),
-        account_holder_name VARCHAR(100) NOT NULL,
-        phone_number VARCHAR(20),
-        phone_country_code VARCHAR(5),
-        bank_name VARCHAR(100),
-        account_number VARCHAR(50),
-        iban VARCHAR(34),
-        swift_code VARCHAR(11),
-        currency VARCHAR(3),
-        is_primary BOOLEAN DEFAULT FALSE,
-        is_active BOOLEAN DEFAULT TRUE,
-        verification_status VARCHAR(20) DEFAULT 'unverified',
-        verification_code VARCHAR(10),
-        verification_sent_at TIMESTAMP,
-        verified_at TIMESTAMP,
-        verification_attempts INTEGER DEFAULT 0,
-        verification_expires_at TIMESTAMP,
-        verification_proof_url VARCHAR(500),
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS trades (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID REFERENCES users(id),
-        trader_id UUID REFERENCES traders(id),
-        send_currency VARCHAR(3) NOT NULL,
-        send_amount DECIMAL(12,2) NOT NULL,
-        receive_currency VARCHAR(3) NOT NULL,
-        receive_amount DECIMAL(12,2) NOT NULL,
-        rate DECIMAL(12,6) NOT NULL,
-        recipient_name VARCHAR(100),
-        recipient_phone VARCHAR(20),
-        recipient_method VARCHAR(50),
-        status VARCHAR(20) DEFAULT 'pending',
-        bond_locked DECIMAL(12,2),
-        created_at TIMESTAMP DEFAULT NOW(),
-        accepted_at TIMESTAMP,
-        paid_at TIMESTAMP,
-        delivered_at TIMESTAMP,
-        completed_at TIMESTAMP,
-        cancelled_at TIMESTAMP,
-        payment_reference VARCHAR(100),
-        payment_proof_url VARCHAR(500)
-      )
-    `);
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS chat_messages (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        trade_id UUID REFERENCES trades(id) ON DELETE CASCADE,
-        sender_id UUID REFERENCES users(id),
-        message_type VARCHAR(20) DEFAULT 'text',
-        content TEXT,
-        image_url VARCHAR(500),
-        read_at TIMESTAMP,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS disputes (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        trade_id UUID REFERENCES trades(id),
-        opened_by UUID REFERENCES users(id),
-        reason TEXT,
-        status VARCHAR(20) DEFAULT 'open',
-        resolution VARCHAR(20),
-        resolution_notes TEXT,
-        resolved_by UUID REFERENCES users(id),
-        resolved_at TIMESTAMP,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS dispute_evidence (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        dispute_id UUID REFERENCES disputes(id) ON DELETE CASCADE,
-        submitted_by UUID REFERENCES users(id),
-        evidence_type VARCHAR(20),
-        content TEXT,
-        file_url VARCHAR(500),
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS ratings (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        trade_id UUID REFERENCES trades(id),
-        from_user_id UUID REFERENCES users(id),
-        to_trader_id UUID REFERENCES traders(id),
-        rating INTEGER CHECK (rating >= 1 AND rating <= 5),
-        comment TEXT,
-        created_at TIMESTAMP DEFAULT NOW(),
-        UNIQUE(trade_id, from_user_id)
-      )
-    `);
-
-    // Create indexes
-    await query(`CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_users_public_key ON users(public_key)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_users_fingerprint ON users(public_key_fingerprint)`);
-    await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_traders_wallet_address ON traders(wallet_address)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_trades_user_id ON trades(user_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_trades_trader_id ON trades(trader_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_trades_status ON trades(status)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_chat_trade_id ON chat_messages(trade_id)`);
-
-    // ============================================
-    // CyxTrade Pro Tables
-    // ============================================
-
-    // Ads table
-    await query(`
-      CREATE TABLE IF NOT EXISTS ads (
-        id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        trader_id           UUID NOT NULL REFERENCES traders(id) ON DELETE CASCADE,
-        type                VARCHAR(4) NOT NULL CHECK (type IN ('buy', 'sell')),
-        asset               VARCHAR(10) NOT NULL DEFAULT 'USDT',
-        fiat_currency       VARCHAR(3) NOT NULL,
-        price_type          VARCHAR(10) NOT NULL DEFAULT 'fixed' CHECK (price_type IN ('fixed', 'floating')),
-        price               DECIMAL(12,6) NOT NULL,
-        floating_margin     DECIMAL(5,2),
-        total_amount        DECIMAL(18,8) NOT NULL,
-        available_amount    DECIMAL(18,8) NOT NULL,
-        min_limit           DECIMAL(12,2) NOT NULL,
-        max_limit           DECIMAL(12,2) NOT NULL,
-        payment_time_limit  INTEGER NOT NULL DEFAULT 15,
-        terms_tags          TEXT[],
-        terms               TEXT,
-        auto_reply          TEXT,
-        remarks             TEXT,
-        status              VARCHAR(20) NOT NULL DEFAULT 'online' CHECK (status IN ('online', 'offline', 'closed')),
-        is_promoted         BOOLEAN DEFAULT FALSE,
-        promoted_until      TIMESTAMP,
-        region_restrictions TEXT[],
-        counterparty_conditions JSONB,
-        created_at          TIMESTAMP DEFAULT NOW(),
-        updated_at          TIMESTAMP DEFAULT NOW(),
-        closed_at           TIMESTAMP
-      )
-    `);
-
-    // Ad payment methods
-    await query(`
-      CREATE TABLE IF NOT EXISTS ad_payment_methods (
-        id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        ad_id               UUID NOT NULL REFERENCES ads(id) ON DELETE CASCADE,
-        payment_method_id   UUID NOT NULL REFERENCES trader_payment_methods(id) ON DELETE CASCADE,
-        is_recommended      BOOLEAN DEFAULT FALSE,
-        UNIQUE(ad_id, payment_method_id)
-      )
-    `);
-
-    // P2P Orders
-    await query(`
-      CREATE TABLE IF NOT EXISTS p2p_orders (
-        id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        order_number        VARCHAR(20) UNIQUE NOT NULL,
-        ad_id               UUID NOT NULL REFERENCES ads(id),
-        user_id             UUID NOT NULL REFERENCES users(id),
-        trader_id           UUID NOT NULL REFERENCES traders(id),
-        type                VARCHAR(4) NOT NULL CHECK (type IN ('buy', 'sell')),
-        asset               VARCHAR(10) NOT NULL DEFAULT 'USDT',
-        fiat_currency       VARCHAR(3) NOT NULL,
-        amount              DECIMAL(18,8) NOT NULL,
-        price               DECIMAL(12,6) NOT NULL,
-        total_fiat          DECIMAL(12,2) NOT NULL,
-        payment_method_id   UUID REFERENCES trader_payment_methods(id),
-        status              VARCHAR(20) NOT NULL DEFAULT 'pending'
-                            CHECK (status IN ('pending', 'paid', 'releasing', 'released', 'completed', 'canceled', 'disputed', 'expired')),
-        payment_reference   VARCHAR(100),
-        payment_proof_url   VARCHAR(500),
-        auto_reply_sent     BOOLEAN DEFAULT FALSE,
-        expires_at          TIMESTAMP,
-        created_at          TIMESTAMP DEFAULT NOW(),
-        paid_at             TIMESTAMP,
-        released_at         TIMESTAMP,
-        completed_at        TIMESTAMP,
-        canceled_at         TIMESTAMP,
-        canceled_by         UUID REFERENCES users(id),
-        cancel_reason       TEXT
-      )
-    `);
-
-    // P2P Messages
-    await query(`
-      CREATE TABLE IF NOT EXISTS p2p_messages (
-        id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        order_id            UUID NOT NULL REFERENCES p2p_orders(id) ON DELETE CASCADE,
-        sender_id           UUID NOT NULL REFERENCES users(id),
-        message_type        VARCHAR(20) NOT NULL DEFAULT 'text' CHECK (message_type IN ('text', 'image', 'system', 'payment_proof')),
-        content             TEXT,
-        image_url           VARCHAR(500),
-        read_at             TIMESTAMP,
-        created_at          TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    // Trader follows
-    await query(`
-      CREATE TABLE IF NOT EXISTS trader_follows (
-        id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        follower_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        trader_id           UUID NOT NULL REFERENCES traders(id) ON DELETE CASCADE,
-        created_at          TIMESTAMP DEFAULT NOW(),
-        UNIQUE(follower_id, trader_id)
-      )
-    `);
-
-    // P2P blocked users
-    await query(`
-      CREATE TABLE IF NOT EXISTS p2p_blocked_users (
-        id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        blocker_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        blocked_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        reason              TEXT,
-        created_at          TIMESTAMP DEFAULT NOW(),
-        UNIQUE(blocker_id, blocked_id)
-      )
-    `);
-
-    // P2P feedback
-    await query(`
-      CREATE TABLE IF NOT EXISTS p2p_feedback (
-        id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        order_id            UUID NOT NULL REFERENCES p2p_orders(id),
-        from_user_id        UUID NOT NULL REFERENCES users(id),
-        to_trader_id        UUID NOT NULL REFERENCES traders(id),
-        rating              VARCHAR(10) NOT NULL CHECK (rating IN ('positive', 'negative')),
-        comment             TEXT,
-        created_at          TIMESTAMP DEFAULT NOW(),
-        UNIQUE(order_id, from_user_id)
-      )
-    `);
-
-    // Pro indexes
-    await query(`CREATE INDEX IF NOT EXISTS idx_ads_trader_id ON ads(trader_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_ads_type_fiat_status ON ads(type, fiat_currency, status)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_ads_status ON ads(status)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_ad_payment_methods_ad_id ON ad_payment_methods(ad_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_p2p_orders_user_id ON p2p_orders(user_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_p2p_orders_trader_id ON p2p_orders(trader_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_p2p_orders_status ON p2p_orders(status)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_p2p_messages_order_id ON p2p_messages(order_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_p2p_feedback_to_trader ON p2p_feedback(to_trader_id)`);
-
-    // Trader stats columns
-    await query(`ALTER TABLE traders ADD COLUMN IF NOT EXISTS avg_release_time_minutes DECIMAL(6,2) DEFAULT 0`);
-    await query(`ALTER TABLE traders ADD COLUMN IF NOT EXISTS avg_pay_time_minutes DECIMAL(6,2) DEFAULT 0`);
-    await query(`ALTER TABLE traders ADD COLUMN IF NOT EXISTS positive_feedback_count INTEGER DEFAULT 0`);
-    await query(`ALTER TABLE traders ADD COLUMN IF NOT EXISTS negative_feedback_count INTEGER DEFAULT 0`);
-    await query(`ALTER TABLE traders ADD COLUMN IF NOT EXISTS trades_30d INTEGER DEFAULT 0`);
-    await query(`ALTER TABLE traders ADD COLUMN IF NOT EXISTS completion_rate_30d DECIMAL(5,2) DEFAULT 100`);
-
-    // Order number generation function
-    await query(`
-      CREATE OR REPLACE FUNCTION generate_p2p_order_number()
-      RETURNS VARCHAR(20) AS $$
-      DECLARE
-        new_number VARCHAR(20);
-      BEGIN
-        new_number := CONCAT(
-          TO_CHAR(NOW(), 'YYYYMMDD'),
-          LPAD(FLOOR(RANDOM() * 1000000000000)::TEXT, 12, '0')
-        );
-        RETURN new_number;
-      END;
-      $$ LANGUAGE plpgsql
-    `);
-
-    // Order number trigger function
-    await query(`
-      CREATE OR REPLACE FUNCTION set_p2p_order_number()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        IF NEW.order_number IS NULL OR NEW.order_number = '' THEN
-          NEW.order_number := generate_p2p_order_number();
-        END IF;
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql
-    `);
-
-    // Create trigger for order number
-    await query(`DROP TRIGGER IF EXISTS trigger_set_p2p_order_number ON p2p_orders`);
-    await query(`
-      CREATE TRIGGER trigger_set_p2p_order_number
-        BEFORE INSERT ON p2p_orders
-        FOR EACH ROW
-        EXECUTE FUNCTION set_p2p_order_number()
-    `);
-
-    // Ad available amount update function
-    await query(`
-      CREATE OR REPLACE FUNCTION update_ad_available_amount()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        IF TG_OP = 'INSERT' THEN
-          UPDATE ads
-          SET available_amount = available_amount - NEW.amount,
-              updated_at = NOW()
-          WHERE id = NEW.ad_id;
-        ELSIF TG_OP = 'UPDATE' THEN
-          IF NEW.status IN ('canceled', 'expired') AND OLD.status NOT IN ('canceled', 'expired') THEN
-            UPDATE ads
-            SET available_amount = available_amount + NEW.amount,
-                updated_at = NOW()
-            WHERE id = NEW.ad_id;
-          END IF;
-        END IF;
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql
-    `);
-
-    // Create trigger for ad available amount
-    await query(`DROP TRIGGER IF EXISTS trigger_update_ad_available ON p2p_orders`);
-    await query(`
-      CREATE TRIGGER trigger_update_ad_available
-        AFTER INSERT OR UPDATE ON p2p_orders
-        FOR EACH ROW
-        EXECUTE FUNCTION update_ad_available_amount()
-    `);
-
-    // ============================================
-    // CyxTrade Pro Wallet System
-    // ============================================
-
-    // Supported assets
-    await query(`
-      CREATE TABLE IF NOT EXISTS supported_assets (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        symbol VARCHAR(10) NOT NULL UNIQUE,
-        name VARCHAR(50) NOT NULL,
-        network VARCHAR(20) NOT NULL DEFAULT 'TRC20',
-        contract_address VARCHAR(64),
-        decimals INTEGER NOT NULL DEFAULT 6,
-        min_deposit DECIMAL(18,8) DEFAULT 0,
-        min_withdrawal DECIMAL(18,8) DEFAULT 0,
-        withdrawal_fee DECIMAL(18,8) DEFAULT 0,
-        is_active BOOLEAN DEFAULT TRUE,
-        is_fiat BOOLEAN DEFAULT FALSE,
-        icon_url VARCHAR(500),
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-
-    // Insert default assets if not exists
-    await query(`
-      INSERT INTO supported_assets (symbol, name, network, decimals, is_active)
-      VALUES
-        ('USDT', 'Tether USD', 'TRC20', 6, TRUE),
-        ('USDC', 'USD Coin', 'TRC20', 6, TRUE),
-        ('BTC', 'Bitcoin', 'BTC', 8, TRUE),
-        ('ETH', 'Ethereum', 'ERC20', 18, TRUE),
-        ('TRX', 'TRON', 'TRC20', 6, TRUE)
-      ON CONFLICT (symbol) DO NOTHING
-    `);
-
-    // User wallets (balance per user per asset)
-    await query(`
-      CREATE TABLE IF NOT EXISTS user_wallets (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        asset VARCHAR(10) NOT NULL,
-        available_balance DECIMAL(18,8) NOT NULL DEFAULT 0,
-        locked_balance DECIMAL(18,8) NOT NULL DEFAULT 0,
-        total_deposited DECIMAL(18,8) NOT NULL DEFAULT 0,
-        total_withdrawn DECIMAL(18,8) NOT NULL DEFAULT 0,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW(),
-        UNIQUE(user_id, asset)
-      )
-    `);
-
-    // Deposit addresses (per user per asset)
-    await query(`
-      CREATE TABLE IF NOT EXISTS deposit_addresses (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        asset VARCHAR(10) NOT NULL,
-        network VARCHAR(20) NOT NULL,
-        address VARCHAR(100) NOT NULL,
-        memo VARCHAR(100),
-        is_active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT NOW(),
-        UNIQUE(user_id, asset, network)
-      )
-    `);
-
-    // Wallet transactions
-    await query(`
-      CREATE TABLE IF NOT EXISTS wallet_transactions (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL REFERENCES users(id),
-        asset VARCHAR(10) NOT NULL,
-        type VARCHAR(20) NOT NULL CHECK (type IN ('deposit', 'withdrawal', 'escrow_lock', 'escrow_release', 'escrow_transfer', 'trade_fee')),
-        amount DECIMAL(18,8) NOT NULL,
-        fee DECIMAL(18,8) DEFAULT 0,
-        balance_before DECIMAL(18,8) NOT NULL,
-        balance_after DECIMAL(18,8) NOT NULL,
-        status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled')),
-        reference_type VARCHAR(20),
-        reference_id UUID,
-        tx_hash VARCHAR(100),
-        from_address VARCHAR(100),
-        to_address VARCHAR(100),
-        network VARCHAR(20),
-        confirmations INTEGER DEFAULT 0,
-        required_confirmations INTEGER DEFAULT 1,
-        notes TEXT,
-        created_at TIMESTAMP DEFAULT NOW(),
-        completed_at TIMESTAMP
-      )
-    `);
-
-    // Add escrow columns to p2p_orders
-    await query(`ALTER TABLE p2p_orders ADD COLUMN IF NOT EXISTS escrow_asset VARCHAR(10)`);
-    await query(`ALTER TABLE p2p_orders ADD COLUMN IF NOT EXISTS escrow_amount DECIMAL(18,8)`);
-    await query(`ALTER TABLE p2p_orders ADD COLUMN IF NOT EXISTS escrow_locked_at TIMESTAMP`);
-    await query(`ALTER TABLE p2p_orders ADD COLUMN IF NOT EXISTS escrow_released_at TIMESTAMP`);
-    await query(`ALTER TABLE p2p_orders ADD COLUMN IF NOT EXISTS escrow_tx_id UUID`);
-
-    // Wallet indexes
-    await query(`CREATE INDEX IF NOT EXISTS idx_user_wallets_user_id ON user_wallets(user_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_user_wallets_asset ON user_wallets(asset)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user_id ON wallet_transactions(user_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_wallet_transactions_type ON wallet_transactions(type)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_wallet_transactions_status ON wallet_transactions(status)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_wallet_transactions_reference ON wallet_transactions(reference_type, reference_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_deposit_addresses_user_id ON deposit_addresses(user_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_deposit_addresses_address ON deposit_addresses(address)`);
-
-    console.log('✅ Database schema initialized (including CyxTrade Pro + Wallets)');
   } catch (error) {
-    console.error('❌ Failed to initialize database:', error);
+    console.error('❌ Failed to initialize database:', error)
     // Don't throw - allow app to run without DB for development
   }
 }
 
-export default pool;
+/**
+ * Inline schema for when migration file is not available
+ * This is a subset of the full migration - enough to get started
+ */
+async function runInlineSchema(): Promise<void> {
+  // Users table
+  await query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      phone VARCHAR(20) UNIQUE,
+      phone_verified BOOLEAN DEFAULT false,
+      phone_verified_at TIMESTAMP,
+      public_key VARCHAR(64) UNIQUE,
+      public_key_fingerprint VARCHAR(16),
+      key_registered_at TIMESTAMP,
+      display_name VARCHAR(100),
+      avatar_url VARCHAR(500),
+      email VARCHAR(255) UNIQUE,
+      country_code VARCHAR(3),
+      preferred_currency VARCHAR(3) DEFAULT 'USD',
+      is_trader BOOLEAN DEFAULT false,
+      is_admin BOOLEAN DEFAULT false,
+      is_suspended BOOLEAN DEFAULT false,
+      suspended_reason TEXT,
+      last_seen_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `)
+
+  // Traders table
+  await query(`
+    CREATE TABLE IF NOT EXISTS traders (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id UUID UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      wallet_address VARCHAR(42) UNIQUE,
+      status VARCHAR(20) DEFAULT 'pending',
+      tier VARCHAR(20) DEFAULT 'starter',
+      bond_amount DECIMAL(18,8) DEFAULT 0,
+      bond_locked DECIMAL(18,8) DEFAULT 0,
+      bond_currency VARCHAR(10) DEFAULT 'USDT',
+      name VARCHAR(100),
+      bio TEXT,
+      rating DECIMAL(3,2) DEFAULT 5.00,
+      total_trades INTEGER DEFAULT 0,
+      completed_trades INTEGER DEFAULT 0,
+      total_volume DECIMAL(18,2) DEFAULT 0,
+      is_online BOOLEAN DEFAULT false,
+      last_online_at TIMESTAMP,
+      avg_release_time_mins DECIMAL(6,2),
+      avg_pay_time_mins DECIMAL(6,2),
+      positive_feedback INTEGER DEFAULT 0,
+      negative_feedback INTEGER DEFAULT 0,
+      trades_30d INTEGER DEFAULT 0,
+      completion_rate_30d DECIMAL(5,2),
+      approved_at TIMESTAMP,
+      approved_by UUID REFERENCES users(id),
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `)
+
+  // Payment methods
+  await query(`
+    CREATE TABLE IF NOT EXISTS trader_payment_methods (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      trader_id UUID NOT NULL REFERENCES traders(id) ON DELETE CASCADE,
+      method_type VARCHAR(20) NOT NULL,
+      provider VARCHAR(50),
+      currency VARCHAR(3) NOT NULL,
+      account_holder_name VARCHAR(100),
+      phone_number VARCHAR(20),
+      phone_country_code VARCHAR(5),
+      bank_name VARCHAR(100),
+      account_number VARCHAR(50),
+      iban VARCHAR(34),
+      swift_code VARCHAR(11),
+      routing_number VARCHAR(20),
+      branch_code VARCHAR(20),
+      is_primary BOOLEAN DEFAULT false,
+      is_active BOOLEAN DEFAULT true,
+      verification_status VARCHAR(20) DEFAULT 'unverified',
+      verification_code VARCHAR(10),
+      verification_sent_at TIMESTAMP,
+      verified_at TIMESTAMP,
+      verification_proof_url VARCHAR(500),
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `)
+
+  // Unified ads table
+  await query(`
+    CREATE TABLE IF NOT EXISTS ads (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      trader_id UUID NOT NULL REFERENCES traders(id) ON DELETE CASCADE,
+      mode VARCHAR(10) NOT NULL DEFAULT 'lite',
+      type VARCHAR(4) NOT NULL,
+      from_currency VARCHAR(10) NOT NULL,
+      to_currency VARCHAR(10) NOT NULL,
+      asset VARCHAR(10),
+      price_type VARCHAR(10) DEFAULT 'fixed',
+      price DECIMAL(18,8) NOT NULL,
+      floating_margin DECIMAL(5,2),
+      total_amount DECIMAL(18,8),
+      available_amount DECIMAL(18,8),
+      min_limit DECIMAL(18,2) NOT NULL,
+      max_limit DECIMAL(18,2) NOT NULL,
+      payment_time_limit INTEGER DEFAULT 15,
+      terms TEXT,
+      terms_tags TEXT[],
+      auto_reply TEXT,
+      remarks TEXT,
+      status VARCHAR(20) DEFAULT 'online',
+      is_promoted BOOLEAN DEFAULT false,
+      promoted_until TIMESTAMP,
+      region_restrictions TEXT[],
+      counterparty_conditions JSONB,
+      order_count INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      closed_at TIMESTAMP
+    )
+  `)
+
+  // Unified orders table
+  await query(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      order_number VARCHAR(20) UNIQUE NOT NULL,
+      mode VARCHAR(10) NOT NULL DEFAULT 'lite',
+      type VARCHAR(4),
+      user_id UUID NOT NULL REFERENCES users(id),
+      trader_id UUID NOT NULL REFERENCES traders(id),
+      ad_id UUID REFERENCES ads(id),
+      payment_method_id UUID REFERENCES trader_payment_methods(id),
+      send_currency VARCHAR(10) NOT NULL,
+      send_amount DECIMAL(18,8) NOT NULL,
+      receive_currency VARCHAR(10) NOT NULL,
+      receive_amount DECIMAL(18,8) NOT NULL,
+      rate DECIMAL(18,8) NOT NULL,
+      fee_amount DECIMAL(18,8) DEFAULT 0,
+      fee_currency VARCHAR(10),
+      asset VARCHAR(10),
+      crypto_amount DECIMAL(18,8),
+      recipient_name VARCHAR(100),
+      recipient_phone VARCHAR(20),
+      recipient_bank VARCHAR(100),
+      recipient_account VARCHAR(50),
+      status VARCHAR(20) NOT NULL DEFAULT 'pending',
+      expires_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW(),
+      accepted_at TIMESTAMP,
+      paid_at TIMESTAMP,
+      delivered_at TIMESTAMP,
+      released_at TIMESTAMP,
+      completed_at TIMESTAMP,
+      cancelled_at TIMESTAMP,
+      cancelled_by UUID REFERENCES users(id),
+      cancel_reason TEXT,
+      payment_reference VARCHAR(100),
+      payment_proof_url VARCHAR(500),
+      escrow_amount DECIMAL(18,8),
+      escrow_asset VARCHAR(10),
+      escrow_locked_at TIMESTAMP,
+      escrow_released_at TIMESTAMP,
+      escrow_tx_id VARCHAR(100),
+      bond_locked DECIMAL(18,8),
+      auto_reply_sent BOOLEAN DEFAULT false,
+      notes TEXT
+    )
+  `)
+
+  // Messages table
+  await query(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      sender_id UUID NOT NULL REFERENCES users(id),
+      message_type VARCHAR(20) DEFAULT 'text',
+      content TEXT,
+      image_url VARCHAR(500),
+      metadata JSONB,
+      is_read BOOLEAN DEFAULT false,
+      read_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `)
+
+  // Feedback table
+  await query(`
+    CREATE TABLE IF NOT EXISTS feedback (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      from_user_id UUID NOT NULL REFERENCES users(id),
+      to_trader_id UUID NOT NULL REFERENCES traders(id),
+      rating_type VARCHAR(10) NOT NULL,
+      rating_value INTEGER NOT NULL,
+      comment TEXT,
+      is_anonymous BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(order_id, from_user_id)
+    )
+  `)
+
+  // Disputes table
+  await query(`
+    CREATE TABLE IF NOT EXISTS disputes (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      order_id UUID UNIQUE NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      opened_by UUID NOT NULL REFERENCES users(id),
+      reason TEXT NOT NULL,
+      status VARCHAR(20) DEFAULT 'open',
+      resolution VARCHAR(20),
+      resolution_notes TEXT,
+      resolved_by UUID REFERENCES users(id),
+      resolved_at TIMESTAMP,
+      evidence_deadline TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `)
+
+  // Order number generator function
+  await query(`
+    CREATE OR REPLACE FUNCTION generate_order_number()
+    RETURNS VARCHAR(20) AS $$
+    BEGIN
+      RETURN CONCAT(TO_CHAR(NOW(), 'YYYYMMDD'), LPAD(FLOOR(RANDOM() * 1000000000000)::TEXT, 12, '0'));
+    END;
+    $$ LANGUAGE plpgsql
+  `)
+
+  // Auto-set order number trigger
+  await query(`
+    CREATE OR REPLACE FUNCTION set_order_number()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      IF NEW.order_number IS NULL THEN
+        NEW.order_number := generate_order_number();
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql
+  `)
+
+  await query(`DROP TRIGGER IF EXISTS trigger_set_order_number ON orders`)
+  await query(`
+    CREATE TRIGGER trigger_set_order_number
+      BEFORE INSERT ON orders
+      FOR EACH ROW
+      EXECUTE FUNCTION set_order_number()
+  `)
+
+  // Create indexes
+  await query(`CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone)`)
+  await query(`CREATE INDEX IF NOT EXISTS idx_users_public_key ON users(public_key)`)
+  await query(`CREATE INDEX IF NOT EXISTS idx_traders_user_id ON traders(user_id)`)
+  await query(`CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id)`)
+  await query(`CREATE INDEX IF NOT EXISTS idx_orders_trader_id ON orders(trader_id)`)
+  await query(`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)`)
+  await query(`CREATE INDEX IF NOT EXISTS idx_orders_mode ON orders(mode)`)
+  await query(`CREATE INDEX IF NOT EXISTS idx_messages_order_id ON messages(order_id)`)
+  await query(`CREATE INDEX IF NOT EXISTS idx_ads_trader_id ON ads(trader_id)`)
+  await query(`CREATE INDEX IF NOT EXISTS idx_ads_mode ON ads(mode)`)
+
+  console.log('✅ Inline schema initialized')
+}
+
+// ============================================================================
+// Health Check
+// ============================================================================
+
+/**
+ * Check database connectivity
+ */
+export async function checkHealth(): Promise<{ connected: boolean; latency: number }> {
+  const start = Date.now()
+  try {
+    await queryOne('SELECT 1')
+    return { connected: true, latency: Date.now() - start }
+  } catch {
+    return { connected: false, latency: Date.now() - start }
+  }
+}
+
+export default pool

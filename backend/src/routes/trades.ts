@@ -1,20 +1,20 @@
 import { Router } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 import { AuthRequest, traderMiddleware } from '../middleware/auth';
 import {
-  createTrade,
-  findTradeById,
-  listTradesForUser,
-  listTradesForTrader,
-  acceptTrade,
-  declineTrade,
-  markTradePaid,
-  markTradeDelivered,
-  completeTrade,
-  openDispute,
-  rateTrade
-} from '../services/tradeService';
+  createLiteOrder,
+  findOrderById,
+  listOrders,
+  acceptOrder,
+  declineOrder,
+  markOrderPaid,
+  markOrderDelivered,
+  completeOrder,
+  cancelOrder,
+  openDispute
+} from '../services/orderService';
 import { findTraderByUserId, findTraderById } from '../services/traderService';
+import { paymentMethodService } from '../services/paymentMethodService';
+import { query } from '../services/db';
 import { AppError, ErrorCode } from '../utils/errors';
 import { sendSuccess } from '../utils/response';
 import { asyncHandler } from '../middleware/errorHandler';
@@ -25,10 +25,7 @@ const router = Router();
 const getParam = (val: string | string[] | undefined): string =>
   Array.isArray(val) ? val[0] : (val ?? '');
 
-// In-memory trade store for development (when DB is not available)
-const mockTrades = new Map<string, any>();
-
-// POST /api/trades - Create new trade request
+// POST /api/trades - Create new trade request (Lite mode order)
 router.post('/', asyncHandler(async (req: AuthRequest, res) => {
   const userId = req.user?.id;
   if (!userId) {
@@ -37,14 +34,16 @@ router.post('/', asyncHandler(async (req: AuthRequest, res) => {
 
   const {
     traderId,
+    adId,
     sendCurrency,
     sendAmount,
     receiveCurrency,
-    receiveAmount,
     rate,
     recipientName,
     recipientPhone,
-    recipientMethod
+    recipientBank,
+    recipientAccount,
+    paymentMethodId
   } = req.body;
 
   // Validation
@@ -61,63 +60,33 @@ router.post('/', asyncHandler(async (req: AuthRequest, res) => {
     throw new AppError(ErrorCode.MISSING_FIELD, 'Recipient phone is required', { field: 'recipientPhone' });
   }
 
-  let trade;
+  // Calculate receive amount from rate
+  const receiveAmount = sendAmount * rate;
 
-  try {
-    // Validate trader exists
-    const trader = await findTraderById(traderId);
-    if (!trader) {
-      throw new AppError(ErrorCode.TRADER_NOT_FOUND, 'Trader not found');
-    }
-    if (trader.status !== 'active') {
-      throw new AppError(ErrorCode.TRADER_OFFLINE, 'This trader is currently unavailable');
-    }
-
-    trade = await createTrade({
-      userId,
-      traderId,
-      sendCurrency,
-      sendAmount,
-      receiveCurrency,
-      receiveAmount,
-      rate,
-      recipientName,
-      recipientPhone,
-      recipientMethod
-    });
-  } catch (err) {
-    if (err instanceof AppError) throw err;
-
-    // Database not available - create mock trade
-    console.log('⚠️ Database not available, creating mock trade');
-    trade = {
-      id: uuidv4(),
-      user_id: userId,
-      trader_id: traderId,
-      send_currency: sendCurrency,
-      send_amount: sendAmount,
-      receive_currency: receiveCurrency,
-      receive_amount: receiveAmount,
-      rate,
-      recipient_name: recipientName,
-      recipient_phone: recipientPhone,
-      recipient_method: recipientMethod,
-      status: 'pending',
-      created_at: new Date(),
-      trader_name: 'Mamadou Diallo',
-      trader_rating: 4.9
-    };
-    mockTrades.set(trade.id, trade);
-  }
+  const order = await createLiteOrder(userId, {
+    trader_id: traderId,
+    ad_id: adId,
+    send_currency: sendCurrency || 'AED',
+    send_amount: sendAmount,
+    receive_currency: receiveCurrency || 'XAF',
+    rate: rate || 163,
+    recipient_name: recipientName,
+    recipient_phone: recipientPhone,
+    recipient_bank: recipientBank,
+    recipient_account: recipientAccount,
+    payment_method_id: paymentMethodId
+  });
 
   sendSuccess(res, {
-    id: trade.id,
-    status: trade.status,
+    id: order.id,
+    orderNumber: order.order_number,
+    status: order.status,
+    expiresAt: order.expires_at,
     message: 'Trade request created'
   }, 201);
 }));
 
-// GET /api/trades - List my trades
+// GET /api/trades - List my trades/orders
 router.get('/', asyncHandler(async (req: AuthRequest, res) => {
   const userId = req.user?.id;
   if (!userId) {
@@ -126,100 +95,111 @@ router.get('/', asyncHandler(async (req: AuthRequest, res) => {
 
   const { status, role, limit, offset } = req.query;
 
-  let result;
+  // Check if user is a trader
+  const trader = await findTraderByUserId(userId);
+  const isTrader = role === 'trader' && trader?.status === 'active';
 
-  try {
-    // Check if user is a trader
-    const trader = await findTraderByUserId(userId);
-    const isTrader = role === 'trader' && trader?.status === 'active';
+  // Build filters for Lite mode orders
+  const filters: any = {
+    mode: 'lite'
+  };
 
-    if (isTrader) {
-      result = await listTradesForTrader(userId, {
-        status: status as string,
-        limit: limit ? parseInt(limit as string) : undefined,
-        offset: offset ? parseInt(offset as string) : undefined
-      });
-    } else {
-      result = await listTradesForUser(userId, {
-        status: status as string,
-        limit: limit ? parseInt(limit as string) : undefined,
-        offset: offset ? parseInt(offset as string) : undefined
-      });
-    }
-  } catch (dbError) {
-    // Database not available - return mock trades for this user
-    console.log('⚠️ Database not available, using mock trades');
-    const userTrades = Array.from(mockTrades.values())
-      .filter(t => t.user_id === userId)
-      .map(t => ({
-        id: t.id,
-        sendAmount: t.send_amount,
-        sendCurrency: t.send_currency,
-        receiveAmount: t.receive_amount,
-        receiveCurrency: t.receive_currency,
-        status: t.status,
-        recipientName: t.recipient_name,
-        traderName: t.trader_name,
-        createdAt: t.created_at
-      }));
-    result = { trades: userTrades, total: userTrades.length };
+  if (isTrader && trader) {
+    filters.trader_id = trader.id;
+  } else {
+    filters.user_id = userId;
   }
 
-  sendSuccess(res, result);
+  if (status) {
+    filters.status = status as string;
+  }
+
+  const orders = await listOrders(
+    filters,
+    limit ? parseInt(limit as string) : 20,
+    offset ? parseInt(offset as string) : 0
+  );
+
+  // Format response for backward compatibility
+  const trades = orders.map(o => ({
+    id: o.id,
+    orderNumber: o.order_number,
+    sendAmount: o.send_amount,
+    sendCurrency: o.send_currency,
+    receiveAmount: o.receive_amount,
+    receiveCurrency: o.receive_currency,
+    status: o.status,
+    recipientName: o.recipient_name,
+    traderName: o.trader_name,
+    createdAt: o.created_at,
+    expiresAt: o.expires_at
+  }));
+
+  sendSuccess(res, { trades, total: trades.length });
 }));
 
-// GET /api/trades/:id - Get trade details
+// GET /api/trades/:id - Get trade/order details
 router.get('/:id', asyncHandler(async (req: AuthRequest, res) => {
   const userId = req.user?.id;
   const id = getParam(req.params.id);
 
-  let trade;
+  const order = await findOrderById(id);
 
-  try {
-    trade = await findTradeById(id);
-    if (!trade) {
-      // Check mock trades
-      trade = mockTrades.get(id);
-    }
-  } catch (dbError) {
-    // Database not available - check mock trades
-    console.log('⚠️ Database not available, checking mock trades');
-    trade = mockTrades.get(id);
+  if (!order) {
+    throw new AppError(ErrorCode.ORDER_NOT_FOUND);
   }
 
-  if (!trade) {
-    throw new AppError(ErrorCode.TRADE_NOT_FOUND);
+  // Get trader payment methods
+  let traderPaymentMethods: any[] = [];
+  try {
+    const methods = await paymentMethodService.getPaymentMethods(order.trader_id);
+    traderPaymentMethods = methods.map(pm => paymentMethodService.maskPaymentMethod(pm));
+  } catch (err) {
+    console.log('Could not fetch trader payment methods');
   }
 
   sendSuccess(res, {
-    id: trade.id,
-    status: trade.status,
-    sendCurrency: trade.send_currency,
-    sendAmount: trade.send_amount,
-    receiveCurrency: trade.receive_currency,
-    receiveAmount: trade.receive_amount,
-    rate: trade.rate,
-    trader: {
-      id: trade.trader_id,
-      displayName: trade.trader_name || 'Mamadou Diallo',
-      rating: trade.trader_rating || 4.9
-    },
-    user: {
-      id: trade.user_id,
-      displayName: trade.user_name,
-      phone: trade.user_phone
-    },
-    recipientName: trade.recipient_name,
-    recipientPhone: trade.recipient_phone,
-    recipientMethod: trade.recipient_method,
-    bondLocked: trade.bond_locked,
-    paymentReference: trade.payment_reference,
-    paymentProofUrl: trade.payment_proof_url,
-    createdAt: trade.created_at,
-    acceptedAt: trade.accepted_at,
-    paidAt: trade.paid_at,
-    deliveredAt: trade.delivered_at,
-    completedAt: trade.completed_at
+    id: order.id,
+    orderNumber: order.order_number,
+    mode: order.mode,
+    status: order.status,
+    sendCurrency: order.send_currency,
+    sendAmount: order.send_amount,
+    receiveCurrency: order.receive_currency,
+    receiveAmount: order.receive_amount,
+    exchangeRate: order.rate,
+    feeAmount: order.fee_amount,
+    traderId: order.trader_id,
+    traderName: order.trader_name || 'Trader',
+    traderRating: order.trader_rating,
+    traderPaymentMethods: traderPaymentMethods.map(pm => ({
+      id: pm.id,
+      type: pm.method_type,
+      name: pm.provider,
+      details: {
+        ...(pm.account_holder_name && { account_holder: pm.account_holder_name }),
+        ...(pm.bank_name && { bank: pm.bank_name }),
+        ...(pm.account_number && { account: pm.account_number }),
+        ...(pm.phone_number && { phone: pm.phone_number }),
+        ...(pm.iban && { iban: pm.iban }),
+      }
+    })),
+    userId: order.user_id,
+    userName: order.user_name,
+    recipientName: order.recipient_name,
+    recipientPhone: order.recipient_phone,
+    recipientBank: order.recipient_bank,
+    recipientAccount: order.recipient_account,
+    bondLocked: order.bond_locked,
+    paymentReference: order.payment_reference,
+    paymentProofUrl: order.payment_proof_url,
+    createdAt: order.created_at,
+    expiresAt: order.expires_at,
+    acceptedAt: order.accepted_at,
+    paidAt: order.paid_at,
+    deliveredAt: order.delivered_at,
+    completedAt: order.completed_at,
+    cancelledAt: order.cancelled_at
   });
 }));
 
@@ -233,18 +213,13 @@ router.put('/:id/accept', traderMiddleware, asyncHandler(async (req: AuthRequest
     throw new AppError(ErrorCode.NOT_A_TRADER);
   }
 
-  const trade = await acceptTrade(id, trader.id);
-  if (!trade) {
-    throw new AppError(
-      ErrorCode.INVALID_TRADE_STATE,
-      'Cannot accept this trade. It may have been cancelled, already accepted, or you may have insufficient bond.'
-    );
-  }
+  const order = await acceptOrder(id, trader.id);
 
   sendSuccess(res, {
-    id: trade.id,
-    status: trade.status,
-    bondLocked: trade.bond_locked,
+    id: order.id,
+    orderNumber: order.order_number,
+    status: order.status,
+    bondLocked: order.bond_locked,
     message: 'Trade accepted'
   });
 }));
@@ -253,20 +228,19 @@ router.put('/:id/accept', traderMiddleware, asyncHandler(async (req: AuthRequest
 router.put('/:id/decline', traderMiddleware, asyncHandler(async (req: AuthRequest, res) => {
   const id = getParam(req.params.id);
   const userId = req.user?.id;
+  const { reason } = req.body;
 
   const trader = await findTraderByUserId(userId!);
   if (!trader) {
     throw new AppError(ErrorCode.NOT_A_TRADER);
   }
 
-  const trade = await declineTrade(id, trader.id);
-  if (!trade) {
-    throw new AppError(ErrorCode.INVALID_TRADE_STATE, 'Cannot decline this trade');
-  }
+  const order = await declineOrder(id, trader.id, reason);
 
   sendSuccess(res, {
-    id: trade.id,
-    status: trade.status,
+    id: order.id,
+    orderNumber: order.order_number,
+    status: order.status,
     message: 'Trade declined'
   });
 }));
@@ -281,21 +255,12 @@ router.put('/:id/paid', asyncHandler(async (req: AuthRequest, res) => {
     throw new AppError(ErrorCode.NOT_AUTHENTICATED);
   }
 
-  const trade = await markTradePaid(id, userId, {
-    reference: paymentReference,
-    proofUrl: paymentProofUrl
-  });
-
-  if (!trade) {
-    throw new AppError(
-      ErrorCode.INVALID_TRADE_STATE,
-      'Cannot mark as paid. The trade may not be in the correct state.'
-    );
-  }
+  const order = await markOrderPaid(id, userId, paymentReference, paymentProofUrl);
 
   sendSuccess(res, {
-    id: trade.id,
-    status: trade.status,
+    id: order.id,
+    orderNumber: order.order_number,
+    status: order.status,
     message: 'Payment marked as sent'
   });
 }));
@@ -310,14 +275,12 @@ router.put('/:id/delivered', traderMiddleware, asyncHandler(async (req: AuthRequ
     throw new AppError(ErrorCode.NOT_A_TRADER);
   }
 
-  const trade = await markTradeDelivered(id, trader.id);
-  if (!trade) {
-    throw new AppError(ErrorCode.INVALID_TRADE_STATE, 'Cannot mark as delivered');
-  }
+  const order = await markOrderDelivered(id, trader.id);
 
   sendSuccess(res, {
-    id: trade.id,
-    status: trade.status,
+    id: order.id,
+    orderNumber: order.order_number,
+    status: order.status,
     message: 'Delivery marked as complete'
   });
 }));
@@ -331,47 +294,32 @@ router.put('/:id/complete', asyncHandler(async (req: AuthRequest, res) => {
     throw new AppError(ErrorCode.NOT_AUTHENTICATED);
   }
 
-  const trade = await completeTrade(id, userId);
-  if (!trade) {
-    throw new AppError(ErrorCode.INVALID_TRADE_STATE, 'Cannot complete this trade');
-  }
+  const order = await completeOrder(id, userId);
 
   sendSuccess(res, {
-    id: trade.id,
-    status: trade.status,
+    id: order.id,
+    orderNumber: order.order_number,
+    status: order.status,
     message: 'Trade completed successfully'
   });
 }));
 
-// PUT /api/trades/:id/cancel - Cancel trade (only pending trades)
+// PUT /api/trades/:id/cancel - Cancel trade (only pending/accepted trades)
 router.put('/:id/cancel', asyncHandler(async (req: AuthRequest, res) => {
   const id = getParam(req.params.id);
   const userId = req.user?.id;
+  const { reason } = req.body;
 
   if (!userId) {
     throw new AppError(ErrorCode.NOT_AUTHENTICATED);
   }
 
-  // For now, only users can cancel their pending trades
-  const trade = await findTradeById(id);
-  if (!trade) {
-    throw new AppError(ErrorCode.TRADE_NOT_FOUND);
-  }
-
-  if (trade.user_id !== userId) {
-    throw new AppError(ErrorCode.UNAUTHORIZED, 'You can only cancel your own trades');
-  }
-
-  if (trade.status !== 'pending') {
-    throw new AppError(ErrorCode.TRADE_CANNOT_BE_CANCELLED, 'Only pending trades can be cancelled');
-  }
-
-  // Use decline which sets cancelled status
-  await declineTrade(id, trade.trader_id);
+  const order = await cancelOrder(id, userId, reason);
 
   sendSuccess(res, {
-    id: trade.id,
-    status: 'cancelled',
+    id: order.id,
+    orderNumber: order.order_number,
+    status: order.status,
     message: 'Trade cancelled'
   });
 }));
@@ -390,18 +338,12 @@ router.post('/:id/dispute', asyncHandler(async (req: AuthRequest, res) => {
     throw new AppError(ErrorCode.MISSING_FIELD, 'Please provide a reason for the dispute', { field: 'reason' });
   }
 
-  const result = await openDispute(id, userId, reason);
-  if (!result) {
-    throw new AppError(
-      ErrorCode.INVALID_TRADE_STATE,
-      'Cannot open a dispute on this trade. It may already be completed or cancelled.'
-    );
-  }
+  const order = await openDispute(id, userId, reason);
 
   sendSuccess(res, {
-    disputeId: result.disputeId,
-    tradeId: id,
-    status: 'disputed',
+    orderId: order.id,
+    orderNumber: order.order_number,
+    status: order.status,
     message: 'Dispute opened'
   });
 }));
@@ -410,7 +352,7 @@ router.post('/:id/dispute', asyncHandler(async (req: AuthRequest, res) => {
 router.post('/:id/rating', asyncHandler(async (req: AuthRequest, res) => {
   const id = getParam(req.params.id);
   const userId = req.user?.id;
-  const { rating, comment } = req.body;
+  const { rating, comment, isAnonymous } = req.body;
 
   if (!userId) {
     throw new AppError(ErrorCode.NOT_AUTHENTICATED);
@@ -428,14 +370,49 @@ router.post('/:id/rating', asyncHandler(async (req: AuthRequest, res) => {
     });
   }
 
-  try {
-    await rateTrade(id, userId, rating, comment);
-  } catch (error: any) {
-    if (error.message?.includes('already rated')) {
-      throw new AppError(ErrorCode.TRADE_ALREADY_RATED);
-    }
-    throw error;
+  // Get order
+  const order = await findOrderById(id);
+  if (!order) {
+    throw new AppError(ErrorCode.ORDER_NOT_FOUND);
   }
+
+  if (order.user_id !== userId) {
+    throw new AppError(ErrorCode.UNAUTHORIZED, 'You can only rate your own orders');
+  }
+
+  if (order.status !== 'completed') {
+    throw new AppError(ErrorCode.INVALID_ORDER_STATE, 'Can only rate completed orders');
+  }
+
+  // Insert feedback
+  await query(
+    `INSERT INTO feedback (order_id, from_user_id, to_trader_id, rating_type, rating_value, comment, is_anonymous)
+     VALUES ($1, $2, $3, 'numeric', $4, $5, $6)
+     ON CONFLICT (order_id, from_user_id) DO UPDATE
+     SET rating_value = $4, comment = $5, is_anonymous = $6`,
+    [id, userId, order.trader_id, rating, comment || null, isAnonymous || false]
+  );
+
+  // Update trader rating
+  await query(
+    `UPDATE traders
+     SET rating = (
+       SELECT COALESCE(AVG(rating_value), 5.00)
+       FROM feedback
+       WHERE to_trader_id = $1 AND rating_type = 'numeric'
+     ),
+     positive_feedback = (
+       SELECT COUNT(*) FROM feedback
+       WHERE to_trader_id = $1 AND rating_value >= 4
+     ),
+     negative_feedback = (
+       SELECT COUNT(*) FROM feedback
+       WHERE to_trader_id = $1 AND rating_value < 3
+     ),
+     updated_at = NOW()
+     WHERE id = $1`,
+    [order.trader_id]
+  );
 
   sendSuccess(res, {
     message: 'Rating submitted',

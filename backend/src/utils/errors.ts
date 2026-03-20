@@ -17,7 +17,7 @@ export enum ErrorCode {
   FORBIDDEN = 2004,
   NOT_AUTHENTICATED = 2005,
 
-  // Trade errors (3xxx)
+  // Trade/Order errors (3xxx)
   TRADE_NOT_FOUND = 3001,
   INVALID_TRADE_STATE = 3002,
   INSUFFICIENT_BOND = 3003,
@@ -25,6 +25,13 @@ export enum ErrorCode {
   TRADE_ALREADY_ACCEPTED = 3005,
   TRADE_CANNOT_BE_CANCELLED = 3006,
   TRADE_ALREADY_RATED = 3007,
+  // Unified order errors
+  ORDER_NOT_FOUND = 3010,
+  INVALID_ORDER_STATE = 3011,
+  AD_NOT_FOUND = 3012,
+  INSUFFICIENT_BALANCE = 3013,
+  DISPUTE_EXISTS = 3014,
+  ESCROW_FAILED = 3015,
 
   // Trader errors (4xxx)
   TRADER_NOT_FOUND = 4001,
@@ -77,7 +84,7 @@ const defaultMessages: Record<ErrorCode, string> = {
   [ErrorCode.FORBIDDEN]: 'Access denied',
   [ErrorCode.NOT_AUTHENTICATED]: 'Please log in to continue',
 
-  // Trade
+  // Trade/Order
   [ErrorCode.TRADE_NOT_FOUND]: 'Trade not found',
   [ErrorCode.INVALID_TRADE_STATE]: 'This action cannot be performed on the trade in its current state',
   [ErrorCode.INSUFFICIENT_BOND]: 'Trader has insufficient bond for this trade',
@@ -85,6 +92,12 @@ const defaultMessages: Record<ErrorCode, string> = {
   [ErrorCode.TRADE_ALREADY_ACCEPTED]: 'This trade has already been accepted',
   [ErrorCode.TRADE_CANNOT_BE_CANCELLED]: 'This trade cannot be cancelled',
   [ErrorCode.TRADE_ALREADY_RATED]: 'You have already rated this trade',
+  [ErrorCode.ORDER_NOT_FOUND]: 'Order not found',
+  [ErrorCode.INVALID_ORDER_STATE]: 'This action cannot be performed on the order in its current state',
+  [ErrorCode.AD_NOT_FOUND]: 'Ad not found or not available',
+  [ErrorCode.INSUFFICIENT_BALANCE]: 'Insufficient balance',
+  [ErrorCode.DISPUTE_EXISTS]: 'A dispute already exists for this order',
+  [ErrorCode.ESCROW_FAILED]: 'Failed to lock/release escrow',
 
   // Trader
   [ErrorCode.TRADER_NOT_FOUND]: 'Trader not found',
@@ -137,7 +150,7 @@ const statusCodes: Record<ErrorCode, number> = {
   [ErrorCode.FORBIDDEN]: 403,
   [ErrorCode.NOT_AUTHENTICATED]: 401,
 
-  // Trade - 400/404
+  // Trade/Order - 400/404
   [ErrorCode.TRADE_NOT_FOUND]: 404,
   [ErrorCode.INVALID_TRADE_STATE]: 400,
   [ErrorCode.INSUFFICIENT_BOND]: 400,
@@ -145,6 +158,12 @@ const statusCodes: Record<ErrorCode, number> = {
   [ErrorCode.TRADE_ALREADY_ACCEPTED]: 400,
   [ErrorCode.TRADE_CANNOT_BE_CANCELLED]: 400,
   [ErrorCode.TRADE_ALREADY_RATED]: 400,
+  [ErrorCode.ORDER_NOT_FOUND]: 404,
+  [ErrorCode.INVALID_ORDER_STATE]: 400,
+  [ErrorCode.AD_NOT_FOUND]: 404,
+  [ErrorCode.INSUFFICIENT_BALANCE]: 400,
+  [ErrorCode.DISPUTE_EXISTS]: 400,
+  [ErrorCode.ESCROW_FAILED]: 500,
 
   // Trader - 400/404
   [ErrorCode.TRADER_NOT_FOUND]: 404,
