@@ -156,7 +156,20 @@ export default function AppHome() {
   const [selectedTrader, setSelectedTrader] = useState<typeof MOCK_TRADERS[0] | null>(null)
   const [isCreatingTrade, setIsCreatingTrade] = useState(false)
 
+  // Pro warning modal
+  const [showProWarning, setShowProWarning] = useState(false)
+  const [proWarningAccepted, setProWarningAccepted] = useState(false)
+  const [proWarningChecked, setProWarningChecked] = useState(false)
+
   const moreDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Check if user has already accepted Pro warning
+  useEffect(() => {
+    const accepted = localStorage.getItem('cyxtrade_pro_warning_accepted')
+    if (accepted === 'true') {
+      setProWarningAccepted(true)
+    }
+  }, [])
 
   // Detect user's currency based on IP
   useEffect(() => {
@@ -193,6 +206,21 @@ export default function AppHome() {
     setIsLoggingOut(true)
     await logout()
     navigate('/login')
+  }
+
+  const handleProClick = () => {
+    if (proWarningAccepted) {
+      navigate('/pro')
+    } else {
+      setShowProWarning(true)
+    }
+  }
+
+  const handleAcceptProWarning = () => {
+    localStorage.setItem('cyxtrade_pro_warning_accepted', 'true')
+    setProWarningAccepted(true)
+    setShowProWarning(false)
+    navigate('/pro')
   }
 
   // Filter currencies
@@ -355,13 +383,16 @@ export default function AppHome() {
                 User Center
               </Link>
 
-              {/* CyxTrade Pro - Prominent link */}
-              <Link to="/pro" className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-orange-500 bg-orange-500/10 border border-orange-500/30 rounded-lg hover:bg-orange-500/20 transition">
+              {/* CyxTrade Pro - Prominent button */}
+              <button
+                onClick={handleProClick}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-orange-500 bg-orange-500/10 border border-orange-500/30 rounded-lg hover:bg-orange-500/20 transition"
+              >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 Pro
-              </Link>
+              </button>
 
               {/* More Dropdown */}
               <div className="relative" ref={moreDropdownRef}>
@@ -958,6 +989,76 @@ export default function AppHome() {
                 className="flex-1 px-4 py-3 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 transition"
               >
                 Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pro Warning Modal */}
+      {showProWarning && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => { setShowProWarning(false); setProWarningChecked(false); }}>
+          <div className="bg-[#1E2329] rounded-2xl w-full max-w-md mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <h3 className="text-lg font-bold text-white">Welcome to CyxTrade Pro!</h3>
+              <button onClick={() => { setShowProWarning(false); setProWarningChecked(false); }} className="text-gray-400 hover:text-white transition">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <h4 className="text-white font-semibold">Things to Know Before You Start</h4>
+              </div>
+
+              <div className="text-gray-300 text-sm leading-relaxed space-y-3">
+                <p>
+                  To avoid becoming a victim of scammers, <span className="text-orange-400 font-medium">NEVER transfer cryptocurrency before actually receiving the payment!</span>
+                </p>
+                <p>
+                  Don't believe anyone who claims to be a customer support and convinces you to complete the transaction before you receive the payment - they're scammers.
+                </p>
+                <p>
+                  Once the seller confirms the order and transfers the assets to the buyer, the transaction is considered completed and cannot be disputed.
+                </p>
+                <p className="text-gray-400">
+                  CyxTrade does not take any responsibility for transactions made outside of the platform.
+                </p>
+              </div>
+
+              {/* Checkbox */}
+              <label className="flex items-start gap-3 mt-6 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={proWarningChecked}
+                  onChange={(e) => setProWarningChecked(e.target.checked)}
+                  className="mt-1 w-4 h-4 rounded border-gray-600 bg-gray-800 text-orange-500 focus:ring-orange-500 focus:ring-offset-gray-900"
+                />
+                <span className="text-gray-300 text-sm">I have read and agree to the above content</span>
+              </label>
+            </div>
+
+            {/* Action Button */}
+            <div className="p-4 pt-0">
+              <button
+                onClick={handleAcceptProWarning}
+                disabled={!proWarningChecked}
+                className={`w-full py-3 font-semibold rounded-xl transition ${
+                  proWarningChecked
+                    ? 'bg-gradient-to-r from-orange-500 to-yellow-500 text-black hover:from-orange-600 hover:to-yellow-600'
+                    : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                Start Trading
               </button>
             </div>
           </div>
