@@ -24,6 +24,7 @@ import bootstrapRoutes from './routes/bootstrap';
 import marketRoutes from './routes/market';
 import proRoutes from './routes/pro';
 import riskRoutes from './routes/risk';
+import totpRoutes from './routes/totp';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler';
@@ -77,6 +78,7 @@ app.use('/api/bootstrap', bootstrapRoutes);  // P2P peer discovery
 app.use('/api/market', marketRoutes);  // External market reference rates
 app.use('/api/pro', proRoutes);  // CyxTrade Pro - P2P marketplace
 app.use('/api/risk', riskRoutes);  // Risk assessment and scam warnings
+app.use('/api/totp', authMiddleware, totpRoutes);  // Two-factor authentication
 
 // Error handling
 app.use(errorHandler);

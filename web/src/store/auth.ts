@@ -12,9 +12,11 @@ export interface User {
   publicKey?: string
   fingerprint?: string
   displayName: string | null
+  username?: string | null
   avatarUrl: string | null
   isTrader: boolean
   isAdmin: boolean
+  totpEnabled?: boolean
   traderId?: string
   traderAddress?: string
 }
@@ -26,8 +28,15 @@ interface AuthState {
   isLoading: boolean
   error: string | null
 
+  // TOTP login state
+  totpRequired: boolean
+  partialToken: string | null
+  pendingUser: User | null
+
   // Keypair auth actions
   loginWithKeypair: () => Promise<boolean>
+  verifyTotpLogin: (code: string) => Promise<boolean>
+  cancelTotpLogin: () => void
   hasStoredIdentity: () => Promise<boolean>
   exportPrivateKey: () => Promise<string | null>
   importPrivateKey: (privateKeyHex: string) => Promise<boolean>
@@ -37,9 +46,10 @@ interface AuthState {
   verifyOtp: (phone: string, otp: string) => Promise<boolean>
 
   // Other actions
-  updateProfile: (data: { displayName?: string; avatarUrl?: string }) => Promise<boolean>
+  updateProfile: (data: { displayName?: string; avatarUrl?: string | null }) => Promise<boolean>
   becomeTrader: () => Promise<{ address: string } | null>
-  logout: () => void
+  logout: () => Promise<void>
+  forgetDeviceIdentity: () => Promise<void>
   clearError: () => void
 }
 
@@ -51,6 +61,11 @@ export const useAuthStore = create<AuthState>()(
       identity: null,
       isLoading: false,
       error: null,
+
+      // TOTP login state
+      totpRequired: false,
+      partialToken: null,
+      pendingUser: null,
 
       // Check if there's a stored identity
       hasStoredIdentity: async () => {
@@ -116,6 +131,33 @@ export const useAuthStore = create<AuthState>()(
             throw new Error(verifyData.error?.message || 'Failed to verify signature')
           }
 
+          // Check if TOTP is required
+          if (verifyData.data.requiresTOTP) {
+            const pendingUser: User = {
+              id: verifyData.data.user.id,
+              publicKey: verifyData.data.user.publicKey,
+              fingerprint: verifyData.data.user.fingerprint,
+              phone: verifyData.data.user.phone,
+              displayName: verifyData.data.user.displayName,
+              username: verifyData.data.user.username,
+              avatarUrl: verifyData.data.user.avatarUrl,
+              isTrader: verifyData.data.user.isTrader,
+              isAdmin: verifyData.data.user.isAdmin,
+              totpEnabled: verifyData.data.user.totpEnabled,
+              traderId: verifyData.data.user.traderId,
+              traderAddress: verifyData.data.user.traderAddress
+            }
+            set({
+              isLoading: false,
+              identity,
+              totpRequired: true,
+              partialToken: verifyData.data.partialToken,
+              pendingUser
+            })
+            // Return false to indicate login is not complete yet (TOTP needed)
+            return false
+          }
+
           set({
             isLoading: false,
             identity,
@@ -126,12 +168,17 @@ export const useAuthStore = create<AuthState>()(
               fingerprint: verifyData.data.user.fingerprint,
               phone: verifyData.data.user.phone,
               displayName: verifyData.data.user.displayName,
+              username: verifyData.data.user.username,
               avatarUrl: verifyData.data.user.avatarUrl,
               isTrader: verifyData.data.user.isTrader,
               isAdmin: verifyData.data.user.isAdmin,
+              totpEnabled: verifyData.data.user.totpEnabled,
               traderId: verifyData.data.user.traderId,
               traderAddress: verifyData.data.user.traderAddress
-            }
+            },
+            totpRequired: false,
+            partialToken: null,
+            pendingUser: null
           })
           return true
         } catch (err) {
@@ -157,6 +204,70 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: false, error: (err as Error).message })
           return false
         }
+      },
+
+      // Complete TOTP login
+      verifyTotpLogin: async (code: string) => {
+        const { partialToken } = get()
+        if (!partialToken) {
+          set({ error: 'No pending TOTP verification' })
+          return false
+        }
+
+        set({ isLoading: true, error: null })
+        try {
+          const res = await fetch(`${API_URL}/auth/verify-totp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ partialToken, code })
+          })
+
+          const contentType = res.headers.get('content-type')
+          if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Server returned non-JSON response')
+          }
+
+          const data = await res.json()
+          if (!res.ok) {
+            throw new Error(data.error?.message || 'TOTP verification failed')
+          }
+
+          set({
+            isLoading: false,
+            token: data.data.token,
+            user: {
+              id: data.data.user.id,
+              publicKey: data.data.user.publicKey,
+              fingerprint: data.data.user.fingerprint,
+              phone: data.data.user.phone,
+              displayName: data.data.user.displayName,
+              username: data.data.user.username,
+              avatarUrl: data.data.user.avatarUrl,
+              isTrader: data.data.user.isTrader,
+              isAdmin: data.data.user.isAdmin,
+              totpEnabled: data.data.user.totpEnabled,
+              traderId: data.data.user.traderId,
+              traderAddress: data.data.user.traderAddress
+            },
+            totpRequired: false,
+            partialToken: null,
+            pendingUser: null
+          })
+          return true
+        } catch (err) {
+          set({ isLoading: false, error: (err as Error).message })
+          return false
+        }
+      },
+
+      // Cancel TOTP login
+      cancelTotpLogin: () => {
+        set({
+          totpRequired: false,
+          partialToken: null,
+          pendingUser: null,
+          error: null
+        })
       },
 
       requestOtp: async (phone: string) => {
@@ -195,9 +306,11 @@ export const useAuthStore = create<AuthState>()(
               id: data.data.user.id,
               phone: data.data.user.phone,
               displayName: data.data.user.displayName,
+              username: data.data.user.username,
               avatarUrl: data.data.user.avatarUrl,
               isTrader: data.data.user.isTrader,
               isAdmin: data.data.user.isAdmin,
+              totpEnabled: data.data.user.totpEnabled,
               traderId: data.data.user.traderId,
               traderAddress: data.data.user.traderAddress
             }
@@ -226,12 +339,15 @@ export const useAuthStore = create<AuthState>()(
           const result = await res.json()
           if (!res.ok) throw new Error(result.error?.message || 'Failed to update profile')
 
+          const updatedUser = result.data || result
+
           set(state => ({
             isLoading: false,
             user: state.user ? {
               ...state.user,
-              displayName: data.displayName ?? state.user.displayName,
-              avatarUrl: data.avatarUrl ?? state.user.avatarUrl
+              displayName: updatedUser.displayName ?? state.user.displayName,
+              username: updatedUser.username ?? state.user.username,
+              avatarUrl: updatedUser.avatarUrl ?? state.user.avatarUrl
             } : null
           }))
           return true
@@ -257,14 +373,40 @@ export const useAuthStore = create<AuthState>()(
           const result = await res.json()
           if (!res.ok) throw new Error(result.error?.message || 'Failed to register as trader')
 
+          let syncedUser: User | null = null
+          try {
+            const meRes = await fetch(`${API_URL}/users/me`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            })
+            const meResult = await meRes.json()
+            if (meRes.ok && meResult?.data) {
+              syncedUser = {
+                id: meResult.data.id,
+                publicKey: meResult.data.publicKey,
+                fingerprint: meResult.data.fingerprint,
+                phone: meResult.data.phone,
+                displayName: meResult.data.displayName,
+                username: meResult.data.username,
+                avatarUrl: meResult.data.avatarUrl,
+                isTrader: meResult.data.isTrader,
+                isAdmin: meResult.data.isAdmin,
+                totpEnabled: meResult.data.totpEnabled,
+                traderId: meResult.data.traderId,
+                traderAddress: meResult.data.traderAddress
+              }
+            }
+          } catch {
+            // Fall back to local optimistic update below.
+          }
+
           set(state => ({
             isLoading: false,
-            user: state.user ? {
+            user: syncedUser || (state.user ? {
               ...state.user,
               isTrader: true,
               traderId: result.data.traderId,
               traderAddress: result.data.address
-            } : null
+            } : null)
           }))
           return { address: result.data.address }
         } catch (err) {
@@ -274,9 +416,30 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: async () => {
-        // Clear stored identity on logout
-        await cryptoService.clearIdentity()
+        const { token } = get()
+
+        // Best-effort server logout to blacklist JWT.
+        if (token) {
+          try {
+            await fetch(`${API_URL}/auth/logout`, {
+              method: 'DELETE',
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            })
+          } catch {
+            // Local logout should still proceed if backend is unreachable.
+          }
+        }
+
+        // Keep identity in IndexedDB so users can sign back in on this device.
         set({ token: null, user: null, identity: null, error: null })
+      },
+
+      forgetDeviceIdentity: async () => {
+        await get().logout()
+        await cryptoService.clearIdentity()
+        set({ identity: null })
       },
 
       clearError: () => set({ error: null })

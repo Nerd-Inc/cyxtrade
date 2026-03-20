@@ -3,8 +3,9 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import rateLimit from 'express-rate-limit';
 import nacl from 'tweetnacl';
-import { getOrCreateUser, findUserByPublicKey, createUserWithPublicKey } from '../services/userService';
+import { getOrCreateUser, findUserByPublicKey, createUserWithPublicKey, findUserById, getTotpSecret } from '../services/userService';
 import { findTraderByUserId } from '../services/traderService';
+import { verifyToken as verifyTotpToken, decryptTotpSecret } from '../services/totpService';
 import { AppError, ErrorCode } from '../utils/errors';
 import { sendSuccess, sendAppError } from '../utils/response';
 import { asyncHandler } from '../middleware/errorHandler';
@@ -198,7 +199,8 @@ router.post('/verify', verifyRateLimiter, asyncHandler(async (req, res) => {
       avatarUrl: user.avatar_url,
       isTrader,
       isAdmin: user.is_admin || isAdmin,
-      traderId: trader?.id
+      traderId: trader?.id,
+      traderAddress: trader?.wallet_address
     }
   });
 }));
@@ -407,13 +409,43 @@ router.post('/verify-signature', signatureRateLimiter, asyncHandler(async (req, 
     };
   }
 
-  // Generate JWT token
+  // Check if user has TOTP enabled
+  if (user.totp_enabled) {
+    // Generate a partial token that requires TOTP verification to complete
+    const partialTokenId = crypto.randomUUID();
+    const partialToken = jwt.sign(
+      {
+        jti: partialTokenId,
+        type: 'totp_pending',
+        userId: user.id,
+        publicKey: normalizedPublicKey,
+        fingerprint,
+      },
+      JWT_SECRET,
+      { expiresIn: '5m' } as jwt.SignOptions
+    );
+
+    sendSuccess(res, {
+      requiresTOTP: true,
+      partialToken,
+      user: {
+        id: user.id,
+        displayName: user.display_name,
+        avatarUrl: user.avatar_url,
+      }
+    });
+    return;
+  }
+
+  // Generate JWT token (no TOTP required)
   const tokenId = crypto.randomUUID();
   const token = jwt.sign(
     {
       jti: tokenId,
       id: user.id,
+      phone: user.phone || null,
       publicKey: fingerprint,
+      publicKeyFingerprint: fingerprint,
       isTrader,
       isAdmin: user.is_admin || false
     },
@@ -429,10 +461,99 @@ router.post('/verify-signature', signatureRateLimiter, asyncHandler(async (req, 
       fingerprint,
       phone: user.phone || null,
       displayName: user.display_name,
+      username: user.username,
       avatarUrl: user.avatar_url,
       isTrader,
       isAdmin: user.is_admin || false,
-      traderId: trader?.id
+      totpEnabled: user.totp_enabled || false,
+      traderId: trader?.id,
+      traderAddress: trader?.wallet_address
+    }
+  });
+}));
+
+// POST /api/auth/verify-totp - Complete login with TOTP verification
+router.post('/verify-totp', asyncHandler(async (req, res) => {
+  const { partialToken, code } = req.body;
+
+  if (!partialToken) {
+    throw new AppError(ErrorCode.MISSING_FIELD, 'Partial token is required', { field: 'partialToken' });
+  }
+  if (!code) {
+    throw new AppError(ErrorCode.MISSING_FIELD, 'TOTP code is required', { field: 'code' });
+  }
+
+  // Verify partial token
+  let payload: any;
+  try {
+    payload = jwt.verify(partialToken, JWT_SECRET);
+  } catch (err) {
+    if (err instanceof jwt.TokenExpiredError) {
+      throw new AppError(ErrorCode.EXPIRED_TOKEN, 'Session expired. Please login again.');
+    }
+    throw new AppError(ErrorCode.INVALID_TOKEN, 'Invalid token');
+  }
+
+  if (payload.type !== 'totp_pending') {
+    throw new AppError(ErrorCode.INVALID_TOKEN, 'Invalid token type');
+  }
+
+  const userId = payload.userId;
+  const user = await findUserById(userId);
+
+  if (!user || !user.totp_enabled) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'User not found or TOTP not enabled');
+  }
+
+  // Get and decrypt TOTP secret
+  const encryptedSecret = await getTotpSecret(userId);
+  if (!encryptedSecret) {
+    throw new AppError(ErrorCode.INTERNAL_ERROR, 'TOTP configuration error');
+  }
+
+  const secret = decryptTotpSecret(encryptedSecret, userId);
+
+  // Verify TOTP code
+  if (!verifyTotpToken(secret, code)) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Invalid TOTP code');
+  }
+
+  // Get trader info
+  const trader = await findTraderByUserId(userId);
+  const isTrader = trader?.status === 'active';
+
+  // Generate full JWT token
+  const tokenId = crypto.randomUUID();
+  const fingerprint = payload.fingerprint;
+  const token = jwt.sign(
+    {
+      jti: tokenId,
+      id: user.id,
+      phone: user.phone || null,
+      publicKey: fingerprint,
+      publicKeyFingerprint: fingerprint,
+      isTrader,
+      isAdmin: user.is_admin || false
+    },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
+  );
+
+  sendSuccess(res, {
+    token,
+    user: {
+      id: user.id,
+      publicKey: payload.publicKey,
+      fingerprint,
+      phone: user.phone || null,
+      displayName: user.display_name,
+      username: user.username,
+      avatarUrl: user.avatar_url,
+      isTrader,
+      isAdmin: user.is_admin || false,
+      totpEnabled: true,
+      traderId: trader?.id,
+      traderAddress: trader?.wallet_address
     }
   });
 }));

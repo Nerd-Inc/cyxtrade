@@ -16,6 +16,8 @@ export enum ErrorCode {
   UNAUTHORIZED = 2003,
   FORBIDDEN = 2004,
   NOT_AUTHENTICATED = 2005,
+  TOTP_REQUIRED = 2006,
+  INVALID_TOTP = 2007,
 
   // Trade/Order errors (3xxx)
   TRADE_NOT_FOUND = 3001,
@@ -83,6 +85,8 @@ const defaultMessages: Record<ErrorCode, string> = {
   [ErrorCode.UNAUTHORIZED]: 'You are not authorized to perform this action',
   [ErrorCode.FORBIDDEN]: 'Access denied',
   [ErrorCode.NOT_AUTHENTICATED]: 'Please log in to continue',
+  [ErrorCode.TOTP_REQUIRED]: 'Two-factor authentication required',
+  [ErrorCode.INVALID_TOTP]: 'Invalid verification code',
 
   // Trade/Order
   [ErrorCode.TRADE_NOT_FOUND]: 'Trade not found',
@@ -149,6 +153,8 @@ const statusCodes: Record<ErrorCode, number> = {
   [ErrorCode.UNAUTHORIZED]: 403,
   [ErrorCode.FORBIDDEN]: 403,
   [ErrorCode.NOT_AUTHENTICATED]: 401,
+  [ErrorCode.TOTP_REQUIRED]: 403,
+  [ErrorCode.INVALID_TOTP]: 400,
 
   // Trade/Order - 400/404
   [ErrorCode.TRADE_NOT_FOUND]: 404,

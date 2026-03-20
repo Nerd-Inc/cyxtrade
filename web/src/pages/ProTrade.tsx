@@ -5,6 +5,10 @@ import { useAdsStore, useOrdersStore, useWalletStore } from '../store/pro'
 import ScamWarningModal, { WarningBanner, ReportSuspiciousModal } from '../components/ScamWarningModal'
 import { useRiskAssessment } from '../hooks/useRiskAssessment'
 import FeeBreakdown from '../components/FeeBreakdown'
+import TOTPVerificationModal from '../components/TOTPVerificationModal'
+
+const API_URL = import.meta.env.VITE_API_URL || '/api'
+const TOTP_REQUIRED_CODE = 2006
 
 export default function ProTrade() {
   const { id } = useParams<{ id: string }>()
@@ -24,6 +28,10 @@ export default function ProTrade() {
   const [showRiskWarning, setShowRiskWarning] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
   const [riskChecked, setRiskChecked] = useState(false)
+
+  // TOTP verification state
+  const [showTotpModal, setShowTotpModal] = useState(false)
+  const [pendingOrder, setPendingOrder] = useState<{ adId: string; amount: number; paymentMethod: string } | null>(null)
 
   useEffect(() => {
     if (id) {
@@ -105,14 +113,51 @@ export default function ProTrade() {
   const handleTrade = async () => {
     if (!canTrade || !id) return
 
-    const order = await createOrder({
+    const orderData = {
       adId: id,
       amount: cryptoAmount,
       paymentMethod: selectedPayment
-    })
+    }
 
-    if (order) {
-      navigate(`/pro/order/${order.id}`)
+    const result = await createOrder(orderData)
+
+    if (result.order) {
+      navigate(`/pro/order/${result.order.id}`)
+    } else if (result.errorCode === TOTP_REQUIRED_CODE) {
+      // TOTP required - save pending order and show modal
+      setPendingOrder(orderData)
+      setShowTotpModal(true)
+    }
+  }
+
+  const handleTotpVerified = async () => {
+    setShowTotpModal(false)
+
+    // Retry the order after TOTP verification
+    if (pendingOrder) {
+      const result = await createOrder(pendingOrder)
+      if (result.order) {
+        navigate(`/pro/order/${result.order.id}`)
+      }
+      setPendingOrder(null)
+    }
+  }
+
+  const verifyTotpForTrade = async (code: string): Promise<boolean> => {
+    const token = useAuthStore.getState().token
+    try {
+      const res = await fetch(`${API_URL}/totp/verify`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code, operation: 'trade' }),
+      })
+      const data = await res.json()
+      return res.ok && data.data?.valid
+    } catch {
+      return false
     }
   }
 
@@ -410,6 +455,20 @@ export default function ProTrade() {
           identifier={currentAd.traderUserId || ''}
         />
       )}
+
+      {/* TOTP Verification Modal */}
+      <TOTPVerificationModal
+        isOpen={showTotpModal}
+        onClose={() => {
+          setShowTotpModal(false)
+          setPendingOrder(null)
+        }}
+        onVerified={handleTotpVerified}
+        onSubmit={verifyTotpForTrade}
+        operation="trade"
+        title="Verify Trade"
+        description="Enter your 2FA code to confirm this trade."
+      />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { AuthRequest, authMiddleware } from '../../middleware/auth';
+import { requireTotpVerification } from '../../middleware/totpMiddleware';
 import {
   getAllWallets,
   getWalletBalance,
@@ -219,8 +220,8 @@ router.post('/deposit/:asset/address', authMiddleware, asyncHandler(async (req: 
 // Withdrawal Routes
 // ============================================
 
-// POST /api/pro/wallet/withdraw - Request withdrawal
-router.post('/withdraw', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
+// POST /api/pro/wallet/withdraw - Request withdrawal (TOTP protected)
+router.post('/withdraw', authMiddleware, requireTotpVerification('withdrawal'), asyncHandler(async (req: AuthRequest, res) => {
   const userId = req.user?.id;
   if (!userId) {
     throw new AppError(ErrorCode.NOT_AUTHENTICATED);

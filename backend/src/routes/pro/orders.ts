@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { AuthRequest, authMiddleware, traderMiddleware } from '../../middleware/auth';
+import { requireTotpVerification } from '../../middleware/totpMiddleware';
 import {
   createProOrder,
   findOrderById,
@@ -48,8 +49,8 @@ const getParam = (param: string | string[] | undefined): string => {
 // User Order Routes
 // ============================================
 
-// POST /api/pro/orders - Create new order
-router.post('/', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
+// POST /api/pro/orders - Create new order (TOTP protected)
+router.post('/', authMiddleware, requireTotpVerification('trade'), asyncHandler(async (req: AuthRequest, res) => {
   const userId = req.user?.id;
   if (!userId) {
     throw new AppError(ErrorCode.NOT_AUTHENTICATED);

@@ -8,9 +8,12 @@ export interface User {
   public_key_fingerprint: string | null;
   key_registered_at: Date | null;
   display_name: string | null;
+  username: string | null;
   avatar_url: string | null;
   is_trader: boolean;
   is_admin: boolean;
+  totp_enabled: boolean;
+  totp_enabled_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -49,7 +52,7 @@ export async function getOrCreateUser(phone: string, isAdmin: boolean = false): 
 
 export async function updateUser(
   id: string,
-  data: { display_name?: string; avatar_url?: string }
+  data: { display_name?: string | null; avatar_url?: string | null; username?: string | null }
 ): Promise<User | null> {
   const fields: string[] = [];
   const values: any[] = [];
@@ -62,6 +65,10 @@ export async function updateUser(
   if (data.avatar_url !== undefined) {
     fields.push(`avatar_url = $${paramIndex++}`);
     values.push(data.avatar_url);
+  }
+  if (data.username !== undefined) {
+    fields.push(`username = $${paramIndex++}`);
+    values.push(data.username);
   }
 
   if (fields.length === 0) return findUserById(id);
@@ -135,4 +142,107 @@ export async function linkPublicKeyToUser(
     [publicKey.toLowerCase(), fingerprint, userId]
   );
   return rows[0] || null;
+}
+
+// ============================================
+// USERNAME MANAGEMENT
+// ============================================
+
+const RESERVED_USERNAMES = [
+  'admin', 'administrator', 'cyxtrade', 'support', 'help', 'moderator', 'mod',
+  'system', 'official', 'staff', 'team', 'root', 'null', 'undefined', 'api'
+];
+
+export async function findUserByUsername(username: string): Promise<User | null> {
+  return queryOne<User>(
+    'SELECT * FROM users WHERE LOWER(username) = LOWER($1)',
+    [username]
+  );
+}
+
+export async function isUsernameAvailable(username: string): Promise<boolean> {
+  // Check reserved words
+  if (RESERVED_USERNAMES.includes(username.toLowerCase())) {
+    return false;
+  }
+
+  const existing = await queryOne<{ count: number }>(
+    'SELECT COUNT(*)::int as count FROM users WHERE LOWER(username) = LOWER($1)',
+    [username]
+  );
+  return (existing?.count || 0) === 0;
+}
+
+export function validateUsername(username: string): { valid: boolean; error?: string } {
+  if (!username || typeof username !== 'string') {
+    return { valid: false, error: 'Username is required' };
+  }
+
+  const trimmed = username.trim();
+
+  if (trimmed.length < 3) {
+    return { valid: false, error: 'Username must be at least 3 characters' };
+  }
+
+  if (trimmed.length > 30) {
+    return { valid: false, error: 'Username must be at most 30 characters' };
+  }
+
+  if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(trimmed)) {
+    return { valid: false, error: 'Username must start with a letter and contain only letters, numbers, and underscores' };
+  }
+
+  if (RESERVED_USERNAMES.includes(trimmed.toLowerCase())) {
+    return { valid: false, error: 'This username is reserved' };
+  }
+
+  return { valid: true };
+}
+
+// ============================================
+// TOTP MANAGEMENT
+// ============================================
+
+export async function setTotpSecret(
+  userId: string,
+  encryptedSecret: string
+): Promise<User | null> {
+  const rows = await query<User>(
+    `UPDATE users
+     SET totp_secret_encrypted = $1, updated_at = NOW()
+     WHERE id = $2
+     RETURNING *`,
+    [encryptedSecret, userId]
+  );
+  return rows[0] || null;
+}
+
+export async function enableTotp(userId: string): Promise<User | null> {
+  const rows = await query<User>(
+    `UPDATE users
+     SET totp_enabled = TRUE, totp_enabled_at = NOW(), updated_at = NOW()
+     WHERE id = $1
+     RETURNING *`,
+    [userId]
+  );
+  return rows[0] || null;
+}
+
+export async function disableTotp(userId: string): Promise<User | null> {
+  const rows = await query<User>(
+    `UPDATE users
+     SET totp_enabled = FALSE, totp_secret_encrypted = NULL, totp_enabled_at = NULL, updated_at = NOW()
+     WHERE id = $1
+     RETURNING *`,
+    [userId]
+  );
+  return rows[0] || null;
+}
+
+export async function getTotpSecret(userId: string): Promise<string | null> {
+  const result = await queryOne<{ totp_secret_encrypted: string | null }>(
+    'SELECT totp_secret_encrypted FROM users WHERE id = $1',
+    [userId]
+  );
+  return result?.totp_secret_encrypted || null;
 }

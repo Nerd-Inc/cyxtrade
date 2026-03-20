@@ -114,7 +114,7 @@ interface WalletState {
   fetchBalance: (asset: string) => Promise<WalletBalance | null>
   initWallet: (asset: string) => Promise<boolean>
   fetchDepositAddress: (asset: string, network?: string) => Promise<{ address: string | null; memo?: string } | null>
-  requestWithdrawal: (data: { asset: string; amount: number; address: string; network?: string }) => Promise<boolean>
+  requestWithdrawal: (data: { asset: string; amount: number; address: string; network?: string }) => Promise<{ success: boolean; errorCode?: number }>
   cancelWithdrawal: (txId: string) => Promise<boolean>
   fetchTransactions: (filters?: { asset?: string; type?: string; status?: string; limit?: number; offset?: number }) => Promise<void>
   clearError: () => void
@@ -221,16 +221,23 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         body: JSON.stringify({ asset, amount, address, network })
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error?.message || 'Failed to request withdrawal')
+      if (!res.ok) {
+        // Return error code for TOTP handling
+        const errorCode = data.error?.code
+        const errorMsg = data.error?.message || 'Failed to request withdrawal'
+        set({ isLoading: false, error: errorMsg })
+        // Return error code so caller can handle TOTP_REQUIRED (2006)
+        return { success: false, errorCode }
+      }
 
       // Refresh balances and transactions
       await get().fetchBalances()
       await get().fetchTransactions()
       set({ isLoading: false })
-      return true
+      return { success: true }
     } catch (err) {
       set({ isLoading: false, error: (err as Error).message })
-      return false
+      return { success: false }
     }
   },
 
@@ -481,7 +488,7 @@ interface OrdersState {
   // Actions
   fetchOrders: (filters?: { status?: string; role?: 'buyer' | 'seller' }) => Promise<void>
   fetchOrder: (id: string) => Promise<P2POrder | null>
-  createOrder: (data: { adId: string; amount: number; paymentMethod: string }) => Promise<P2POrder | null>
+  createOrder: (data: { adId: string; amount: number; paymentMethod: string }) => Promise<{ order: P2POrder | null; errorCode?: number }>
   markPaid: (id: string) => Promise<boolean>
   releaseOrder: (id: string) => Promise<boolean>
   cancelOrder: (id: string) => Promise<boolean>
@@ -538,7 +545,13 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
         body: JSON.stringify(orderData)
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error?.message || 'Failed to create order')
+      if (!res.ok) {
+        const errorCode = data.error?.code
+        const errorMsg = data.error?.message || 'Failed to create order'
+        set({ isLoading: false, error: errorMsg })
+        // Return error info for TOTP handling
+        return { order: null, errorCode }
+      }
 
       const newOrder = data.data
       set(state => ({
@@ -546,10 +559,10 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
         currentOrder: newOrder,
         isLoading: false
       }))
-      return newOrder
+      return { order: newOrder }
     } catch (err) {
       set({ isLoading: false, error: (err as Error).message })
-      return null
+      return { order: null }
     }
   },
 
