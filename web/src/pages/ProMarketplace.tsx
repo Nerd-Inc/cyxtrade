@@ -313,6 +313,65 @@ export default function ProMarketplace() {
   const [showAmountModal, setShowAmountModal] = useState(false)
   const [amountFilter, setAmountFilter] = useState('')
 
+  // Express mode state
+  const [expressStep, setExpressStep] = useState<1 | 2 | 3>(1)
+  const [expressMode, setExpressMode] = useState<'buy' | 'sell'>('buy')
+  const [expressPayAmount, setExpressPayAmount] = useState('')
+  const [expressReceiveAmount, setExpressReceiveAmount] = useState('')
+  const [selectedExpressPayment, setSelectedExpressPayment] = useState('')
+  const [selectedExpressAd, setSelectedExpressAd] = useState<string | null>(null)
+  const [expressAdTab, setExpressAdTab] = useState<'recommended' | 'verification-free'>('recommended')
+  const [placeOrderCountdown, setPlaceOrderCountdown] = useState(15)
+
+  // Express mock rate (would come from API)
+  const expressRate = expressMode === 'buy' ? 3.700 : 3.683
+
+  // Calculate express amounts
+  const calculateExpressReceive = (payAmount: string) => {
+    const pay = parseFloat(payAmount)
+    if (isNaN(pay)) return ''
+    return expressMode === 'buy'
+      ? (pay / expressRate).toFixed(4)
+      : (pay * expressRate).toFixed(2)
+  }
+
+  // Express mock payment methods with rates
+  const EXPRESS_PAYMENT_METHODS = [
+    { id: 'enbd', name: 'Emirates NBD', rate: 3.790 },
+    { id: 'cash', name: 'Cash Deposit to Bank', rate: 3.839 },
+    { id: 'bank', name: 'Bank Transfer', rate: 3.865 },
+    { id: 'adib', name: 'ADIB: Abu Dhabi Islamic Bank', rate: 3.865 },
+    { id: 'adcb', name: 'Abu Dhabi Commercial Bank ADCB', rate: 3.865 },
+  ]
+
+  // Express mock traders
+  const EXPRESS_RECOMMENDED_ADS = [
+    { id: 'exp1', name: 'SalimCapital', badge: 'pro', orders: 519, completion: 99.90, rate: 3.790, requiresVerification: true },
+    { id: 'exp2', name: 'HappyCryptoAE', badge: 'pro-verified', orders: 290, completion: 100.00, rate: 3.845, requiresVerification: true },
+    { id: 'exp3', name: 'TRUSTED_CRYPTO_XCHANG', badge: 'diamond', orders: 224, completion: 97.40, rate: 3.839, requiresVerification: true },
+  ]
+
+  const EXPRESS_VERIFICATION_FREE_ADS = [
+    { id: 'exp4', name: 'DTBcrypto', badge: 'diamond', orders: 412, completion: 98.90, rate: 3.714, requiresVerification: false },
+    { id: 'exp5', name: 'ArabDu', badge: 'diamond', orders: 136, completion: 99.30, rate: 3.840, requiresVerification: false },
+    { id: 'exp6', name: 'TrustTradePro', badge: 'diamond', orders: 137, completion: 100.00, rate: 3.897, requiresVerification: false },
+  ]
+
+  // Place order countdown effect
+  useEffect(() => {
+    if (expressStep === 3 && selectedExpressAd && placeOrderCountdown > 0) {
+      const timer = setTimeout(() => setPlaceOrderCountdown(prev => prev - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [expressStep, selectedExpressAd, placeOrderCountdown])
+
+  // Reset countdown when ad changes
+  useEffect(() => {
+    if (selectedExpressAd) {
+      setPlaceOrderCountdown(15)
+    }
+  }, [selectedExpressAd])
+
   // Sort dropdown state
   const [showSortDropdown, setShowSortDropdown] = useState(false)
   const [sortBy, setSortBy] = useState<'price' | 'orders' | 'completion' | 'rating'>('price')
@@ -715,6 +774,436 @@ export default function ProMarketplace() {
           </div>
         </div>
 
+        {/* ============================================ */}
+        {/* EXPRESS TAB CONTENT */}
+        {/* ============================================ */}
+        {activeTab === 'express' && (
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Left Side - Title and Description */}
+            <div className="lg:w-1/2">
+              <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">P2P Express</h1>
+              <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+                {expressMode === 'buy' ? 'Buy' : 'Sell'} {selectedAsset} with {selectedFiat}
+              </h2>
+              <p className={`${dark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Buy and Sell {selectedAsset} on CyxTrade P2P with various payment methods
+              </p>
+
+              {/* Breadcrumb for steps 2 and 3 */}
+              {expressStep > 1 && (
+                <div className="flex items-center gap-2 mt-6 text-sm">
+                  <button
+                    onClick={() => { setExpressStep(1); setSelectedExpressPayment(''); setSelectedExpressAd(null); }}
+                    className={`${dark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
+                  >
+                    Express
+                  </button>
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <button
+                    onClick={() => { setExpressStep(2); setSelectedExpressAd(null); }}
+                    className={expressStep === 2 ? 'text-white font-medium' : `${dark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
+                  >
+                    Payment Method
+                  </button>
+                  {expressStep === 3 && (
+                    <>
+                      <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      <span className="text-white font-medium">Select Ad</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Right Side - Form Card */}
+            <div className="lg:w-1/2">
+              {/* Step 1: Amount Input */}
+              {expressStep === 1 && (
+                <div className={`rounded-2xl p-6 ${dark ? 'bg-gray-800' : 'bg-white shadow-lg'}`}>
+                  {/* Buy/Sell Toggle */}
+                  <div className="flex mb-6">
+                    <button
+                      onClick={() => setExpressMode('buy')}
+                      className={`flex-1 py-3 text-center font-medium rounded-l-lg transition ${
+                        expressMode === 'buy'
+                          ? 'bg-gray-700 text-white'
+                          : `${dark ? 'bg-gray-900 text-gray-400' : 'bg-gray-100 text-gray-500'}`
+                      }`}
+                    >
+                      Buy
+                    </button>
+                    <button
+                      onClick={() => setExpressMode('sell')}
+                      className={`flex-1 py-3 text-center font-medium rounded-r-lg transition ${
+                        expressMode === 'sell'
+                          ? 'bg-gray-700 text-white'
+                          : `${dark ? 'bg-gray-900 text-gray-400' : 'bg-gray-100 text-gray-500'}`
+                      }`}
+                    >
+                      Sell
+                    </button>
+                  </div>
+
+                  {/* You Pay Input */}
+                  <div className={`rounded-lg border p-4 mb-4 ${dark ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`text-sm ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        {expressMode === 'buy' ? 'You Pay' : 'You Sell'}
+                      </span>
+                      {expressMode === 'sell' && userBalance && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className={dark ? 'text-gray-500' : 'text-gray-400'}>
+                            Balance: {userBalance.available} {selectedAsset}
+                          </span>
+                          <button className="text-green-500 hover:text-green-400 font-medium">Add Funds</button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="text"
+                        value={expressPayAmount}
+                        onChange={(e) => {
+                          setExpressPayAmount(e.target.value)
+                          setExpressReceiveAmount(calculateExpressReceive(e.target.value))
+                        }}
+                        placeholder={expressMode === 'buy' ? '100-1000000' : '27.3448-5000'}
+                        className={`flex-1 text-xl bg-transparent outline-none ${dark ? 'text-white placeholder-gray-600' : 'text-gray-900 placeholder-gray-400'}`}
+                      />
+                      {expressMode === 'sell' && (
+                        <button
+                          onClick={() => {
+                            const max = userBalance?.available || '5000'
+                            setExpressPayAmount(max)
+                            setExpressReceiveAmount(calculateExpressReceive(max))
+                          }}
+                          className="text-sm text-yellow-500 hover:text-yellow-400 font-medium"
+                        >
+                          All
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setShowCryptoModal(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-700/50 hover:bg-gray-700 transition"
+                      >
+                        <span
+                          className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                          style={{ backgroundColor: selectedCryptoData?.color || '#26A17B' }}
+                        >
+                          {selectedCryptoData?.icon || '₮'}
+                        </span>
+                        <span className="text-white font-medium">{expressMode === 'buy' ? selectedFiat : selectedAsset}</span>
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* You Receive Input */}
+                  <div className={`rounded-lg border p-4 mb-6 ${dark ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`text-sm ${dark ? 'text-gray-500' : 'text-gray-400'}`}>You Receive</span>
+                      <span className="text-xs text-green-500 font-medium">3.78% APR</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="text"
+                        value={expressReceiveAmount}
+                        readOnly
+                        placeholder={expressMode === 'buy' ? '20.6313-5000' : '100-7000000'}
+                        className={`flex-1 text-xl bg-transparent outline-none ${dark ? 'text-white placeholder-gray-600' : 'text-gray-900 placeholder-gray-400'}`}
+                      />
+                      <button
+                        onClick={() => setShowCurrencyModal(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-700/50 hover:bg-gray-700 transition"
+                      >
+                        <span
+                          className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                          style={{ backgroundColor: expressMode === 'buy' ? (selectedCryptoData?.color || '#26A17B') : (selectedCurrencyData?.color || '#2E7D32') }}
+                        >
+                          {expressMode === 'buy' ? (selectedCryptoData?.icon || '₮') : (selectedCurrencyData?.symbol.slice(0, 1) || '$')}
+                        </span>
+                        <span className="text-white font-medium">{expressMode === 'buy' ? selectedAsset : selectedFiat}</span>
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Estimated Price */}
+                  <div className={`text-sm mb-6 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    <span>Estimated price </span>
+                    <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="ml-2">1 {selectedAsset} ≈ {expressRate.toFixed(3)} {selectedFiat}</span>
+                  </div>
+
+                  {/* Select Payment Method Button */}
+                  <button
+                    onClick={() => setExpressStep(2)}
+                    disabled={!expressPayAmount || parseFloat(expressPayAmount) <= 0}
+                    className={`w-full py-4 rounded-lg font-semibold transition ${
+                      expressMode === 'buy'
+                        ? 'bg-green-600 hover:bg-green-700 disabled:bg-green-600/50 text-white'
+                        : 'bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white'
+                    }`}
+                  >
+                    Select Payment Method
+                  </button>
+                </div>
+              )}
+
+              {/* Step 2: Payment Method Selection */}
+              {expressStep === 2 && (
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-6">Select Payment Method</h3>
+                  <div className="space-y-3">
+                    {EXPRESS_PAYMENT_METHODS.map((method) => (
+                      <button
+                        key={method.id}
+                        onClick={() => setSelectedExpressPayment(method.id)}
+                        className={`w-full flex items-center justify-between p-4 rounded-lg border transition ${
+                          selectedExpressPayment === method.id
+                            ? 'border-yellow-500 bg-gray-800'
+                            : `${dark ? 'border-gray-700 bg-gray-800/50 hover:border-gray-600' : 'border-gray-200 bg-white hover:border-gray-300'}`
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="w-1 h-4 rounded-full bg-yellow-500"></span>
+                          <span className="text-white font-medium">{method.name}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                            1 {selectedAsset} = {method.rate.toFixed(3)} {selectedFiat}
+                          </span>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                            selectedExpressPayment === method.id
+                              ? 'border-white bg-white'
+                              : `${dark ? 'border-gray-600' : 'border-gray-300'}`
+                          }`}>
+                            {selectedExpressPayment === method.id && (
+                              <div className="w-2.5 h-2.5 rounded-full bg-gray-900"></div>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Select Ad Button */}
+                  <button
+                    onClick={() => {
+                      setExpressStep(3)
+                      // Auto-select first ad
+                      const ads = expressAdTab === 'recommended' ? EXPRESS_RECOMMENDED_ADS : EXPRESS_VERIFICATION_FREE_ADS
+                      if (ads.length > 0) setSelectedExpressAd(ads[0].id)
+                    }}
+                    disabled={!selectedExpressPayment}
+                    className="w-full py-4 mt-6 rounded-lg font-semibold bg-yellow-500 hover:bg-yellow-400 disabled:bg-yellow-500/50 text-gray-900 transition"
+                  >
+                    Select Ad
+                  </button>
+                </div>
+              )}
+
+              {/* Step 3: Select Preferred Ad */}
+              {expressStep === 3 && (
+                <div className="flex flex-col lg:flex-row gap-6">
+                  {/* Left: Ad List */}
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-white mb-4">Select Preferred Ad</h3>
+
+                    {/* Tabs */}
+                    <div className="flex gap-2 mb-4">
+                      <button
+                        onClick={() => {
+                          setExpressAdTab('recommended')
+                          if (EXPRESS_RECOMMENDED_ADS.length > 0) setSelectedExpressAd(EXPRESS_RECOMMENDED_ADS[0].id)
+                        }}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                          expressAdTab === 'recommended'
+                            ? 'bg-yellow-500 text-gray-900'
+                            : `${dark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`
+                        }`}
+                      >
+                        Recommended Ad
+                      </button>
+                      <button
+                        onClick={() => {
+                          setExpressAdTab('verification-free')
+                          if (EXPRESS_VERIFICATION_FREE_ADS.length > 0) setSelectedExpressAd(EXPRESS_VERIFICATION_FREE_ADS[0].id)
+                        }}
+                        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition ${
+                          expressAdTab === 'verification-free'
+                            ? 'bg-gray-700 text-white'
+                            : `${dark ? 'bg-gray-800 text-gray-400 hover:bg-gray-700' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`
+                        }`}
+                      >
+                        Verification-free
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* Ad Cards */}
+                    <div className="space-y-3">
+                      {(expressAdTab === 'recommended' ? EXPRESS_RECOMMENDED_ADS : EXPRESS_VERIFICATION_FREE_ADS).map((ad, idx) => (
+                        <button
+                          key={ad.id}
+                          onClick={() => setSelectedExpressAd(ad.id)}
+                          className={`w-full p-4 rounded-lg border text-left transition ${
+                            selectedExpressAd === ad.id
+                              ? 'border-orange-500 bg-gray-800'
+                              : `${dark ? 'border-gray-700 bg-gray-800/50 hover:border-gray-600' : 'border-gray-200 bg-white hover:border-gray-300'}`
+                          }`}
+                        >
+                          {idx === 0 && (
+                            <span className="inline-block px-2 py-0.5 mb-2 text-xs font-medium bg-yellow-500/20 text-yellow-500 rounded">
+                              Best offer
+                            </span>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-white font-medium">{ad.name}</span>
+                                {ad.badge === 'pro' && (
+                                  <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded">Pro</span>
+                                )}
+                                {ad.badge === 'pro-verified' && (
+                                  <>
+                                    <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded">Pro</span>
+                                    <span className="text-blue-400">✓</span>
+                                  </>
+                                )}
+                                {ad.badge === 'diamond' && (
+                                  <span className="text-yellow-500">💎</span>
+                                )}
+                              </div>
+                              <p className={`text-sm mt-1 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
+                                {ad.orders} orders | {ad.completion.toFixed(2)} % Completion
+                              </p>
+                              {idx === 0 && (
+                                <button className={`text-sm mt-1 flex items-center gap-1 ${dark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-600'}`}>
+                                  View Ad Requirements
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xl font-bold text-white">{ad.rate.toFixed(3)}</span>
+                              <span className={`ml-1 text-sm ${dark ? 'text-gray-500' : 'text-gray-400'}`}>د.إ</span>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    <button className="w-full mt-4 text-center text-yellow-500 hover:text-yellow-400 text-sm font-medium">
+                      Find more options
+                    </button>
+                  </div>
+
+                  {/* Right: Preview Order */}
+                  <div className={`lg:w-72 p-6 rounded-2xl ${dark ? 'bg-gray-800' : 'bg-white shadow-lg'}`}>
+                    <h4 className="text-lg font-bold text-white mb-4">Preview Order</h4>
+
+                    {expressAdTab === 'recommended' && (
+                      <span className="inline-block px-2 py-1 mb-4 text-xs font-medium bg-blue-500/20 text-blue-400 rounded">
+                        Requires verification
+                      </span>
+                    )}
+
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-sm flex items-center gap-1 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          Payment time limit
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </span>
+                        <span className="text-white font-medium">15 min</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-500'}`}>You Pay</span>
+                        <span className="text-white font-medium">
+                          {expressPayAmount ? parseFloat(expressPayAmount).toLocaleString(undefined, { minimumFractionDigits: 3 }) : '0.000'} {selectedFiat}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-500'}`}>You Receive</span>
+                        <span className="text-white font-bold text-lg">
+                          {expressReceiveAmount || '0.00'} {selectedAsset}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Auto-subscribe toggle */}
+                    <div className={`flex items-center justify-between p-3 mt-4 rounded-lg ${dark ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+                      <div className="flex items-center gap-2">
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        <span className={`text-sm ${dark ? 'text-gray-300' : 'text-gray-600'}`}>Auto-subscribe to Earn</span>
+                        <span className="text-xs text-green-500 font-medium">3.78% APR</span>
+                      </div>
+                      <button
+                        onClick={() => setAutoSubscribe(!autoSubscribe)}
+                        className={`w-10 h-5 rounded-full transition ${autoSubscribe ? 'bg-green-500' : 'bg-gray-600'}`}
+                      >
+                        <div className={`w-4 h-4 rounded-full bg-white shadow transform transition ${autoSubscribe ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                      </button>
+                    </div>
+
+                    {/* Place Order Button */}
+                    <button
+                      onClick={() => {
+                        // Would navigate to order page or create order
+                        navigate('/pro/orders')
+                      }}
+                      disabled={!selectedExpressAd}
+                      className="w-full py-4 mt-6 rounded-lg font-semibold bg-green-500 hover:bg-green-600 disabled:bg-green-500/50 text-white transition"
+                    >
+                      Place Order ({placeOrderCountdown}s)
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ============================================ */}
+        {/* BLOCK TRADE TAB CONTENT */}
+        {/* ============================================ */}
+        {activeTab === 'block' && (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 ${dark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+              <svg className={`w-10 h-10 ${dark ? 'text-gray-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+            </div>
+            <h3 className={`text-xl font-semibold mb-2 ${dark ? 'text-white' : 'text-gray-900'}`}>Block Trade</h3>
+            <p className={`text-center max-w-md ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+              Block trading for large volume transactions. Coming soon to CyxTrade Pro.
+            </p>
+          </div>
+        )}
+
+        {/* ============================================ */}
+        {/* P2P TAB CONTENT */}
+        {/* ============================================ */}
+        {activeTab === 'p2p' && (
+        <>
         {/* Buy/Sell Toggle + Crypto Tabs Row */}
         <div className="flex flex-col gap-4 mb-4">
           {/* Buy/Sell Toggle - Small */}
@@ -1588,6 +2077,8 @@ export default function ProMarketplace() {
             ))}
           </div>
         </div>
+        </>
+        )}
       </main>
 
       {/* Currency Selection Modal */}
