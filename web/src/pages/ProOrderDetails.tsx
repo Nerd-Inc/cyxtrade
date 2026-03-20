@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/auth'
 import { useOrdersStore, useWalletStore } from '../store/pro'
 import ScamWarningModal, { WarningBanner, ReportSuspiciousModal } from '../components/ScamWarningModal'
 import { useRiskAssessment } from '../hooks/useRiskAssessment'
+import FeeBreakdown from '../components/FeeBreakdown'
 
 export default function ProOrderDetails() {
   const { id } = useParams<{ id: string }>()
@@ -279,20 +280,20 @@ export default function ProOrderDetails() {
             </div>
           )}
 
+          {/* Fee Breakdown Summary */}
+          <FeeBreakdown
+            sendAmount={isBuyer ? currentOrder.fiatAmount : currentOrder.cryptoAmount}
+            sendCurrency={isBuyer ? currentOrder.fiatCurrency : currentOrder.asset}
+            receiveAmount={isBuyer ? currentOrder.cryptoAmount : currentOrder.fiatAmount}
+            receiveCurrency={isBuyer ? currentOrder.asset : currentOrder.fiatCurrency}
+            exchangeRate={isBuyer ? 1 / currentOrder.price : currentOrder.price}
+            platformFeePercent={0}
+            variant="compact"
+            className="mb-4"
+          />
+
           {/* Order Details */}
           <div className="space-y-3">
-            <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-              <span className="text-gray-500 dark:text-gray-400">Crypto Amount</span>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {currentOrder.cryptoAmount.toFixed(4)} {currentOrder.asset}
-              </span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-              <span className="text-gray-500 dark:text-gray-400">Fiat Amount</span>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {currentOrder.fiatAmount.toLocaleString()} {currentOrder.fiatCurrency}
-              </span>
-            </div>
             <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
               <span className="text-gray-500 dark:text-gray-400">Price</span>
               <span className="text-gray-900 dark:text-white">

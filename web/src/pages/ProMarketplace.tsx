@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
 import { useAdsStore, useWalletStore, type P2PAd } from '../store/pro'
 import { DarkModeContext } from '../App'
+import { RateComparisonBadge } from '../components/FeeBreakdown'
 
 // Crypto assets with icons, names, symbols, and colors
 const CRYPTO_ASSETS = [
@@ -325,6 +326,9 @@ export default function ProMarketplace() {
 
   // Express mock rate (would come from API)
   const expressRate = expressMode === 'buy' ? 3.700 : 3.683
+
+  // Market rate for comparison (mid-market rate, would come from price feed API)
+  const marketRate = 3.691
 
   // Calculate express amounts
   const calculateExpressReceive = (payAmount: string) => {
@@ -1468,11 +1472,16 @@ export default function ProMarketplace() {
                 </div>
 
                 {/* Price - col-span-2 */}
-                <div className="md:col-span-2 flex items-center">
+                <div className="md:col-span-2 flex flex-col justify-center">
                   <p className={`text-lg font-semibold ${dark ? 'text-white' : 'text-gray-900'}`}>
                     <span className={`text-xs font-normal mr-1 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>{getCurrencyPrefix(ad.currency)}</span>
                     {ad.price.toFixed(3)}
                   </p>
+                  <RateComparisonBadge
+                    traderRate={ad.price}
+                    marketRate={marketRate}
+                    className="mt-1"
+                  />
                 </div>
 
                 {/* Available/Order Limit - col-span-3 */}
@@ -1576,6 +1585,11 @@ export default function ProMarketplace() {
                           <p className={`text-xl font-semibold ${tradeType === 'buy' ? 'text-green-500' : 'text-red-500'}`}>
                             {getCurrencyPrefix(ad.currency)} {ad.price.toFixed(2)} <span className={`text-xs font-normal ${dark ? 'text-gray-500' : 'text-gray-400'}`}>{ad.currency}</span>
                           </p>
+                          <RateComparisonBadge
+                            traderRate={ad.price}
+                            marketRate={marketRate}
+                            className="mt-1"
+                          />
                         </div>
 
                         {/* You Pay / You Receive Input */}

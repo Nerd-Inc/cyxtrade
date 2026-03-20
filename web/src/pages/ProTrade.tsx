@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/auth'
 import { useAdsStore, useOrdersStore, useWalletStore } from '../store/pro'
 import ScamWarningModal, { WarningBanner, ReportSuspiciousModal } from '../components/ScamWarningModal'
 import { useRiskAssessment } from '../hooks/useRiskAssessment'
+import FeeBreakdown from '../components/FeeBreakdown'
 
 export default function ProTrade() {
   const { id } = useParams<{ id: string }>()
@@ -247,15 +248,32 @@ export default function ProTrade() {
             </p>
           </div>
 
-          {/* Crypto Amount */}
-          <div className="mb-4 bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-              {isBuying ? 'I will receive' : 'I will send'}
-            </p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
-              {cryptoAmount.toFixed(6)} <span className="text-teal-600">{currentAd.asset}</span>
-            </p>
-          </div>
+          {/* Fee Breakdown */}
+          {fiatValue > 0 && (
+            <FeeBreakdown
+              sendAmount={fiatValue}
+              sendCurrency={currentAd.fiatCurrency}
+              receiveAmount={cryptoAmount}
+              receiveCurrency={currentAd.asset}
+              exchangeRate={1 / currentAd.price}
+              platformFeePercent={0}
+              estimatedDeliveryTime={currentAd.avgReleaseTime ? `~${currentAd.avgReleaseTime} min` : undefined}
+              variant="compact"
+              className="mb-4"
+            />
+          )}
+
+          {/* Crypto Amount Preview */}
+          {fiatValue === 0 && (
+            <div className="mb-4 bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                {isBuying ? 'I will receive' : 'I will send'}
+              </p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                0.000000 <span className="text-teal-600">{currentAd.asset}</span>
+              </p>
+            </div>
+          )}
 
           {/* Balance Check (for selling) */}
           {!isBuying && (

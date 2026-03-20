@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
+import FeeBreakdown from '../components/FeeBreakdown'
 
 // Comprehensive currency list with symbols, flags, and colors
 const CURRENCIES = [
@@ -1103,36 +1104,25 @@ export default function AppHome() {
               </div>
             </div>
 
-            {/* Trade Summary */}
+            {/* Trade Summary with Fee Breakdown */}
             <div className="p-4">
               <h4 className="text-sm text-gray-400 font-medium uppercase tracking-wide mb-3">Trade Summary</h4>
 
-              {/* Amount Section */}
-              <div className="bg-[#2B3139] rounded-xl p-4 mb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-gray-400">You Send</span>
-                  <span className="text-xl font-bold text-white">
-                    {fromCurrencyData?.symbol} {parseFloat(sendAmount).toLocaleString()} {fromCurrency}
-                  </span>
-                </div>
-                <div className="flex items-center justify-center my-2">
-                  <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
-                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Recipient Gets</span>
-                  <span className="text-xl font-bold text-green-400">
-                    {toCurrencyData?.symbol} {calculateReceiveAmount(sendAmount, selectedTrader.rate)} {toCurrency}
-                  </span>
-                </div>
-                <div className="mt-3 pt-3 border-t border-gray-700 flex items-center justify-between text-sm">
-                  <span className="text-gray-500">Exchange Rate</span>
-                  <span className="text-gray-300">1 {fromCurrency} = {selectedTrader.rate.toFixed(2)} {toCurrency}</span>
-                </div>
-              </div>
+              {/* Fee Breakdown Component */}
+              <FeeBreakdown
+                sendAmount={parseFloat(sendAmount)}
+                sendCurrency={fromCurrency}
+                sendCurrencySymbol={fromCurrencyData?.symbol}
+                receiveAmount={parseFloat(sendAmount) * selectedTrader.rate}
+                receiveCurrency={toCurrency}
+                receiveCurrencySymbol={toCurrencyData?.symbol}
+                exchangeRate={selectedTrader.rate}
+                marketRate={selectedTrader.rate * 0.98} // Mock: assume trader rate is ~2% better than market
+                platformFeePercent={0.5}
+                estimatedDeliveryTime={`~${selectedTrader.responseTime} minutes`}
+                variant="detailed"
+                className="mb-4"
+              />
 
               {/* Recipient Details */}
               <div className="bg-[#2B3139] rounded-xl p-4 mb-4">
@@ -1194,14 +1184,6 @@ export default function AppHome() {
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Fee Info */}
-              <div className="flex items-center justify-between text-sm mb-4">
-                <span className="text-gray-500">Platform Fee (0.5%)</span>
-                <span className="text-gray-300 font-medium">
-                  {fromCurrencyData?.symbol} {(parseFloat(sendAmount) * 0.005).toFixed(2)} {fromCurrency}
-                </span>
               </div>
             </div>
 
