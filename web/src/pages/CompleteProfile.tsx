@@ -19,6 +19,8 @@ export default function CompleteProfile() {
   const [username, setUsername] = useState(user?.username || '')
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle')
   const [usernameError, setUsernameError] = useState<string | null>(null)
+  const [displayNameStatus, setDisplayNameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
+  const [displayNameError, setDisplayNameError] = useState<string | null>(null)
   const [avatarPreview, setAvatarPreview] = useState(user?.avatarUrl || '')
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [removeAvatar, setRemoveAvatar] = useState(false)
@@ -40,6 +42,43 @@ export default function CompleteProfile() {
     setAvatarPreview(objectUrl)
     return () => URL.revokeObjectURL(objectUrl)
   }, [avatarFile])
+
+  // Debounced display name uniqueness check
+  useEffect(() => {
+    const trimmed = displayName.trim()
+    if (trimmed.length < 2) {
+      setDisplayNameStatus('idle')
+      setDisplayNameError(null)
+      return
+    }
+    if (user?.displayName?.toLowerCase() === trimmed.toLowerCase()) {
+      setDisplayNameStatus('available')
+      setDisplayNameError(null)
+      return
+    }
+    setDisplayNameStatus('checking')
+    setDisplayNameError(null)
+    const timeoutId = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_URL}/users/check-displayname/${encodeURIComponent(trimmed)}`)
+        if (!res.ok) { setDisplayNameStatus('idle'); return }
+        const data = await res.json()
+        if (data.data?.available === true) {
+          setDisplayNameStatus('available')
+          setDisplayNameError(null)
+        } else if (data.data?.available === false) {
+          setDisplayNameStatus('taken')
+          setDisplayNameError(data.data?.reason || 'This display name is already taken')
+        } else {
+          setDisplayNameStatus('idle')
+        }
+      } catch {
+        setDisplayNameStatus('idle')
+        setDisplayNameError(null)
+      }
+    }, 500)
+    return () => clearTimeout(timeoutId)
+  }, [displayName, user?.displayName])
 
   // Debounced username availability check
   useEffect(() => {
@@ -65,6 +104,33 @@ export default function CompleteProfile() {
       return
     }
 
+    // Client-side blocked name check (mirrors backend validation)
+    const lower = trimmedUsername.toLowerCase()
+    const blockedPrefixes = [
+      'cyx', 'binance', 'coinbase', 'kraken', 'bybit', 'okx', 'kucoin',
+      'paxful', 'wise', 'westernunion', 'paypal', 'admin_', 'mod_', 'official_', 'support_',
+    ]
+    const blockedSubstrings = [
+      'crypto', 'bitcoin', 'ethereum', 'blockchain', 'admin', 'official', 'support',
+      'scam', 'fraud', 'hack', 'freemoney', 'airdrop', 'giveaway',
+      'customer_service', 'guaranteed', 'profit',
+    ]
+    if (blockedPrefixes.some(p => lower.startsWith(p))) {
+      setUsernameStatus('invalid')
+      setUsernameError('This username contains a restricted prefix')
+      return
+    }
+    if (blockedSubstrings.some(s => lower.includes(s))) {
+      setUsernameStatus('invalid')
+      setUsernameError('This username contains a restricted word')
+      return
+    }
+    if (/(.)\1{4,}/.test(lower)) {
+      setUsernameStatus('invalid')
+      setUsernameError('Username contains too many repeated characters')
+      return
+    }
+
     // If user already has this username, it's available (no change)
     if (user?.username?.toLowerCase() === trimmedUsername.toLowerCase()) {
       setUsernameStatus('available')
@@ -78,18 +144,21 @@ export default function CompleteProfile() {
     const timeoutId = setTimeout(async () => {
       try {
         const res = await fetch(`${API_URL}/users/check-username/${encodeURIComponent(trimmedUsername)}`)
+        if (!res.ok) { setUsernameStatus('idle'); return }
         const data = await res.json()
 
-        if (data.data?.available) {
+        if (data.data?.available === true) {
           setUsernameStatus('available')
           setUsernameError(null)
-        } else {
+        } else if (data.data?.available === false) {
           setUsernameStatus('taken')
           setUsernameError(data.data?.reason || 'Username is already taken')
+        } else {
+          setUsernameStatus('idle')
         }
       } catch {
         setUsernameStatus('idle')
-        setUsernameError('Could not check username availability')
+        setUsernameError(null)
       }
     }, 500)
 
@@ -194,6 +263,11 @@ export default function CompleteProfile() {
       return
     }
 
+    if (displayNameStatus === 'taken') {
+      setLocalError('Please choose a different display name — this one is taken')
+      return
+    }
+
     if (usernameStatus !== 'available' && user?.username?.toLowerCase() !== cleanUsername.toLowerCase()) {
       setLocalError('Please choose an available username')
       return
@@ -259,20 +333,48 @@ export default function CompleteProfile() {
               <label htmlFor="displayName" className="block text-sm font-medium text-gray-300 mb-2">
                 Display Name
               </label>
-              <input
-                type="text"
-                id="displayName"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="How should we call you?"
-                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-cyx-card-hover text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 transition"
-                required
-                minLength={2}
-                maxLength={100}
-              />
-              <p className="mt-2 text-sm text-gray-500">
-                This is how traders will see you.
-              </p>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="displayName"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="How should we call you?"
+                  className={`w-full px-4 pr-10 py-3 rounded-lg border bg-cyx-card-hover text-white placeholder-gray-500 focus:outline-none transition ${
+                    displayNameStatus === 'available' ? 'border-green-500' :
+                    displayNameStatus === 'taken' ? 'border-red-500' :
+                    'border-gray-700 focus:border-yellow-500'
+                  }`}
+                  required
+                  minLength={2}
+                  maxLength={100}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {displayNameStatus === 'checking' && (
+                    <svg className="animate-spin h-5 w-5 text-gray-400" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  )}
+                  {displayNameStatus === 'available' && (
+                    <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                  {displayNameStatus === 'taken' && (
+                    <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+              {displayNameError ? (
+                <p className="mt-2 text-sm text-red-400">{displayNameError}</p>
+              ) : (
+                <p className="mt-2 text-sm text-gray-500">
+                  This is how traders will see you. Must be unique.
+                </p>
+              )}
             </div>
 
             <div>
@@ -369,7 +471,11 @@ export default function CompleteProfile() {
                 isUploadingAvatar ||
                 displayName.trim().length < 2 ||
                 username.trim().length < 3 ||
-                (usernameStatus !== 'available' && user?.username?.toLowerCase() !== username.trim().toLowerCase())
+                displayNameStatus === 'taken' ||
+                displayNameStatus === 'checking' ||
+                usernameStatus === 'taken' ||
+                usernameStatus === 'invalid' ||
+                usernameStatus === 'checking'
               }
               className="w-full bg-yellow-500 text-black py-3 rounded-lg font-semibold hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >

@@ -9,6 +9,7 @@ import {
   isUsernameAvailable,
   validateUsername
 } from '../services/userService';
+import { query } from '../services/db';
 import { AppError, ErrorCode } from '../utils/errors';
 import { sendSuccess } from '../utils/response';
 
@@ -52,6 +53,24 @@ router.get('/check-username/:username', asyncHandler(async (req, res) => {
   // Check availability
   const available = await isUsernameAvailable(username);
   sendSuccess(res, { available });
+}));
+
+// GET /api/users/check-displayname/:name - Check if display name is available
+router.get('/check-displayname/:name', asyncHandler(async (req, res) => {
+  const nameParam = req.params.name;
+  const name = Array.isArray(nameParam) ? nameParam[0] : nameParam;
+
+  if (!name || name.trim().length < 2) {
+    sendSuccess(res, { available: false, reason: 'Display name must be at least 2 characters' });
+    return;
+  }
+
+  const existing = await query<{ count: number }>(
+    'SELECT COUNT(*)::int as count FROM users WHERE LOWER(display_name) = LOWER($1)',
+    [name.trim()]
+  );
+  const available = (existing[0]?.count || 0) === 0;
+  sendSuccess(res, { available, ...(available ? {} : { reason: 'This display name is already taken' }) });
 }));
 
 // GET /api/users/me - Get current user

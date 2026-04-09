@@ -66,6 +66,15 @@ app.use('/uploads', express.static(path.resolve(uploadDir)));
 
 // API Routes
 app.use('/api/auth', authRoutes);
+// Public user checks (no auth required)
+app.get('/api/users/check-username/:username', (req, res, next) => {
+  req.url = `/check-username/${req.params.username}`;
+  userRoutes(req, res, next);
+});
+app.get('/api/users/check-displayname/:name', (req, res, next) => {
+  req.url = `/check-displayname/${req.params.name}`;
+  userRoutes(req, res, next);
+});
 app.use('/api/users', authMiddleware, userRoutes);
 app.use('/api/traders', traderRoutes);
 app.use('/api/trades', authMiddleware, tradeRoutes);

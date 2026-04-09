@@ -148,10 +148,85 @@ export async function linkPublicKeyToUser(
 // USERNAME MANAGEMENT
 // ============================================
 
+// Exact reserved usernames
 const RESERVED_USERNAMES = [
-  'admin', 'administrator', 'cyxtrade', 'support', 'help', 'moderator', 'mod',
-  'system', 'official', 'staff', 'team', 'root', 'null', 'undefined', 'api'
+  'admin', 'administrator', 'cyxtrade', 'cyxwiz', 'support', 'help',
+  'moderator', 'mod', 'system', 'official', 'staff', 'team', 'root',
+  'null', 'undefined', 'api', 'bot', 'info', 'contact', 'security',
+  'abuse', 'postmaster', 'webmaster', 'noreply', 'no_reply',
+  'test', 'demo', 'example', 'anonymous', 'unknown', 'deleted',
+  'suspended', 'banned', 'verified', 'unverified',
 ];
+
+// Prefixes that are not allowed (case-insensitive)
+const BLOCKED_PREFIXES = [
+  'cyx', 'cyxwiz', 'cyxtrade',
+  'binance', 'coinbase', 'kraken', 'bybit', 'okx', 'kucoin',
+  'bitfinex', 'gemini', 'huobi', 'bitget', 'mexc', 'gateio',
+  'paxful', 'localbitcoins', 'remitano', 'noones', 'hodlhodl',
+  'wise', 'westernunion', 'moneygram', 'paypal', 'venmo', 'cashapp',
+  'admin_', 'mod_', 'staff_', 'official_', 'support_', 'system_',
+];
+
+// Substrings that are not allowed anywhere in the username
+const BLOCKED_SUBSTRINGS = [
+  'crypto', 'bitcoin', 'ethereum', 'blockchain', 'defi', 'nft',
+  'admin', 'moderator', 'official', 'support', 'helpdesk',
+  'scam', 'fraud', 'phishing', 'hack', 'exploit',
+  'free_money', 'freemoney', 'freebtc', 'freeusdt', 'airdrop',
+  'giveaway', 'promo_code', 'promocode', 'discount',
+  'whatsapp', 'telegram', 'signal_app',
+  'customer_service', 'customerservice', 'tech_support', 'techsupport',
+  'p2p_admin', 'p2padmin', 'exchange_', 'trading_bot',
+  'guaranteed', 'profit', 'investment', 'returns',
+];
+
+// Patterns that indicate spam/impersonation
+const BLOCKED_PATTERNS = [
+  /^.+_official$/,     // anything_official
+  /^.+_support$/,      // anything_support
+  /^.+_admin$/,        // anything_admin
+  /^.+_team$/,         // anything_team
+  /^.+_help$/,         // anything_help
+  /^real_.+/,          // real_anything
+  /^the_?real_.+/,     // thereal_anything
+  /^not_.+/,           // not_anything (impersonation)
+  /^fake_.+/,          // fake_anything
+  /(.)\1{4,}/,         // 5+ repeated chars (aaaaaaa)
+  /^[a-z]{1,2}\d{6,}/, // short letters + many digits (spam: ab123456)
+];
+
+function isUsernameBlocked(username: string): { blocked: boolean; reason?: string } {
+  const lower = username.toLowerCase();
+
+  // Check exact reserved
+  if (RESERVED_USERNAMES.includes(lower)) {
+    return { blocked: true, reason: 'This username is reserved' };
+  }
+
+  // Check blocked prefixes
+  for (const prefix of BLOCKED_PREFIXES) {
+    if (lower.startsWith(prefix)) {
+      return { blocked: true, reason: 'This username contains a restricted prefix' };
+    }
+  }
+
+  // Check blocked substrings
+  for (const sub of BLOCKED_SUBSTRINGS) {
+    if (lower.includes(sub)) {
+      return { blocked: true, reason: 'This username contains a restricted word' };
+    }
+  }
+
+  // Check blocked patterns
+  for (const pattern of BLOCKED_PATTERNS) {
+    if (pattern.test(lower)) {
+      return { blocked: true, reason: 'This username is not allowed' };
+    }
+  }
+
+  return { blocked: false };
+}
 
 export async function findUserByUsername(username: string): Promise<User | null> {
   return queryOne<User>(
@@ -161,8 +236,9 @@ export async function findUserByUsername(username: string): Promise<User | null>
 }
 
 export async function isUsernameAvailable(username: string): Promise<boolean> {
-  // Check reserved words
-  if (RESERVED_USERNAMES.includes(username.toLowerCase())) {
+  // Check blocked names
+  const check = isUsernameBlocked(username);
+  if (check.blocked) {
     return false;
   }
 
@@ -192,8 +268,9 @@ export function validateUsername(username: string): { valid: boolean; error?: st
     return { valid: false, error: 'Username must start with a letter and contain only letters, numbers, and underscores' };
   }
 
-  if (RESERVED_USERNAMES.includes(trimmed.toLowerCase())) {
-    return { valid: false, error: 'This username is reserved' };
+  const check = isUsernameBlocked(trimmed);
+  if (check.blocked) {
+    return { valid: false, error: check.reason || 'This username is not allowed' };
   }
 
   return { valid: true };
