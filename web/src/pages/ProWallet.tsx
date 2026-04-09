@@ -233,7 +233,7 @@ export default function ProWallet() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0E11] text-white">
+    <div className="min-h-screen bg-cyx-bg text-white">
       {/* Balance Header */}
       <div className="px-6 py-8 border-b border-gray-800">
         <div className="max-w-7xl mx-auto">
@@ -285,25 +285,25 @@ export default function ProWallet() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setActiveModal('deposit')}
-                  className="px-4 py-2 bg-[#2B3139] hover:bg-[#3C4149] rounded text-sm font-medium"
+                  className="px-4 py-2 bg-cyx-card-hover hover:bg-[#3C4149] rounded text-sm font-medium"
                 >
                   Deposit
                 </button>
                 <button
                   onClick={() => setActiveModal('withdraw')}
-                  className="px-4 py-2 bg-[#2B3139] hover:bg-[#3C4149] rounded text-sm font-medium"
+                  className="px-4 py-2 bg-cyx-card-hover hover:bg-[#3C4149] rounded text-sm font-medium"
                 >
                   Withdraw
                 </button>
                 <button
                   onClick={() => setActiveModal('transfer')}
-                  className="px-4 py-2 bg-[#2B3139] hover:bg-[#3C4149] rounded text-sm font-medium"
+                  className="px-4 py-2 bg-cyx-card-hover hover:bg-[#3C4149] rounded text-sm font-medium"
                 >
                   Transfer
                 </button>
                 <button
                   onClick={() => setActiveModal('history')}
-                  className="px-4 py-2 bg-[#2B3139] hover:bg-[#3C4149] rounded text-sm font-medium"
+                  className="px-4 py-2 bg-cyx-card-hover hover:bg-[#3C4149] rounded text-sm font-medium"
                 >
                   History
                 </button>
@@ -343,7 +343,7 @@ export default function ProWallet() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search coin..."
-                    className="w-48 px-3 py-1.5 bg-[#2B3139] rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-yellow-500"
+                    className="w-48 px-3 py-1.5 bg-cyx-card-hover rounded text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-yellow-500"
                     autoFocus
                     onBlur={() => !searchQuery && setShowSearch(false)}
                   />
@@ -377,7 +377,7 @@ export default function ProWallet() {
           </div>
 
           {/* Assets Table */}
-          <div className="bg-[#1E2329] rounded-lg overflow-hidden">
+          <div className="bg-cyx-card rounded-lg overflow-hidden">
             {/* Table Header */}
             <div className="grid grid-cols-12 gap-4 px-4 py-3 text-sm text-gray-400 border-b border-gray-800">
               <div className="col-span-3">
@@ -409,7 +409,7 @@ export default function ProWallet() {
             {/* Table Body */}
             {filteredAssets.map((asset) => (
               <div key={asset.symbol}>
-                <div className="grid grid-cols-12 gap-4 px-4 py-4 items-center hover:bg-[#2B3139] transition-colors">
+                <div className="grid grid-cols-12 gap-4 px-4 py-4 items-center hover:bg-cyx-card-hover transition-colors">
                   {/* Coin */}
                   <div className="col-span-3 flex items-center gap-3">
                     <div className={`w-8 h-8 ${asset.color} rounded-full flex items-center justify-center text-sm font-bold text-white`}>
@@ -461,7 +461,7 @@ export default function ProWallet() {
 
                 {/* Expanded Details */}
                 {expandedAsset === asset.symbol && (
-                  <div className="px-4 py-4 bg-[#2B3139] border-t border-gray-800">
+                  <div className="px-4 py-4 bg-cyx-card-hover border-t border-gray-800">
                     <div className="flex gap-4">
                       <button
                         onClick={() => { setSelectedAsset(asset.symbol); setActiveModal('deposit'); }}
@@ -499,7 +499,7 @@ export default function ProWallet() {
       {/* Deposit Modal */}
       {activeModal === 'deposit' && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setActiveModal(null)}>
-          <div className="bg-[#1E2329] rounded-lg w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-cyx-card rounded-lg w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-gray-700">
               <h3 className="text-lg font-semibold">Deposit {selectedAsset}</h3>
               <button onClick={() => setActiveModal(null)} className="text-gray-400 hover:text-white">
@@ -514,7 +514,7 @@ export default function ProWallet() {
                 <select
                   value={selectedAsset}
                   onChange={(e) => setSelectedAsset(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#2B3139] rounded text-white border border-gray-600 focus:border-yellow-500 focus:outline-none"
+                  className="w-full px-3 py-2 bg-cyx-card-hover rounded text-white border border-gray-600 focus:border-yellow-500 focus:outline-none"
                 >
                   {mockAssets.map(a => (
                     <option key={a.symbol} value={a.symbol}>{a.symbol} - {a.name}</option>
@@ -527,7 +527,7 @@ export default function ProWallet() {
               </div>
 
               {depositAddress ? (
-                <div className="bg-[#2B3139] rounded-lg p-4">
+                <div className="bg-cyx-card-hover rounded-lg p-4">
                   <p className="text-xs text-gray-400 mb-2">Deposit Address</p>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 text-sm break-all">{depositAddress}</code>
@@ -555,7 +555,7 @@ export default function ProWallet() {
       {/* Withdraw Modal */}
       {activeModal === 'withdraw' && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setActiveModal(null)}>
-          <div className="bg-[#1E2329] rounded-lg w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-cyx-card rounded-lg w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-gray-700">
               <h3 className="text-lg font-semibold">Withdraw {selectedAsset}</h3>
               <button onClick={() => setActiveModal(null)} className="text-gray-400 hover:text-white">
@@ -570,7 +570,7 @@ export default function ProWallet() {
                 <select
                   value={selectedAsset}
                   onChange={(e) => setSelectedAsset(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#2B3139] rounded text-white border border-gray-600 focus:border-yellow-500 focus:outline-none"
+                  className="w-full px-3 py-2 bg-cyx-card-hover rounded text-white border border-gray-600 focus:border-yellow-500 focus:outline-none"
                 >
                   {mockAssets.map(a => (
                     <option key={a.symbol} value={a.symbol}>{a.symbol} - {a.name}</option>
@@ -583,7 +583,7 @@ export default function ProWallet() {
                 <select
                   value={withdrawForm.network}
                   onChange={(e) => setWithdrawForm(f => ({ ...f, network: e.target.value }))}
-                  className="w-full px-3 py-2 bg-[#2B3139] rounded text-white border border-gray-600 focus:border-yellow-500 focus:outline-none"
+                  className="w-full px-3 py-2 bg-cyx-card-hover rounded text-white border border-gray-600 focus:border-yellow-500 focus:outline-none"
                 >
                   <option value="TRC20">TRC20 (Tron)</option>
                   <option value="ERC20">ERC20 (Ethereum)</option>
@@ -598,7 +598,7 @@ export default function ProWallet() {
                   value={withdrawForm.address}
                   onChange={(e) => setWithdrawForm(f => ({ ...f, address: e.target.value }))}
                   placeholder={`Enter ${selectedAsset} address`}
-                  className="w-full px-3 py-2 bg-[#2B3139] rounded text-white border border-gray-600 focus:border-yellow-500 focus:outline-none"
+                  className="w-full px-3 py-2 bg-cyx-card-hover rounded text-white border border-gray-600 focus:border-yellow-500 focus:outline-none"
                   required
                 />
               </div>
@@ -612,7 +612,7 @@ export default function ProWallet() {
                     value={withdrawForm.amount}
                     onChange={(e) => setWithdrawForm(f => ({ ...f, amount: e.target.value }))}
                     placeholder="0.0000"
-                    className="w-full px-3 py-2 bg-[#2B3139] rounded text-white border border-gray-600 focus:border-yellow-500 focus:outline-none"
+                    className="w-full px-3 py-2 bg-cyx-card-hover rounded text-white border border-gray-600 focus:border-yellow-500 focus:outline-none"
                     required
                   />
                   <button
@@ -628,7 +628,7 @@ export default function ProWallet() {
                 </div>
               </div>
 
-              <div className="bg-[#2B3139] rounded-lg p-3 text-sm">
+              <div className="bg-cyx-card-hover rounded-lg p-3 text-sm">
                 <div className="flex justify-between mb-1">
                   <span className="text-gray-400">Network Fee</span>
                   <span>1.00 USDT</span>
@@ -654,7 +654,7 @@ export default function ProWallet() {
       {/* Transfer Modal */}
       {activeModal === 'transfer' && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setActiveModal(null)}>
-          <div className="bg-[#1E2329] rounded-lg w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-cyx-card rounded-lg w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-gray-700">
               <h3 className="text-lg font-semibold">Transfer</h3>
               <button onClick={() => setActiveModal(null)} className="text-gray-400 hover:text-white">
@@ -673,7 +673,7 @@ export default function ProWallet() {
       {/* History Modal */}
       {activeModal === 'history' && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setActiveModal(null)}>
-          <div className="bg-[#1E2329] rounded-lg w-full max-w-2xl mx-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-cyx-card rounded-lg w-full max-w-2xl mx-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-gray-700">
               <h3 className="text-lg font-semibold">Transaction History</h3>
               <button onClick={() => setActiveModal(null)} className="text-gray-400 hover:text-white">

@@ -50,7 +50,7 @@ function TradeRequestCard({
   const timeAgo = Math.floor((Date.now() - createdAt.getTime()) / 60000)
 
   return (
-    <div className="bg-[#1E2329] rounded-xl border border-gray-800/50 p-5 hover:border-yellow-500/30 transition">
+    <div className="bg-cyx-card rounded-xl border border-gray-800/50 p-5 hover:border-yellow-500/30 transition">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -68,7 +68,7 @@ function TradeRequestCard({
       </div>
 
       {/* Amount Details */}
-      <div className="bg-[#0B0E11]/50 rounded-xl p-4 mb-4">
+      <div className="bg-cyx-bg/50 rounded-xl p-4 mb-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">They Send</p>
@@ -76,7 +76,7 @@ function TradeRequestCard({
               {trade.sendAmount.toLocaleString()} <span className="text-sm font-medium text-gray-400">{trade.sendCurrency}</span>
             </p>
           </div>
-          <div className="w-10 h-10 bg-[#2B3139] rounded-full flex items-center justify-center">
+          <div className="w-10 h-10 bg-cyx-card-hover rounded-full flex items-center justify-center">
             <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>
@@ -95,7 +95,7 @@ function TradeRequestCard({
         <button
           onClick={onDecline}
           disabled={isLoading}
-          className="flex-1 py-3 border border-gray-700 text-gray-300 font-medium rounded-xl hover:bg-[#2B3139] hover:border-red-500/30 hover:text-red-400 transition disabled:opacity-50"
+          className="flex-1 py-3 border border-gray-700 text-gray-300 font-medium rounded-xl hover:bg-cyx-card-hover hover:border-red-500/30 hover:text-red-400 transition disabled:opacity-50"
         >
           Decline
         </button>
@@ -139,7 +139,7 @@ function ActiveTradeCard({
   return (
     <Link
       to={`/app/chat/${trade.id}`}
-      className="block bg-[#1E2329] rounded-xl border border-gray-800/50 p-5 hover:border-green-500/30 transition group"
+      className="block bg-cyx-card rounded-xl border border-gray-800/50 p-5 hover:border-green-500/30 transition group"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
@@ -158,7 +158,7 @@ function ActiveTradeCard({
       </div>
 
       {/* Amount Bar */}
-      <div className="flex items-center justify-between bg-[#0B0E11]/50 rounded-xl px-4 py-3 mb-4">
+      <div className="flex items-center justify-between bg-cyx-bg/50 rounded-xl px-4 py-3 mb-4">
         <div className="flex items-center gap-2">
           <span className="text-lg font-bold text-white">{trade.sendAmount.toLocaleString()}</span>
           <span className="text-sm text-gray-500">{trade.sendCurrency}</span>
@@ -322,7 +322,7 @@ export default function TraderDashboard() {
 
   if (!hasTraderAccess && !hasCheckedProfile) {
     return (
-      <div className="min-h-screen bg-[#0B0E11] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-cyx-bg flex items-center justify-center p-4">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent" />
       </div>
     )
@@ -330,7 +330,7 @@ export default function TraderDashboard() {
 
   if (!hasTraderAccess) {
     return (
-      <div className="min-h-screen bg-[#0B0E11] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-cyx-bg flex items-center justify-center p-4">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Not a Trader</h1>
           <p className="text-gray-400 mb-6">You need to register as a trader to access this page.</p>
@@ -346,9 +346,9 @@ export default function TraderDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0E11]">
+    <div className="min-h-screen bg-cyx-bg">
       {/* Header */}
-      <header className="bg-[#1E2329]/95 backdrop-blur-sm border-b border-gray-800/50 sticky top-0 z-10">
+      <header className="bg-cyx-card/95 backdrop-blur-sm border-b border-gray-800/50 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -452,7 +452,7 @@ export default function TraderDashboard() {
               </button>
               <button
                 onClick={() => setShowWithdrawModal(true)}
-                className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-[#2B3139] text-white font-semibold rounded-xl hover:bg-[#3C4149] transition border border-gray-700"
+                className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-cyx-card-hover text-white font-semibold rounded-xl hover:bg-[#3C4149] transition border border-gray-700"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
@@ -465,7 +465,7 @@ export default function TraderDashboard() {
 
         {/* Stats - Professional Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <div className="bg-[#1E2329] rounded-xl p-4 border border-gray-800/50 hover:border-yellow-500/30 transition group">
+          <div className="bg-cyx-card rounded-xl p-4 border border-gray-800/50 hover:border-yellow-500/30 transition group">
             <div className="flex items-center justify-between mb-2">
               <div className="w-8 h-8 bg-yellow-500/10 rounded-lg flex items-center justify-center group-hover:bg-yellow-500/20 transition">
                 <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -479,7 +479,7 @@ export default function TraderDashboard() {
             <p className="text-2xl font-bold text-white">{pendingTrades.length}</p>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Pending</p>
           </div>
-          <div className="bg-[#1E2329] rounded-xl p-4 border border-gray-800/50 hover:border-blue-500/30 transition group">
+          <div className="bg-cyx-card rounded-xl p-4 border border-gray-800/50 hover:border-blue-500/30 transition group">
             <div className="flex items-center justify-between mb-2">
               <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center group-hover:bg-blue-500/20 transition">
                 <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -493,7 +493,7 @@ export default function TraderDashboard() {
             <p className="text-2xl font-bold text-white">{activeTrades.length}</p>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Active</p>
           </div>
-          <div className="bg-[#1E2329] rounded-xl p-4 border border-gray-800/50 hover:border-green-500/30 transition group">
+          <div className="bg-cyx-card rounded-xl p-4 border border-gray-800/50 hover:border-green-500/30 transition group">
             <div className="flex items-center justify-between mb-2">
               <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center group-hover:bg-green-500/20 transition">
                 <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -504,7 +504,7 @@ export default function TraderDashboard() {
             <p className="text-2xl font-bold text-white">{profile?.completedCount || 0}</p>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Completed</p>
           </div>
-          <div className="bg-[#1E2329] rounded-xl p-4 border border-gray-800/50 hover:border-yellow-500/30 transition group">
+          <div className="bg-cyx-card rounded-xl p-4 border border-gray-800/50 hover:border-yellow-500/30 transition group">
             <div className="flex items-center justify-between mb-2">
               <div className="w-8 h-8 bg-yellow-500/10 rounded-lg flex items-center justify-center group-hover:bg-yellow-500/20 transition">
                 <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
@@ -537,7 +537,7 @@ export default function TraderDashboard() {
             </Link>
             <Link
               to="/app/payment-methods"
-              className="flex-shrink-0 flex items-center gap-3 bg-[#1E2329] rounded-xl border border-gray-800/50 px-4 py-3 hover:border-blue-500/30 transition group"
+              className="flex-shrink-0 flex items-center gap-3 bg-cyx-card rounded-xl border border-gray-800/50 px-4 py-3 hover:border-blue-500/30 transition group"
             >
               <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center group-hover:bg-blue-500/30 transition">
                 <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -551,7 +551,7 @@ export default function TraderDashboard() {
             </Link>
             <Link
               to="/app/history"
-              className="flex-shrink-0 flex items-center gap-3 bg-[#1E2329] rounded-xl border border-gray-800/50 px-4 py-3 hover:border-purple-500/30 transition group"
+              className="flex-shrink-0 flex items-center gap-3 bg-cyx-card rounded-xl border border-gray-800/50 px-4 py-3 hover:border-purple-500/30 transition group"
             >
               <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center group-hover:bg-purple-500/30 transition">
                 <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -565,7 +565,7 @@ export default function TraderDashboard() {
             </Link>
             <Link
               to="/app/settings"
-              className="flex-shrink-0 flex items-center gap-3 bg-[#1E2329] rounded-xl border border-gray-800/50 px-4 py-3 hover:border-gray-500/30 transition group"
+              className="flex-shrink-0 flex items-center gap-3 bg-cyx-card rounded-xl border border-gray-800/50 px-4 py-3 hover:border-gray-500/30 transition group"
             >
               <div className="w-10 h-10 bg-gray-500/20 rounded-lg flex items-center justify-center group-hover:bg-gray-500/30 transition">
                 <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -590,7 +590,7 @@ export default function TraderDashboard() {
         </div>
 
         {/* Tabs - Professional Pill Style */}
-        <div className="bg-[#1E2329] rounded-xl p-1 inline-flex gap-1 mb-6">
+        <div className="bg-cyx-card rounded-xl p-1 inline-flex gap-1 mb-6">
           {(['pending', 'active', 'completed'] as Tab[]).map((t) => (
             <button
               key={t}
@@ -695,7 +695,7 @@ export default function TraderDashboard() {
       {/* Receive Modal */}
       {showReceiveModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#1E2329] rounded-2xl border border-gray-800/50 shadow-2xl">
+          <div className="w-full max-w-md bg-cyx-card rounded-2xl border border-gray-800/50 shadow-2xl">
             {/* Header */}
             <div className="p-5 border-b border-gray-800/50 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -741,7 +741,7 @@ export default function TraderDashboard() {
               <div className="mb-5">
                 <label className="block text-xs text-gray-500 uppercase tracking-wider mb-2">Your Deposit Address</label>
                 <div className="relative">
-                  <div className="bg-[#0B0E11] rounded-xl px-4 py-3.5 text-white font-mono text-sm break-all pr-14 border border-gray-800/50">
+                  <div className="bg-cyx-bg rounded-xl px-4 py-3.5 text-white font-mono text-sm break-all pr-14 border border-gray-800/50">
                     {profile?.address || 'Loading...'}
                   </div>
                   <button
@@ -768,15 +768,15 @@ export default function TraderDashboard() {
 
               {/* Info Cards */}
               <div className="grid grid-cols-3 gap-3 mb-5">
-                <div className="bg-[#0B0E11]/50 rounded-xl p-3 text-center border border-gray-800/30">
+                <div className="bg-cyx-bg/50 rounded-xl p-3 text-center border border-gray-800/30">
                   <p className="text-lg font-bold text-white">10</p>
                   <p className="text-xs text-gray-500">Min USDT</p>
                 </div>
-                <div className="bg-[#0B0E11]/50 rounded-xl p-3 text-center border border-gray-800/30">
+                <div className="bg-cyx-bg/50 rounded-xl p-3 text-center border border-gray-800/30">
                   <p className="text-lg font-bold text-white">19</p>
                   <p className="text-xs text-gray-500">Confirms</p>
                 </div>
-                <div className="bg-[#0B0E11]/50 rounded-xl p-3 text-center border border-gray-800/30">
+                <div className="bg-cyx-bg/50 rounded-xl p-3 text-center border border-gray-800/30">
                   <p className="text-lg font-bold text-white">~2</p>
                   <p className="text-xs text-gray-500">Minutes</p>
                 </div>
@@ -803,7 +803,7 @@ export default function TraderDashboard() {
       {/* Withdraw Modal */}
       {showWithdrawModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#1E2329] rounded-2xl border border-gray-800/50 shadow-2xl">
+          <div className="w-full max-w-md bg-cyx-card rounded-2xl border border-gray-800/50 shadow-2xl">
             {/* Header */}
             <div className="p-5 border-b border-gray-800/50 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -848,7 +848,7 @@ export default function TraderDashboard() {
                   value={withdrawAddress}
                   onChange={(e) => setWithdrawAddress(e.target.value)}
                   placeholder="T... (TRC20 Address)"
-                  className="w-full px-4 py-3.5 bg-[#0B0E11] border border-gray-800/50 rounded-xl text-white placeholder-gray-600 focus:border-green-500/50 focus:outline-none font-mono text-sm transition"
+                  className="w-full px-4 py-3.5 bg-cyx-bg border border-gray-800/50 rounded-xl text-white placeholder-gray-600 focus:border-green-500/50 focus:outline-none font-mono text-sm transition"
                 />
               </div>
 
@@ -861,7 +861,7 @@ export default function TraderDashboard() {
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
                     placeholder="0.00"
-                    className="w-full px-4 py-3.5 bg-[#0B0E11] border border-gray-800/50 rounded-xl text-white text-xl font-bold placeholder-gray-600 focus:border-green-500/50 focus:outline-none pr-24 transition"
+                    className="w-full px-4 py-3.5 bg-cyx-bg border border-gray-800/50 rounded-xl text-white text-xl font-bold placeholder-gray-600 focus:border-green-500/50 focus:outline-none pr-24 transition"
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                     <span className="text-gray-500 text-sm">USDT</span>
@@ -881,7 +881,7 @@ export default function TraderDashboard() {
 
               {/* Summary */}
               {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
-                <div className="bg-[#0B0E11]/50 rounded-xl p-4 mb-5 border border-gray-800/30">
+                <div className="bg-cyx-bg/50 rounded-xl p-4 mb-5 border border-gray-800/30">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-500">You will receive</span>
                     <span className="text-white font-semibold">
@@ -949,7 +949,7 @@ function EmptyState({ title, description, icon }: { title: string; description: 
 
   return (
     <div className="text-center py-16">
-      <div className="w-20 h-20 bg-[#1E2329] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-gray-800/50">
+      <div className="w-20 h-20 bg-cyx-card rounded-2xl flex items-center justify-center mx-auto mb-4 border border-gray-800/50">
         {icon ? icons[icon] : (
           <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />

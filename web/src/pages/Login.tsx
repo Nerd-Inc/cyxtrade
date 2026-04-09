@@ -64,14 +64,14 @@ export default function Login() {
 
   if (hasExisting === null) {
     return (
-      <div className="min-h-screen bg-[#0B0E11] flex items-center justify-center">
+      <div className="min-h-screen bg-cyx-bg flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-yellow-500 border-t-transparent"></div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0E11] flex items-center justify-center px-4 relative overflow-hidden">
+    <div className="min-h-screen bg-cyx-bg flex items-center justify-center px-4 relative overflow-hidden">
       {/* Watermark Logo */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <img
@@ -111,7 +111,7 @@ export default function Login() {
           )}
         </div>
 
-        <div className="bg-[#1E2329] rounded-lg border border-gray-800 p-8">
+        <div className="bg-cyx-card rounded-lg border border-gray-800 p-8">
           {!showRecovery ? (
             <div className="space-y-6">
               {/* Privacy notice */}
@@ -164,13 +164,13 @@ export default function Login() {
                   <div className="w-full border-t border-gray-700"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-[#1E2329] text-gray-500">or</span>
+                  <span className="px-2 bg-cyx-card text-gray-500">or</span>
                 </div>
               </div>
 
               <button
                 onClick={() => setShowRecovery(true)}
-                className="w-full border border-gray-700 text-gray-300 py-3 rounded-lg font-semibold hover:bg-[#2B3139] transition"
+                className="w-full border border-gray-700 text-gray-300 py-3 rounded-lg font-semibold hover:bg-cyx-card-hover transition"
               >
                 Recover Existing Account
               </button>
@@ -186,7 +186,7 @@ export default function Login() {
                   value={privateKey}
                   onChange={(e) => setPrivateKey(e.target.value)}
                   placeholder="Enter your 64-character backup key..."
-                  className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-[#2B3139] text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 transition font-mono text-sm h-24 resize-none"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-cyx-card-hover text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 transition font-mono text-sm h-24 resize-none"
                   required
                 />
                 <p className="mt-2 text-sm text-gray-500">

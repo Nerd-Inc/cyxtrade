@@ -227,7 +227,7 @@ export default function CompleteProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0E11] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-cyx-bg flex items-center justify-center px-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <Link to="/" className="inline-block mb-6">
@@ -241,7 +241,7 @@ export default function CompleteProfile() {
           </p>
         </div>
 
-        <div className="bg-[#1E2329] rounded-lg border border-gray-800 p-8">
+        <div className="bg-cyx-card rounded-lg border border-gray-800 p-8">
           <div className="flex justify-center mb-6">
             <div className="w-24 h-24 bg-yellow-500/20 rounded-full flex items-center justify-center overflow-hidden">
               {avatarPreview ? (
@@ -265,7 +265,7 @@ export default function CompleteProfile() {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="How should we call you?"
-                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-[#2B3139] text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 transition"
+                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-cyx-card-hover text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 transition"
                 required
                 minLength={2}
                 maxLength={100}
@@ -287,7 +287,7 @@ export default function CompleteProfile() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                   placeholder="your_username"
-                  className={`w-full pl-8 pr-10 py-3 rounded-lg border bg-[#2B3139] text-white placeholder-gray-500 focus:outline-none transition ${
+                  className={`w-full pl-8 pr-10 py-3 rounded-lg border bg-cyx-card-hover text-white placeholder-gray-500 focus:outline-none transition ${
                     usernameStatus === 'available' ? 'border-green-500' :
                     usernameStatus === 'taken' || usernameStatus === 'invalid' ? 'border-red-500' :
                     'border-gray-700 focus:border-yellow-500'
@@ -349,7 +349,7 @@ export default function CompleteProfile() {
               )}
             </div>
 
-            <div className="bg-[#2B3139] rounded-lg p-4">
+            <div className="bg-cyx-card-hover rounded-lg p-4">
               <div className="flex items-center gap-3 text-sm text-gray-300">
                 <span className="text-xl">ID</span>
                 <span>{identityLabel}</span>

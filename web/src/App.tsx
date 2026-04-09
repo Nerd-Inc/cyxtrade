@@ -88,7 +88,7 @@ const landingPairKey = (from: string, to: string) => `${from}/${to}`
 
 function App() {
   return (
-    <div className="min-h-screen bg-[#0B0E11]">
+    <div className="min-h-screen bg-cyx-bg">
       <Header />
       <Hero />
       <TrustedBy />
@@ -114,7 +114,7 @@ function Header() {
   }, [])
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0B0E11]/95 backdrop-blur-md border-b border-gray-800/50' : 'bg-transparent'}`}>
+    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-cyx-bg/95 backdrop-blur-md border-b border-gray-800/50' : 'bg-transparent'}`}>
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <Link to="/about" className="flex items-center">
@@ -313,7 +313,7 @@ function Hero() {
           />
         ))}
         {/* Dark overlay */}
-        <div className="absolute inset-0 bg-[#0B0E11]/70" />
+        <div className="absolute inset-0 bg-cyx-bg/70" />
         {/* Green and Orange glow effects */}
         <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-green-500/10 rounded-full blur-[120px]" />
         <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-orange-500/10 rounded-full blur-[120px]" />
@@ -419,7 +419,7 @@ function Hero() {
 // Trusted By Component
 function TrustedBy() {
   return (
-    <section className="py-12 bg-[#1E2329] border-y border-gray-800">
+    <section className="py-12 bg-cyx-card border-y border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <p className="text-center text-gray-500 text-sm uppercase tracking-wider mb-8">Trusted by communities worldwide</p>
         <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-60">
@@ -544,7 +544,7 @@ function LiveMarket() {
   })
 
   return (
-    <section className="py-20 bg-[#0B0E11]">
+    <section className="py-20 bg-cyx-bg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
           <div>
@@ -556,7 +556,7 @@ function LiveMarket() {
             <select
               value={metric}
               onChange={(e) => setMetric(e.target.value as 'rate' | 'pnl' | 'snl')}
-              className="px-4 py-2.5 bg-[#1E2329] border border-gray-700 rounded-xl text-white focus:outline-none focus:border-orange-500 cursor-pointer"
+              className="px-4 py-2.5 bg-cyx-card border border-gray-700 rounded-xl text-white focus:outline-none focus:border-orange-500 cursor-pointer"
             >
               <option value="rate">Sort by Rate</option>
               <option value="pnl">Sort by PnL</option>
@@ -564,7 +564,7 @@ function LiveMarket() {
             </select>
             <button
               onClick={() => setShowAddPair(true)}
-              className="px-4 py-2.5 bg-[#1E2329] border border-gray-700 rounded-xl text-gray-400 hover:text-white hover:border-orange-500/50 transition flex items-center gap-2"
+              className="px-4 py-2.5 bg-cyx-card border border-gray-700 rounded-xl text-gray-400 hover:text-white hover:border-orange-500/50 transition flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -579,7 +579,7 @@ function LiveMarket() {
           {watchPairs.map((pair) => {
             const key = landingPairKey(pair.from, pair.to)
             return (
-              <span key={key} className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#1E2329] border border-gray-700 rounded-lg text-sm text-gray-300">
+              <span key={key} className="inline-flex items-center gap-2 px-3 py-1.5 bg-cyx-card border border-gray-700 rounded-lg text-sm text-gray-300">
                 {key}
                 <button
                   type="button"
@@ -596,7 +596,7 @@ function LiveMarket() {
           })}
         </div>
 
-        <div className="bg-[#1E2329] rounded-2xl border border-gray-800 overflow-hidden">
+        <div className="bg-cyx-card rounded-2xl border border-gray-800 overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-800">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
             <span className="text-green-500 text-sm font-medium">Live</span>
@@ -654,7 +654,7 @@ function LiveMarket() {
       {/* Add Pair Modal */}
       {showAddPair && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowAddPair(false)}>
-          <div className="bg-[#1E2329] rounded-2xl w-full max-w-md mx-4 p-6 border border-gray-800" onClick={e => e.stopPropagation()}>
+          <div className="bg-cyx-card rounded-2xl w-full max-w-md mx-4 p-6 border border-gray-800" onClick={e => e.stopPropagation()}>
             <h3 className="text-xl font-bold text-white mb-6">Add Currency Pair</h3>
             <div className="space-y-4">
               <div>
@@ -664,7 +664,7 @@ function LiveMarket() {
                   value={baseCurrency}
                   onChange={(e) => setBaseCurrency(e.target.value)}
                   placeholder="e.g., USD"
-                  className="w-full px-4 py-3 bg-[#2B3139] border border-gray-700 rounded-xl text-white uppercase focus:outline-none focus:border-orange-500 transition"
+                  className="w-full px-4 py-3 bg-cyx-card-hover border border-gray-700 rounded-xl text-white uppercase focus:outline-none focus:border-orange-500 transition"
                 />
                 <datalist id="landing-base-list">
                   {COMMON_CURRENCIES.map((c) => <option key={c} value={c} />)}
@@ -677,7 +677,7 @@ function LiveMarket() {
                   value={quoteCurrency}
                   onChange={(e) => setQuoteCurrency(e.target.value)}
                   placeholder="e.g., XAF"
-                  className="w-full px-4 py-3 bg-[#2B3139] border border-gray-700 rounded-xl text-white uppercase focus:outline-none focus:border-orange-500 transition"
+                  className="w-full px-4 py-3 bg-cyx-card-hover border border-gray-700 rounded-xl text-white uppercase focus:outline-none focus:border-orange-500 transition"
                 />
                 <datalist id="landing-quote-list">
                   {COMMON_CURRENCIES.map((c) => <option key={c} value={c} />)}
@@ -686,7 +686,7 @@ function LiveMarket() {
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => setShowAddPair(false)}
-                  className="flex-1 px-4 py-3 bg-[#2B3139] text-white rounded-xl hover:bg-[#3C4149] transition font-medium"
+                  className="flex-1 px-4 py-3 bg-cyx-card-hover text-white rounded-xl hover:bg-[#3C4149] transition font-medium"
                 >
                   Cancel
                 </button>
@@ -780,7 +780,7 @@ function Features() {
   }
 
   return (
-    <section id="features" className="py-20 bg-[#1E2329]">
+    <section id="features" className="py-20 bg-cyx-card">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <p className="text-green-500 text-sm font-semibold uppercase tracking-wider mb-2">Features</p>
@@ -796,7 +796,7 @@ function Features() {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="group bg-[#0B0E11] border border-gray-800 hover:border-green-500/30 rounded-2xl p-6 transition-all duration-300"
+              className="group bg-cyx-bg border border-gray-800 hover:border-green-500/30 rounded-2xl p-6 transition-all duration-300"
             >
               <div className={`w-14 h-14 bg-gradient-to-br ${colorClasses[feature.color]} rounded-2xl flex items-center justify-center mb-5`}>
                 {feature.icon}
@@ -839,7 +839,7 @@ function HowItWorks() {
   ]
 
   return (
-    <section id="how-it-works" className="py-20 bg-[#0B0E11]">
+    <section id="how-it-works" className="py-20 bg-cyx-bg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <p className="text-orange-500 text-sm font-semibold uppercase tracking-wider mb-2">Process</p>
@@ -854,7 +854,7 @@ function HowItWorks() {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {steps.map((item, index) => (
             <div key={index} className="relative">
-              <div className="bg-[#1E2329] border border-gray-800 rounded-2xl p-6 h-full">
+              <div className="bg-cyx-card border border-gray-800 rounded-2xl p-6 h-full">
                 <div className="text-5xl font-bold bg-gradient-to-r from-green-500 to-orange-500 bg-clip-text text-transparent mb-4">
                   {item.step}
                 </div>
@@ -873,7 +873,7 @@ function HowItWorks() {
         </div>
 
         {/* Comparison */}
-        <div className="mt-20 bg-[#1E2329] border border-gray-800 rounded-2xl p-8">
+        <div className="mt-20 bg-cyx-card border border-gray-800 rounded-2xl p-8">
           <h3 className="text-2xl font-bold text-center text-white mb-10">
             Compare the Savings
           </h3>
@@ -945,7 +945,7 @@ function Download() {
   return (
     <section id="download" className="py-20 relative overflow-hidden">
       {/* Background Logo */}
-      <div className="absolute inset-0 bg-[#0B0E11]" />
+      <div className="absolute inset-0 bg-cyx-bg" />
       <div className="absolute inset-0 flex items-center justify-center">
         <img src="/logo.png" alt="" className="h-full object-contain opacity-20" />
       </div>
@@ -1034,7 +1034,7 @@ function FAQ() {
   ]
 
   return (
-    <section id="faq" className="py-20 bg-[#1E2329]">
+    <section id="faq" className="py-20 bg-cyx-card">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <p className="text-green-500 text-sm font-semibold uppercase tracking-wider mb-2">FAQ</p>
@@ -1050,7 +1050,7 @@ function FAQ() {
           {faqs.map((faq, index) => (
             <div
               key={index}
-              className="bg-[#0B0E11] border border-gray-800 rounded-xl overflow-hidden"
+              className="bg-cyx-bg border border-gray-800 rounded-xl overflow-hidden"
             >
               <button
                 className="w-full px-6 py-5 text-left flex justify-between items-center hover:bg-white/[0.02] transition"
@@ -1082,7 +1082,7 @@ function FAQ() {
 // Footer Component
 function Footer() {
   return (
-    <footer className="py-16 bg-[#0B0E11] border-t border-gray-800">
+    <footer className="py-16 bg-cyx-bg border-t border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid md:grid-cols-4 gap-10 mb-12">
           {/* Brand */}

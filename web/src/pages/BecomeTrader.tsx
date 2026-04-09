@@ -28,9 +28,9 @@ export default function BecomeTrader() {
 
   if (user?.isTrader) {
     return (
-      <div className="min-h-screen bg-[#0B0E11] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-cyx-bg flex items-center justify-center px-4">
         <div className="max-w-md w-full text-center">
-          <div className="bg-[#1E2329] rounded-lg border border-gray-800 p-8">
+          <div className="bg-cyx-card rounded-lg border border-gray-800 p-8">
             <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -42,7 +42,7 @@ export default function BecomeTrader() {
             <p className="text-gray-400 mb-6">
               Your deposit address:
             </p>
-            <div className="bg-[#2B3139] rounded-lg p-4 mb-6 break-all font-mono text-sm text-white">
+            <div className="bg-cyx-card-hover rounded-lg p-4 mb-6 break-all font-mono text-sm text-white">
               {user.traderAddress || 'Loading...'}
             </div>
             <Link
@@ -58,7 +58,7 @@ export default function BecomeTrader() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0E11] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-cyx-bg flex items-center justify-center px-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center space-x-2 mb-6">
@@ -67,7 +67,7 @@ export default function BecomeTrader() {
           </Link>
         </div>
 
-        <div className="bg-[#1E2329] rounded-lg border border-gray-800 p-8">
+        <div className="bg-cyx-card rounded-lg border border-gray-800 p-8">
           {step === 'info' && (
             <>
               <div className="text-center mb-6">
@@ -85,7 +85,7 @@ export default function BecomeTrader() {
               </div>
 
               <div className="space-y-4 mb-8">
-                <div className="flex items-start gap-3 p-4 bg-[#2B3139] rounded-lg">
+                <div className="flex items-start gap-3 p-4 bg-cyx-card-hover rounded-lg">
                   <svg className="w-6 h-6 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
@@ -97,7 +97,7 @@ export default function BecomeTrader() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-4 bg-[#2B3139] rounded-lg">
+                <div className="flex items-start gap-3 p-4 bg-cyx-card-hover rounded-lg">
                   <svg className="w-6 h-6 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
@@ -109,7 +109,7 @@ export default function BecomeTrader() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-4 bg-[#2B3139] rounded-lg">
+                <div className="flex items-start gap-3 p-4 bg-cyx-card-hover rounded-lg">
                   <svg className="w-6 h-6 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -191,7 +191,7 @@ export default function BecomeTrader() {
                   Your USDT-TRC20 Deposit Address
                 </label>
                 <div className="relative">
-                  <div className="bg-[#2B3139] rounded-lg p-4 pr-12 break-all font-mono text-sm text-white">
+                  <div className="bg-cyx-card-hover rounded-lg p-4 pr-12 break-all font-mono text-sm text-white">
                     {generatedAddress}
                   </div>
                   <button
@@ -230,7 +230,7 @@ export default function BecomeTrader() {
                 </Link>
                 <Link
                   to="/app"
-                  className="block w-full bg-[#2B3139] text-gray-300 py-3 rounded-lg font-semibold text-center hover:bg-[#3C4149] transition"
+                  className="block w-full bg-cyx-card-hover text-gray-300 py-3 rounded-lg font-semibold text-center hover:bg-[#3C4149] transition"
                 >
                   Back to Home
                 </Link>

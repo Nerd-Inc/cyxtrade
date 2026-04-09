@@ -158,9 +158,9 @@ export default function PostTraderAd() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0E11]">
+    <div className="min-h-screen bg-cyx-bg">
       {/* Header */}
-      <header className="bg-[#1E2329] border-b border-gray-800 sticky top-0 z-10">
+      <header className="bg-cyx-card border-b border-gray-800 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -228,7 +228,7 @@ export default function PostTraderAd() {
         )}
 
         {/* Step Content */}
-        <div className="bg-[#1E2329] border border-gray-800 rounded-xl p-6 mb-6">
+        <div className="bg-cyx-card border border-gray-800 rounded-xl p-6 mb-6">
 
           {/* ============================================ */}
           {/* STEP 1: Set Corridor & Rate */}
@@ -241,7 +241,7 @@ export default function PostTraderAd() {
               </div>
 
               {/* Sample Calculation */}
-              <div className="bg-[#2B3139] rounded-xl p-4 border border-gray-700">
+              <div className="bg-cyx-card-hover rounded-xl p-4 border border-gray-700">
                 <div className="flex items-center justify-between">
                   <div className="text-center">
                     <p className="text-gray-400 text-xs mb-1">Buyer Sends You</p>
@@ -269,7 +269,7 @@ export default function PostTraderAd() {
                     <select
                       value={receiveCurrency}
                       onChange={(e) => setReceiveCurrency(e.target.value)}
-                      className="w-full px-4 py-3 pl-12 rounded-xl border bg-[#2B3139] border-gray-700 text-white appearance-none cursor-pointer focus:border-green-500 focus:outline-none"
+                      className="w-full px-4 py-3 pl-12 rounded-xl border bg-cyx-card-hover border-gray-700 text-white appearance-none cursor-pointer focus:border-green-500 focus:outline-none"
                     >
                       {CURRENCIES.map(c => (
                         <option key={c.code} value={c.code}>{c.flag} {c.code} - {c.name}</option>
@@ -291,7 +291,7 @@ export default function PostTraderAd() {
                     <select
                       value={sendCurrency}
                       onChange={(e) => setSendCurrency(e.target.value)}
-                      className="w-full px-4 py-3 pl-12 rounded-xl border bg-[#2B3139] border-gray-700 text-white appearance-none cursor-pointer focus:border-green-500 focus:outline-none"
+                      className="w-full px-4 py-3 pl-12 rounded-xl border bg-cyx-card-hover border-gray-700 text-white appearance-none cursor-pointer focus:border-green-500 focus:outline-none"
                     >
                       {CURRENCIES.map(c => (
                         <option key={c.code} value={c.code}>{c.flag} {c.code} - {c.name}</option>
@@ -319,7 +319,7 @@ export default function PostTraderAd() {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Exchange Rate (1 {receiveCurrency} = ? {sendCurrency})
                 </label>
-                <div className="flex items-center bg-[#2B3139] border border-gray-700 rounded-xl">
+                <div className="flex items-center bg-cyx-card-hover border border-gray-700 rounded-xl">
                   <button
                     onClick={() => setRate((parseFloat(rate) - 0.5).toFixed(2))}
                     className="px-4 py-3 text-gray-400 hover:text-white text-xl"
@@ -363,7 +363,7 @@ export default function PostTraderAd() {
                   Order Limits ({receiveCurrency})
                 </label>
                 <div className="flex items-center gap-3">
-                  <div className="flex-1 flex items-center bg-[#2B3139] border border-gray-700 rounded-xl">
+                  <div className="flex-1 flex items-center bg-cyx-card-hover border border-gray-700 rounded-xl">
                     <span className="px-3 text-gray-400">Min</span>
                     <input
                       type="text"
@@ -374,7 +374,7 @@ export default function PostTraderAd() {
                     <span className="px-3 text-gray-400">{receiveCurrency}</span>
                   </div>
                   <span className="text-gray-500">~</span>
-                  <div className="flex-1 flex items-center bg-[#2B3139] border border-gray-700 rounded-xl">
+                  <div className="flex-1 flex items-center bg-cyx-card-hover border border-gray-700 rounded-xl">
                     <span className="px-3 text-gray-400">Max</span>
                     <input
                       type="text"
@@ -415,7 +415,7 @@ export default function PostTraderAd() {
 
                 <button
                   onClick={() => setShowPaymentModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-700 bg-[#2B3139] text-white hover:bg-[#3C4149] transition"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-700 bg-cyx-card-hover text-white hover:bg-[#3C4149] transition"
                 >
                   <span className="text-lg text-green-400">+</span>
                   <span>Add Payment Method</span>
@@ -437,7 +437,7 @@ export default function PostTraderAd() {
                       className={`px-4 py-2 rounded-lg font-medium transition ${
                         paymentTimeLimit === t.value
                           ? 'bg-green-500 text-white'
-                          : 'bg-[#2B3139] text-gray-400 hover:text-white border border-gray-700'
+                          : 'bg-cyx-card-hover text-gray-400 hover:text-white border border-gray-700'
                       }`}
                     >
                       {t.label}
@@ -469,7 +469,7 @@ export default function PostTraderAd() {
                   placeholder="E.g., Must have verified phone number. Payment must come from account matching your name."
                   rows={3}
                   maxLength={500}
-                  className="w-full px-4 py-3 rounded-xl border bg-[#2B3139] border-gray-700 text-white placeholder-gray-500 resize-none focus:border-green-500 focus:outline-none"
+                  className="w-full px-4 py-3 rounded-xl border bg-cyx-card-hover border-gray-700 text-white placeholder-gray-500 resize-none focus:border-green-500 focus:outline-none"
                 />
                 <p className="text-xs text-gray-500 text-right mt-1">{conditions.length}/500</p>
               </div>
@@ -485,7 +485,7 @@ export default function PostTraderAd() {
                   placeholder="This message will be automatically sent to buyers when they start a trade with you."
                   rows={3}
                   maxLength={500}
-                  className="w-full px-4 py-3 rounded-xl border bg-[#2B3139] border-gray-700 text-white placeholder-gray-500 resize-none focus:border-green-500 focus:outline-none"
+                  className="w-full px-4 py-3 rounded-xl border bg-cyx-card-hover border-gray-700 text-white placeholder-gray-500 resize-none focus:border-green-500 focus:outline-none"
                 />
                 <p className="text-xs text-gray-500 text-right mt-1">{autoReply.length}/500</p>
               </div>
@@ -499,7 +499,7 @@ export default function PostTraderAd() {
                     className={`flex-1 py-3 rounded-xl font-medium transition ${
                       adStatus === 'online'
                         ? 'bg-green-500 text-white'
-                        : 'bg-[#2B3139] text-gray-400 border border-gray-700'
+                        : 'bg-cyx-card-hover text-gray-400 border border-gray-700'
                     }`}
                   >
                     <span className="mr-2">🟢</span> Online
@@ -509,7 +509,7 @@ export default function PostTraderAd() {
                     className={`flex-1 py-3 rounded-xl font-medium transition ${
                       adStatus === 'offline'
                         ? 'bg-gray-600 text-white'
-                        : 'bg-[#2B3139] text-gray-400 border border-gray-700'
+                        : 'bg-cyx-card-hover text-gray-400 border border-gray-700'
                     }`}
                   >
                     <span className="mr-2">⚫</span> Offline
@@ -523,7 +523,7 @@ export default function PostTraderAd() {
               </div>
 
               {/* Fee Notice */}
-              <div className="p-4 bg-[#2B3139] border border-gray-700 rounded-xl">
+              <div className="p-4 bg-cyx-card-hover border border-gray-700 rounded-xl">
                 <div className="flex items-start gap-3">
                   <span className="text-gray-400 text-xl">💰</span>
                   <div>
@@ -543,7 +543,7 @@ export default function PostTraderAd() {
           {step > 1 ? (
             <button
               onClick={handlePrevious}
-              className="px-6 py-3 rounded-xl font-medium bg-[#2B3139] text-white hover:bg-[#3C4149] transition"
+              className="px-6 py-3 rounded-xl font-medium bg-cyx-card-hover text-white hover:bg-[#3C4149] transition"
             >
               Previous
             </button>
@@ -570,7 +570,7 @@ export default function PostTraderAd() {
       {/* Payment Method Modal */}
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#1E2329] rounded-xl border border-gray-800">
+          <div className="w-full max-w-md bg-cyx-card rounded-xl border border-gray-800">
             <div className="p-4 border-b border-gray-800 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-white">Select Payment Method</h3>
               <button onClick={() => setShowPaymentModal(false)} className="text-gray-400 hover:text-white">
@@ -600,7 +600,7 @@ export default function PostTraderAd() {
                       type="checkbox"
                       checked={selectedPayments.includes(method.id)}
                       onChange={() => togglePayment(method.id)}
-                      className="w-5 h-5 rounded border-gray-600 text-green-500 focus:ring-green-500 bg-[#2B3139]"
+                      className="w-5 h-5 rounded border-gray-600 text-green-500 focus:ring-green-500 bg-cyx-card-hover"
                     />
                   </label>
                 ))}
@@ -621,7 +621,7 @@ export default function PostTraderAd() {
       {/* Confirmation Modal */}
       {showConfirmModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#1E2329] rounded-xl border border-gray-800">
+          <div className="w-full max-w-md bg-cyx-card rounded-xl border border-gray-800">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-white mb-6">Confirm Your Ad</h3>
 
@@ -651,7 +651,7 @@ export default function PostTraderAd() {
             <div className="p-4 border-t border-gray-800 flex gap-3">
               <button
                 onClick={() => setShowConfirmModal(false)}
-                className="flex-1 py-3 rounded-xl font-medium bg-[#2B3139] text-white hover:bg-[#3C4149] transition"
+                className="flex-1 py-3 rounded-xl font-medium bg-cyx-card-hover text-white hover:bg-[#3C4149] transition"
               >
                 Cancel
               </button>

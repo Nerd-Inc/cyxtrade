@@ -409,8 +409,8 @@ export default function Chat() {
   const currentStep = trade ? getStatusStep(trade.status) : 0
 
   return (
-    <div className="min-h-screen bg-[#0B0E11]">
-      <header className="bg-[#1E2329] border-b border-gray-800 sticky top-0 z-10">
+    <div className="min-h-screen bg-cyx-bg">
+      <header className="bg-cyx-card border-b border-gray-800 sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -437,7 +437,7 @@ export default function Chat() {
               )}
               <Link
                 to={`/app/trade/${tradeId}`}
-                className="text-sm px-3 py-2 rounded-lg border border-gray-700 text-gray-300 hover:bg-[#2B3139] transition"
+                className="text-sm px-3 py-2 rounded-lg border border-gray-700 text-gray-300 hover:bg-cyx-card-hover transition"
               >
                 Details
               </Link>
@@ -467,7 +467,7 @@ export default function Chat() {
 
         {/* Progress Steps */}
         {trade && !tradeExpired && trade.status !== 'cancelled' && (
-          <div className="mb-6 bg-[#1E2329] border border-gray-800 rounded-xl p-4">
+          <div className="mb-6 bg-cyx-card border border-gray-800 rounded-xl p-4">
             <div className="flex items-center justify-between">
               {['Pay', 'Paid', 'Delivering', 'Completed'].map((step, index) => (
                 <div key={step} className="flex items-center">
@@ -536,7 +536,7 @@ export default function Chat() {
 
         {/* Payment Instructions Banner - Show payment methods prominently */}
         {trade && !tradeExpired && (trade.status === 'pending' || trade.status === 'accepted') && (
-          <div className="mb-4 p-4 bg-[#1E2329] border border-green-500/30 rounded-xl">
+          <div className="mb-4 p-4 bg-cyx-card border border-green-500/30 rounded-xl">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -552,7 +552,7 @@ export default function Chat() {
                 {/* Payment Methods */}
                 <div className="space-y-3">
                   {(trade.traderPaymentMethods || MOCK_PAYMENT_METHODS).map((method: any) => (
-                    <div key={method.id} className="bg-[#2B3139] rounded-xl p-4 border border-gray-700">
+                    <div key={method.id} className="bg-cyx-card-hover rounded-xl p-4 border border-gray-700">
                       <div className="flex items-center gap-2 mb-3">
                         <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded">
                           {method.type}
@@ -597,7 +597,7 @@ export default function Chat() {
               </button>
             ) : (
               /* Proof of Payment Upload */
-              <div className="bg-[#2B3139] rounded-xl p-4 border border-gray-700">
+              <div className="bg-cyx-card-hover rounded-xl p-4 border border-gray-700">
                 <h4 className="text-white font-medium mb-3">Upload Proof of Payment</h4>
 
                 {/* File Upload Area */}
@@ -649,7 +649,7 @@ export default function Chat() {
                     value={paymentReference}
                     onChange={(e) => setPaymentReference(e.target.value)}
                     placeholder="Transaction ID or reference number"
-                    className="w-full px-4 py-3 bg-[#1E2329] border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                    className="w-full px-4 py-3 bg-cyx-card border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
                   />
                 </div>
 
@@ -764,7 +764,7 @@ export default function Chat() {
               </button>
               <button
                 onClick={() => navigate('/app/history')}
-                className="flex-1 bg-[#2B3139] text-white py-2.5 rounded-xl font-medium hover:bg-[#3C4149] transition"
+                className="flex-1 bg-cyx-card-hover text-white py-2.5 rounded-xl font-medium hover:bg-[#3C4149] transition"
               >
                 View Orders
               </button>
@@ -774,7 +774,7 @@ export default function Chat() {
 
         {/* Trade Summary Card */}
         {trade && !tradeExpired && (
-          <div className="mb-4 bg-[#1E2329] border border-gray-800 rounded-xl p-4">
+          <div className="mb-4 bg-cyx-card border border-gray-800 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-gray-400 text-sm">You Send</span>
               <span className="text-white font-semibold">{trade.sendAmount?.toLocaleString()} {trade.sendCurrency}</span>
@@ -795,7 +795,7 @@ export default function Chat() {
         )}
 
         {/* Chat Messages */}
-        <div className="bg-[#1E2329] border border-gray-800 rounded-xl p-4 min-h-[300px]">
+        <div className="bg-cyx-card border border-gray-800 rounded-xl p-4 min-h-[300px]">
           {isLoading ? (
             <div className="flex justify-center py-14">
               <div className="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent" />
@@ -818,7 +818,7 @@ export default function Chat() {
                       className={`max-w-[80%] rounded-xl px-4 py-2 ${
                         mine
                           ? 'bg-green-500 text-white'
-                          : 'bg-[#2B3139] text-white'
+                          : 'bg-cyx-card-hover text-white'
                       }`}
                     >
                       <p className="whitespace-pre-wrap break-words text-sm">{text}</p>
@@ -836,13 +836,13 @@ export default function Chat() {
       </main>
 
       {/* Message Input */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#1E2329]/95 border-t border-gray-800 backdrop-blur">
+      <div className="fixed bottom-0 left-0 right-0 bg-cyx-card/95 border-t border-gray-800 backdrop-blur">
         <div className="max-w-3xl mx-auto p-4">
           <div className="flex items-end gap-3">
             {/* Upload Button */}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="p-3 bg-[#2B3139] rounded-xl text-gray-400 hover:text-white hover:bg-[#3C4149] transition"
+              className="p-3 bg-cyx-card-hover rounded-xl text-gray-400 hover:text-white hover:bg-[#3C4149] transition"
               title="Upload image"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -860,7 +860,7 @@ export default function Chat() {
               }}
               rows={1}
               placeholder="Type a message..."
-              className="flex-1 resize-none rounded-xl border border-gray-700 bg-[#2B3139] px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition"
+              className="flex-1 resize-none rounded-xl border border-gray-700 bg-cyx-card-hover px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition"
             />
             <button
               onClick={sendMessage}

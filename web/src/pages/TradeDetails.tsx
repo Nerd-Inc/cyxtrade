@@ -77,7 +77,7 @@ export default function TradeDetails() {
 
   if (isLoading || !currentTrade) {
     return (
-      <div className="min-h-screen bg-[#0B0E11] flex items-center justify-center">
+      <div className="min-h-screen bg-cyx-bg flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-yellow-500 border-t-transparent" />
       </div>
     )
@@ -89,9 +89,9 @@ export default function TradeDetails() {
   const isUser = trade.userId === user?.id
 
   return (
-    <div className="min-h-screen bg-[#0B0E11]">
+    <div className="min-h-screen bg-cyx-bg">
       {/* Header */}
-      <header className="bg-[#1E2329] border-b border-gray-800 sticky top-0 z-10">
+      <header className="bg-cyx-card border-b border-gray-800 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Link to="/app/history" className="text-gray-400 hover:text-white transition">
@@ -122,7 +122,7 @@ export default function TradeDetails() {
           statusInfo.color === 'purple' ? 'bg-purple-500/10 border-purple-500/30' :
           statusInfo.color === 'yellow' ? 'bg-yellow-500/10 border-yellow-500/30' :
           statusInfo.color === 'red' ? 'bg-red-500/10 border-red-500/30' :
-          'bg-[#1E2329] border-gray-800'
+          'bg-cyx-card border-gray-800'
         }`}>
           <h2 className={`font-semibold ${
             statusInfo.color === 'green' ? 'text-green-400' :
@@ -148,14 +148,14 @@ export default function TradeDetails() {
 
         {/* Progress Steps */}
         {!['disputed', 'cancelled'].includes(trade.status) && (
-          <div className="mb-6 bg-[#1E2329] rounded-lg border border-gray-800 p-4">
+          <div className="mb-6 bg-cyx-card rounded-lg border border-gray-800 p-4">
             <div className="flex items-center justify-between">
               {STATUS_STEPS.map((step, i) => (
                 <div key={step} className="flex items-center flex-1">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     i <= currentStepIndex
                       ? 'bg-yellow-500 text-black'
-                      : 'bg-[#2B3139] text-gray-500'
+                      : 'bg-cyx-card-hover text-gray-500'
                   }`}>
                     {i < currentStepIndex ? (
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -165,7 +165,7 @@ export default function TradeDetails() {
                   </div>
                   {i < STATUS_STEPS.length - 1 && (
                     <div className={`flex-1 h-1 mx-2 ${
-                      i < currentStepIndex ? 'bg-yellow-500' : 'bg-[#2B3139]'
+                      i < currentStepIndex ? 'bg-yellow-500' : 'bg-cyx-card-hover'
                     }`} />
                   )}
                 </div>
@@ -181,8 +181,8 @@ export default function TradeDetails() {
         )}
 
         {/* Trade Summary */}
-        <div className="bg-[#1E2329] rounded-lg border border-gray-800 mb-6 overflow-hidden">
-          <div className="p-4 border-b border-gray-800 bg-[#2B3139]">
+        <div className="bg-cyx-card rounded-lg border border-gray-800 mb-6 overflow-hidden">
+          <div className="p-4 border-b border-gray-800 bg-cyx-card-hover">
             <h3 className="font-semibold text-white">Transfer Summary</h3>
           </div>
           <div className="p-4 space-y-4">
@@ -274,7 +274,7 @@ export default function TradeDetails() {
 
           <Link
             to={`/app/chat/${trade.id}`}
-            className="block w-full py-3 border border-gray-700 text-gray-300 rounded-lg font-semibold text-center hover:bg-[#2B3139] transition"
+            className="block w-full py-3 border border-gray-700 text-gray-300 rounded-lg font-semibold text-center hover:bg-cyx-card-hover transition"
           >
             Chat with Trader
           </Link>
@@ -290,7 +290,7 @@ export default function TradeDetails() {
         </div>
 
         {/* Timeline */}
-        <div className="mt-8 bg-[#1E2329] rounded-lg border border-gray-800 p-4">
+        <div className="mt-8 bg-cyx-card rounded-lg border border-gray-800 p-4">
           <h3 className="font-semibold text-white mb-4">Activity</h3>
           <div className="space-y-4">
             <TimelineItem
@@ -326,7 +326,7 @@ export default function TradeDetails() {
       {/* Payment Modal */}
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="bg-[#1E2329] rounded-lg border border-gray-800 max-w-md w-full p-6">
+          <div className="bg-cyx-card rounded-lg border border-gray-800 max-w-md w-full p-6">
             <h3 className="text-lg font-bold text-white mb-4">
               Confirm Payment
             </h3>
@@ -338,12 +338,12 @@ export default function TradeDetails() {
               value={paymentRef}
               onChange={(e) => setPaymentRef(e.target.value)}
               placeholder="e.g., TXN123456789"
-              className="w-full px-4 py-3 border border-gray-700 rounded-lg bg-[#2B3139] text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 transition mb-4"
+              className="w-full px-4 py-3 border border-gray-700 rounded-lg bg-cyx-card-hover text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 transition mb-4"
             />
             <div className="flex gap-3">
               <button
                 onClick={() => setShowPaymentModal(false)}
-                className="flex-1 py-3 border border-gray-700 text-gray-300 rounded-lg hover:bg-[#2B3139] transition"
+                className="flex-1 py-3 border border-gray-700 text-gray-300 rounded-lg hover:bg-cyx-card-hover transition"
               >
                 Cancel
               </button>

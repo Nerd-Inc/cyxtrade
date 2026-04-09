@@ -63,7 +63,7 @@ function PaymentMethodCard({
   const verificationStatus = method.verificationStatus || 'unverified'
 
   return (
-    <div className={`bg-[#1E2329] rounded-lg border-2 p-4 transition ${
+    <div className={`bg-cyx-card rounded-lg border-2 p-4 transition ${
       method.isPrimary
         ? 'border-yellow-500'
         : 'border-gray-800'
@@ -268,9 +268,9 @@ export default function PaymentMethods() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0E11]">
+    <div className="min-h-screen bg-cyx-bg">
       {/* Header */}
-      <header className="bg-[#1E2329] border-b border-gray-800 sticky top-0 z-10">
+      <header className="bg-cyx-card border-b border-gray-800 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -321,7 +321,7 @@ export default function PaymentMethods() {
           </div>
         ) : paymentMethods.length === 0 ? (
           <div className="text-center py-12">
-            <div className="w-16 h-16 bg-[#2B3139] rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-cyx-card-hover rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
               </svg>
@@ -354,7 +354,7 @@ export default function PaymentMethods() {
       {/* Add Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="bg-[#1E2329] rounded-lg border border-gray-800 max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-cyx-card rounded-lg border border-gray-800 max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-800">
               <h3 className="text-lg font-bold text-white">
                 Add Payment Method
@@ -398,7 +398,7 @@ export default function PaymentMethods() {
                   value={methodName}
                   onChange={(e) => setMethodName(e.target.value)}
                   placeholder="e.g., My UBA Account"
-                  className="w-full px-4 py-3 border border-gray-700 rounded-lg bg-[#2B3139] text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 transition"
+                  className="w-full px-4 py-3 border border-gray-700 rounded-lg bg-cyx-card-hover text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 transition"
                 />
               </div>
 
@@ -413,7 +413,7 @@ export default function PaymentMethods() {
                     value={details[field.key] || ''}
                     onChange={(e) => setDetails(d => ({ ...d, [field.key]: e.target.value }))}
                     placeholder={field.placeholder}
-                    className="w-full px-4 py-3 border border-gray-700 rounded-lg bg-[#2B3139] text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 transition"
+                    className="w-full px-4 py-3 border border-gray-700 rounded-lg bg-cyx-card-hover text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 transition"
                   />
                 </div>
               ))}
@@ -426,7 +426,7 @@ export default function PaymentMethods() {
                   setMethodName('')
                   setDetails({})
                 }}
-                className="flex-1 py-3 border border-gray-700 text-gray-300 rounded-lg hover:bg-[#2B3139] transition"
+                className="flex-1 py-3 border border-gray-700 text-gray-300 rounded-lg hover:bg-cyx-card-hover transition"
               >
                 Cancel
               </button>
@@ -445,7 +445,7 @@ export default function PaymentMethods() {
       {/* Verification Modal */}
       {showVerifyModal && verifyingMethod && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="bg-[#1E2329] rounded-lg border border-gray-800 max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-cyx-card rounded-lg border border-gray-800 max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-800">
               <h3 className="text-lg font-bold text-white">
                 Verify Payment Method
@@ -478,7 +478,7 @@ export default function PaymentMethods() {
                     <p className="text-sm text-blue-500/80 ml-8 mb-2">
                       Add this code in the payment reference/description:
                     </p>
-                    <div className="ml-8 bg-[#2B3139] border-2 border-dashed border-yellow-500 rounded-lg p-3 text-center">
+                    <div className="ml-8 bg-cyx-card-hover border-2 border-dashed border-yellow-500 rounded-lg p-3 text-center">
                       <code className="text-lg font-bold text-yellow-400 tracking-wider">
                         {verificationData.code}
                       </code>
@@ -514,7 +514,7 @@ export default function PaymentMethods() {
                       value={proofUrl}
                       onChange={(e) => setProofUrl(e.target.value)}
                       placeholder="https://example.com/screenshot.png"
-                      className="w-full px-4 py-3 border border-gray-700 rounded-lg bg-[#2B3139] text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 transition"
+                      className="w-full px-4 py-3 border border-gray-700 rounded-lg bg-cyx-card-hover text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 transition"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Upload your screenshot to an image host and paste the URL here
@@ -533,7 +533,7 @@ export default function PaymentMethods() {
             <div className="p-6 border-t border-gray-800 flex gap-3">
               <button
                 onClick={closeVerifyModal}
-                className="flex-1 py-3 border border-gray-700 text-gray-300 rounded-lg hover:bg-[#2B3139] transition"
+                className="flex-1 py-3 border border-gray-700 text-gray-300 rounded-lg hover:bg-cyx-card-hover transition"
               >
                 Cancel
               </button>

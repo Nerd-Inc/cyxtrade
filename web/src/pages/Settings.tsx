@@ -219,8 +219,8 @@ export default function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0E11]">
-      <header className="bg-[#1E2329] border-b border-gray-800 sticky top-0 z-10">
+    <div className="min-h-screen bg-cyx-bg">
+      <header className="bg-cyx-card border-b border-gray-800 sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Link to="/app" className="text-gray-400 hover:text-white">
@@ -235,20 +235,20 @@ export default function Settings() {
 
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
         {/* Identity Section */}
-        <section className="bg-[#1E2329] rounded-lg border border-gray-800 p-6">
+        <section className="bg-cyx-card rounded-lg border border-gray-800 p-6">
           <h2 className="text-lg font-semibold text-white mb-2">Identity</h2>
           <p className="text-sm text-gray-400 mb-4">
             Your account is tied to your keypair identity.
           </p>
 
           <div className="space-y-4">
-            <div className="bg-[#2B3139] rounded-lg p-4">
+            <div className="bg-cyx-card-hover rounded-lg p-4">
               <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Fingerprint</p>
               <p className="font-mono text-sm text-white">
                 {fingerprint || 'Not available'}
               </p>
             </div>
-            <div className="bg-[#2B3139] rounded-lg p-4">
+            <div className="bg-cyx-card-hover rounded-lg p-4">
               <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Public Key</p>
               <p className="font-mono text-xs break-all text-gray-300">
                 {publicKey || 'Not available'}
@@ -258,7 +258,7 @@ export default function Settings() {
               <button
                 type="button"
                 onClick={() => handleCopy(publicKey)}
-                className="px-4 py-2 text-sm rounded-lg bg-[#2B3139] text-gray-300 hover:bg-[#3C4149] transition"
+                className="px-4 py-2 text-sm rounded-lg bg-cyx-card-hover text-gray-300 hover:bg-[#3C4149] transition"
               >
                 Copy Public Key
               </button>
@@ -268,7 +268,7 @@ export default function Settings() {
 
         {/* Trader Address Section */}
         {user?.isTrader && (
-          <section className="bg-[#1E2329] rounded-lg border border-gray-800 p-6">
+          <section className="bg-cyx-card rounded-lg border border-gray-800 p-6">
             <h2 className="text-lg font-semibold text-white mb-2">Trader Address</h2>
             <p className="text-sm text-gray-400 mb-4">
               Use this address for your trader bond deposits.
@@ -279,16 +279,16 @@ export default function Settings() {
             ) : traderAddress ? (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="bg-[#2B3139] rounded-lg p-3">
+                  <div className="bg-cyx-card-hover rounded-lg p-3">
                     <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Asset</p>
                     <p className="text-sm font-semibold text-white">{TRADER_DEPOSIT_ASSET}</p>
                   </div>
-                  <div className="bg-[#2B3139] rounded-lg p-3">
+                  <div className="bg-cyx-card-hover rounded-lg p-3">
                     <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Network</p>
                     <p className="text-sm font-semibold text-white">{TRADER_DEPOSIT_NETWORK}</p>
                   </div>
                 </div>
-                <div className="bg-[#2B3139] rounded-lg p-3">
+                <div className="bg-cyx-card-hover rounded-lg p-3">
                   <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Deposit Address</p>
                   <p className="font-mono text-xs break-all text-white">{traderAddress}</p>
                 </div>
@@ -304,7 +304,7 @@ export default function Settings() {
                     <button
                       type="button"
                       onClick={() => handleCopy(traderDepositShareText)}
-                      className="px-4 py-2 text-sm rounded-lg bg-[#2B3139] text-gray-300 hover:bg-[#3C4149] transition"
+                      className="px-4 py-2 text-sm rounded-lg bg-cyx-card-hover text-gray-300 hover:bg-[#3C4149] transition"
                     >
                       Copy Deposit Details
                     </button>
@@ -323,7 +323,7 @@ export default function Settings() {
         )}
 
         {/* Backup Key Section */}
-        <section className="bg-[#1E2329] rounded-lg border border-gray-800 p-6">
+        <section className="bg-cyx-card rounded-lg border border-gray-800 p-6">
           <h2 className="text-lg font-semibold text-white mb-2">Backup Key</h2>
           <p className="text-sm text-gray-400 mb-4">
             Save this key securely. You need it to recover your account on a new device.
@@ -340,7 +340,7 @@ export default function Settings() {
             </button>
           ) : (
             <div className="space-y-4">
-              <div className="bg-[#2B3139] rounded-lg p-4">
+              <div className="bg-cyx-card-hover rounded-lg p-4">
                 <p className="font-mono text-xs break-all text-white">{backupKey}</p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -357,7 +357,7 @@ export default function Settings() {
                     setBackupKey(null)
                     setCopyStatus('idle')
                   }}
-                  className="px-4 py-2 text-sm rounded-lg bg-[#2B3139] text-gray-300 hover:bg-[#3C4149] transition"
+                  className="px-4 py-2 text-sm rounded-lg bg-cyx-card-hover text-gray-300 hover:bg-[#3C4149] transition"
                 >
                   Hide Key
                 </button>
@@ -374,7 +374,7 @@ export default function Settings() {
         </section>
 
         {/* Two-Factor Authentication Section */}
-        <section className="bg-[#1E2329] rounded-lg border border-gray-800 p-6">
+        <section className="bg-cyx-card rounded-lg border border-gray-800 p-6">
           <h2 className="text-lg font-semibold text-white mb-2">Two-Factor Authentication</h2>
           <p className="text-sm text-gray-400 mb-4">
             Add an extra layer of security to your account using Google Authenticator or similar apps.
@@ -402,7 +402,7 @@ export default function Settings() {
                 <span className="font-semibold">Two-Factor Authentication is enabled</span>
               </div>
 
-              <div className="bg-[#2B3139] rounded-lg p-4">
+              <div className="bg-cyx-card-hover rounded-lg p-4">
                 <p className="text-sm text-gray-400">
                   Backup codes remaining: <span className="text-white font-semibold">{totpStatus.backupCodesRemaining}</span>
                 </p>
@@ -452,7 +452,7 @@ export default function Settings() {
         {showDisableTotpModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/70" onClick={() => setShowDisableTotpModal(false)} />
-            <div className="relative bg-[#1E2329] rounded-lg border border-gray-800 p-6 w-full max-w-sm mx-4 shadow-xl">
+            <div className="relative bg-cyx-card rounded-lg border border-gray-800 p-6 w-full max-w-sm mx-4 shadow-xl">
               <h3 className="text-lg font-semibold text-white mb-4">Disable Two-Factor Authentication</h3>
               <p className="text-sm text-gray-400 mb-4">
                 Enter a code from your authenticator app or a backup code to disable 2FA.
@@ -463,7 +463,7 @@ export default function Settings() {
                 value={disableTotpCode}
                 onChange={(e) => setDisableTotpCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
                 placeholder="Enter code"
-                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-[#2B3139] text-white text-center font-mono tracking-widest placeholder-gray-600 focus:outline-none focus:border-yellow-500 transition mb-4"
+                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-cyx-card-hover text-white text-center font-mono tracking-widest placeholder-gray-600 focus:outline-none focus:border-yellow-500 transition mb-4"
                 maxLength={8}
               />
 
@@ -481,7 +481,7 @@ export default function Settings() {
                     setDisableTotpCode('')
                     setLocalError(null)
                   }}
-                  className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-300 hover:bg-[#2B3139] transition"
+                  className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-300 hover:bg-cyx-card-hover transition"
                 >
                   Cancel
                 </button>
@@ -499,7 +499,7 @@ export default function Settings() {
         )}
 
         {/* Danger Zone */}
-        <section className="bg-[#1E2329] rounded-lg border border-red-500/30 p-6">
+        <section className="bg-cyx-card rounded-lg border border-red-500/30 p-6">
           <h2 className="text-lg font-semibold text-red-500 mb-2">Danger Zone</h2>
           <p className="text-sm text-gray-400 mb-4">
             Remove the local identity from this browser.

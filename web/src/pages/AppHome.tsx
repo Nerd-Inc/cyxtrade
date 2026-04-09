@@ -345,9 +345,9 @@ export default function AppHome() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0E11]">
+    <div className="min-h-screen bg-cyx-bg">
       {/* Header */}
-      <header className="bg-[#0B0E11]/95 backdrop-blur-md border-b border-gray-800/50 sticky top-0 z-20">
+      <header className="bg-cyx-bg/95 backdrop-blur-md border-b border-gray-800/50 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-14">
             <div className="flex items-center gap-6">
@@ -404,7 +404,7 @@ export default function AppHome() {
                 </button>
 
                 {showMoreDropdown && (
-                  <div className="absolute right-0 mt-2 w-48 bg-[#1E2329] border border-gray-700 rounded-xl shadow-xl py-2">
+                  <div className="absolute right-0 mt-2 w-48 bg-cyx-card border border-gray-700 rounded-xl shadow-xl py-2">
                     {user?.isTrader && (
                       <>
                         <Link to="/app/trader-dashboard" className="flex items-center gap-2 px-4 py-2.5 text-gray-300 hover:bg-white/5 transition">
@@ -479,14 +479,14 @@ export default function AppHome() {
         )}
 
         {/* Currency Filters */}
-        <div className="bg-[#1E2329] rounded-2xl border border-gray-800 p-4 mb-6">
+        <div className="bg-cyx-card rounded-2xl border border-gray-800 p-4 mb-6">
           <div className="flex flex-wrap items-center gap-4">
             {/* I Have */}
             <div className="flex-1 min-w-[200px]">
               <label className="block text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">I Have</label>
               <button
                 onClick={() => setShowFromCurrencyModal(true)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-[#2B3139] border border-gray-700 rounded-xl text-white hover:border-green-500/50 transition"
+                className="w-full flex items-center justify-between px-4 py-3 bg-cyx-card-hover border border-gray-700 rounded-xl text-white hover:border-green-500/50 transition"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">{fromCurrencyData?.flag}</span>
@@ -513,7 +513,7 @@ export default function AppHome() {
               <label className="block text-xs text-gray-500 mb-2 font-medium uppercase tracking-wide">Recipient Gets</label>
               <button
                 onClick={() => setShowToCurrencyModal(true)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-[#2B3139] border border-gray-700 rounded-xl text-white hover:border-orange-500/50 transition"
+                className="w-full flex items-center justify-between px-4 py-3 bg-cyx-card-hover border border-gray-700 rounded-xl text-white hover:border-orange-500/50 transition"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">{toCurrencyData?.flag}</span>
@@ -537,7 +537,7 @@ export default function AppHome() {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition ${
                 amountFilter
                   ? 'bg-green-500/10 border-green-500/30 text-green-400'
-                  : 'bg-[#2B3139] border-gray-700 text-gray-400 hover:border-gray-600'
+                  : 'bg-cyx-card-hover border-gray-700 text-gray-400 hover:border-gray-600'
               }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -555,7 +555,7 @@ export default function AppHome() {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition ${
                 selectedPayments.length > 0
                   ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
-                  : 'bg-[#2B3139] border-gray-700 text-gray-400 hover:border-gray-600'
+                  : 'bg-cyx-card-hover border-gray-700 text-gray-400 hover:border-gray-600'
               }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -597,7 +597,7 @@ export default function AppHome() {
           {filteredTraders.map((trader) => (
             <div
               key={trader.id}
-              className="bg-[#1E2329] rounded-xl border border-gray-800 overflow-hidden hover:border-gray-700 transition"
+              className="bg-cyx-card rounded-xl border border-gray-800 overflow-hidden hover:border-gray-700 transition"
             >
               {/* Trader Card */}
               <div className="p-4">
@@ -635,7 +635,7 @@ export default function AppHome() {
                         {trader.paymentMethods.map((pm) => (
                           <span
                             key={pm}
-                            className="px-2 py-0.5 bg-[#2B3139] text-gray-400 text-xs rounded"
+                            className="px-2 py-0.5 bg-cyx-card-hover text-gray-400 text-xs rounded"
                           >
                             {pm}
                           </span>
@@ -669,7 +669,7 @@ export default function AppHome() {
               {expandedTraderId === trader.id && (
                 <div className="border-t border-gray-700 p-4 bg-[#1A1E23]">
                   {/* Trader Conditions */}
-                  <div className="mb-4 p-3 bg-[#2B3139] rounded-xl border border-gray-700">
+                  <div className="mb-4 p-3 bg-cyx-card-hover rounded-xl border border-gray-700">
                     <div className="flex items-start gap-2">
                       <svg className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -693,7 +693,7 @@ export default function AppHome() {
                           value={sendAmount}
                           onChange={(e) => setSendAmount(e.target.value)}
                           placeholder={`${trader.minLimit} - ${trader.maxLimit}`}
-                          className="w-full px-4 py-3 pr-16 bg-[#2B3139] border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                          className="w-full px-4 py-3 pr-16 bg-cyx-card-hover border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
                         />
                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">
                           {fromCurrency}
@@ -716,7 +716,7 @@ export default function AppHome() {
                         value={recipientName}
                         onChange={(e) => setRecipientName(e.target.value)}
                         placeholder="Full name as on ID"
-                        className="w-full px-4 py-3 bg-[#2B3139] border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                        className="w-full px-4 py-3 bg-cyx-card-hover border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
                       />
                     </div>
 
@@ -730,7 +730,7 @@ export default function AppHome() {
                         value={recipientPhone}
                         onChange={(e) => setRecipientPhone(e.target.value)}
                         placeholder="+237 6XX XXX XXX"
-                        className="w-full px-4 py-3 bg-[#2B3139] border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                        className="w-full px-4 py-3 bg-cyx-card-hover border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
                       />
                     </div>
 
@@ -744,7 +744,7 @@ export default function AppHome() {
                         value={recipientBank}
                         onChange={(e) => setRecipientBank(e.target.value)}
                         placeholder="e.g., MTN Mobile Money"
-                        className="w-full px-4 py-3 bg-[#2B3139] border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                        className="w-full px-4 py-3 bg-cyx-card-hover border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
                       />
                     </div>
 
@@ -758,7 +758,7 @@ export default function AppHome() {
                         value={recipientAccount}
                         onChange={(e) => setRecipientAccount(e.target.value)}
                         placeholder="Bank account or mobile money number"
-                        className="w-full px-4 py-3 bg-[#2B3139] border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                        className="w-full px-4 py-3 bg-cyx-card-hover border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
                       />
                     </div>
                   </div>
@@ -784,7 +784,7 @@ export default function AppHome() {
           ))}
 
           {filteredTraders.length === 0 && (
-            <div className="text-center py-16 bg-[#1E2329] rounded-xl border border-gray-800">
+            <div className="text-center py-16 bg-cyx-card rounded-xl border border-gray-800">
               <svg className="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -808,7 +808,7 @@ export default function AppHome() {
       {/* From Currency Modal */}
       {showFromCurrencyModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowFromCurrencyModal(false)}>
-          <div className="bg-[#1E2329] rounded-2xl w-full max-w-md mx-4 max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="bg-cyx-card rounded-2xl w-full max-w-md mx-4 max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-gray-700">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">Select Currency (I Have)</h3>
@@ -823,7 +823,7 @@ export default function AppHome() {
                 value={currencySearch}
                 onChange={(e) => setCurrencySearch(e.target.value)}
                 placeholder="Search currency..."
-                className="w-full px-4 py-3 bg-[#2B3139] border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                className="w-full px-4 py-3 bg-cyx-card-hover border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
                 autoFocus
               />
             </div>
@@ -856,7 +856,7 @@ export default function AppHome() {
       {/* To Currency Modal */}
       {showToCurrencyModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowToCurrencyModal(false)}>
-          <div className="bg-[#1E2329] rounded-2xl w-full max-w-md mx-4 max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="bg-cyx-card rounded-2xl w-full max-w-md mx-4 max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-gray-700">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">Select Currency (Recipient Gets)</h3>
@@ -871,7 +871,7 @@ export default function AppHome() {
                 value={currencySearch}
                 onChange={(e) => setCurrencySearch(e.target.value)}
                 placeholder="Search currency..."
-                className="w-full px-4 py-3 bg-[#2B3139] border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
+                className="w-full px-4 py-3 bg-cyx-card-hover border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500"
                 autoFocus
               />
             </div>
@@ -904,7 +904,7 @@ export default function AppHome() {
       {/* Payment Method Modal */}
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowPaymentModal(false)}>
-          <div className="bg-[#1E2329] rounded-2xl w-full max-w-md mx-4 max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="bg-cyx-card rounded-2xl w-full max-w-md mx-4 max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-gray-700">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">Payment Methods</h3>
@@ -923,7 +923,7 @@ export default function AppHome() {
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-xl mb-2 transition ${
                     selectedPayments.includes(method)
                       ? 'bg-orange-500/10 border border-orange-500/30'
-                      : 'bg-[#2B3139] border border-gray-700 hover:border-gray-600'
+                      : 'bg-cyx-card-hover border border-gray-700 hover:border-gray-600'
                   }`}
                 >
                   <span className="text-white">{method}</span>
@@ -938,7 +938,7 @@ export default function AppHome() {
             <div className="p-4 border-t border-gray-700 flex gap-3">
               <button
                 onClick={() => setSelectedPayments([])}
-                className="flex-1 px-4 py-3 bg-[#2B3139] text-white rounded-xl hover:bg-[#3C4149] transition"
+                className="flex-1 px-4 py-3 bg-cyx-card-hover text-white rounded-xl hover:bg-[#3C4149] transition"
               >
                 Reset
               </button>
@@ -956,7 +956,7 @@ export default function AppHome() {
       {/* Amount Filter Modal */}
       {showAmountModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowAmountModal(false)}>
-          <div className="bg-[#1E2329] rounded-2xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-cyx-card rounded-2xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-gray-700">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-white">Filter by Amount</h3>
@@ -974,7 +974,7 @@ export default function AppHome() {
                 value={amountFilter}
                 onChange={(e) => setAmountFilter(e.target.value)}
                 placeholder="e.g., 500"
-                className="w-full px-4 py-3 bg-[#2B3139] border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                className="w-full px-4 py-3 bg-cyx-card-hover border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
                 autoFocus
               />
               <p className="text-xs text-gray-500 mt-2">Only show traders who accept this amount</p>
@@ -985,7 +985,7 @@ export default function AppHome() {
                   setAmountFilter('')
                   setShowAmountModal(false)
                 }}
-                className="flex-1 px-4 py-3 bg-[#2B3139] text-white rounded-xl hover:bg-[#3C4149] transition"
+                className="flex-1 px-4 py-3 bg-cyx-card-hover text-white rounded-xl hover:bg-[#3C4149] transition"
               >
                 Clear
               </button>
@@ -1003,7 +1003,7 @@ export default function AppHome() {
       {/* Pro Warning Modal */}
       {showProWarning && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => { setShowProWarning(false); setProWarningChecked(false); }}>
-          <div className="bg-[#1E2329] rounded-2xl w-full max-w-md mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="bg-cyx-card rounded-2xl w-full max-w-md mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-700">
               <h3 className="text-lg font-bold text-white">Welcome to CyxTrade Pro!</h3>
@@ -1073,7 +1073,7 @@ export default function AppHome() {
       {/* Trade Confirmation Modal */}
       {showConfirmModal && selectedTrader && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => !isCreatingTrade && setShowConfirmModal(false)}>
-          <div className="bg-[#1E2329] rounded-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-cyx-card rounded-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="p-4 border-b border-gray-700">
               <div className="flex items-center justify-between">
@@ -1129,7 +1129,7 @@ export default function AppHome() {
               />
 
               {/* Recipient Details */}
-              <div className="bg-[#2B3139] rounded-xl p-4 mb-4">
+              <div className="bg-cyx-card-hover rounded-xl p-4 mb-4">
                 <h5 className="text-sm text-gray-400 font-medium mb-3">Recipient Details</h5>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -1156,7 +1156,7 @@ export default function AppHome() {
               </div>
 
               {/* Trader Info */}
-              <div className="bg-[#2B3139] rounded-xl p-4 mb-4">
+              <div className="bg-cyx-card-hover rounded-xl p-4 mb-4">
                 <h5 className="text-sm text-gray-400 font-medium mb-3">Trader</h5>
                 <div className="flex items-center gap-3">
                   <div
@@ -1196,7 +1196,7 @@ export default function AppHome() {
               <button
                 onClick={() => setShowConfirmModal(false)}
                 disabled={isCreatingTrade}
-                className="flex-1 px-4 py-3 bg-[#2B3139] text-white rounded-xl hover:bg-[#3C4149] transition disabled:opacity-50"
+                className="flex-1 px-4 py-3 bg-cyx-card-hover text-white rounded-xl hover:bg-[#3C4149] transition disabled:opacity-50"
               >
                 Cancel
               </button>

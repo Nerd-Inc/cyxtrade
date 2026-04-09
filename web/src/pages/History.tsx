@@ -40,7 +40,7 @@ function TradeCard({ trade }: { trade: Trade }) {
   return (
     <Link
       to={`/app/trade/${trade.id}`}
-      className="block bg-[#1E2329] rounded-lg border border-gray-800 p-4 hover:border-yellow-500/50 transition"
+      className="block bg-cyx-card rounded-lg border border-gray-800 p-4 hover:border-yellow-500/50 transition"
     >
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center">
@@ -96,9 +96,9 @@ export default function History() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0E11]">
+    <div className="min-h-screen bg-cyx-bg">
       {/* Header */}
-      <header className="bg-[#1E2329] border-b border-gray-800 sticky top-0 z-10">
+      <header className="bg-cyx-card border-b border-gray-800 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Link to="/app" className="text-gray-400 hover:text-white">
@@ -114,19 +114,19 @@ export default function History() {
       <main className="max-w-4xl mx-auto px-4 py-6">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-[#1E2329] rounded-lg p-4 border border-gray-800">
+          <div className="bg-cyx-card rounded-lg p-4 border border-gray-800">
             <p className="text-sm text-gray-400">Total Trades</p>
             <p className="text-2xl font-bold text-white">{stats.total}</p>
           </div>
-          <div className="bg-[#1E2329] rounded-lg p-4 border border-gray-800">
+          <div className="bg-cyx-card rounded-lg p-4 border border-gray-800">
             <p className="text-sm text-gray-400">Completed</p>
             <p className="text-2xl font-bold text-green-500">{stats.completed}</p>
           </div>
-          <div className="bg-[#1E2329] rounded-lg p-4 border border-gray-800">
+          <div className="bg-cyx-card rounded-lg p-4 border border-gray-800">
             <p className="text-sm text-gray-400">In Progress</p>
             <p className="text-2xl font-bold text-blue-400">{stats.pending}</p>
           </div>
-          <div className="bg-[#1E2329] rounded-lg p-4 border border-gray-800">
+          <div className="bg-cyx-card rounded-lg p-4 border border-gray-800">
             <p className="text-sm text-gray-400">Volume</p>
             <p className="text-2xl font-bold text-white">${stats.volume.toLocaleString()}</p>
           </div>
@@ -141,7 +141,7 @@ export default function History() {
               className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
                 filter === status
                   ? 'bg-yellow-500 text-black'
-                  : 'bg-[#1E2329] text-gray-400 border border-gray-700 hover:border-yellow-500/50'
+                  : 'bg-cyx-card text-gray-400 border border-gray-700 hover:border-yellow-500/50'
               }`}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -156,7 +156,7 @@ export default function History() {
           </div>
         ) : filteredTrades.length === 0 ? (
           <div className="text-center py-12">
-            <div className="w-16 h-16 bg-[#1E2329] rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-cyx-card rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>

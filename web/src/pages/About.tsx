@@ -2,9 +2,9 @@ import { Link } from 'react-router-dom'
 
 export default function About() {
   return (
-    <div className="min-h-screen bg-[#0B0E11]">
+    <div className="min-h-screen bg-cyx-bg">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#0B0E11]/95 backdrop-blur-md border-b border-gray-800/50">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-cyx-bg/95 backdrop-blur-md border-b border-gray-800/50">
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <Link to="/" className="flex items-center">
@@ -36,7 +36,7 @@ export default function About() {
       </section>
 
       {/* Mission */}
-      <section className="py-20 bg-[#1E2329]">
+      <section className="py-20 bg-cyx-card">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-white mb-4">Our Mission</h2>
@@ -51,23 +51,23 @@ export default function About() {
       </section>
 
       {/* The Problem */}
-      <section className="py-20 bg-[#0B0E11]">
+      <section className="py-20 bg-cyx-bg">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-white mb-8 text-center">The Problem We Solve</h2>
           <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-[#1E2329] border border-gray-800 rounded-2xl p-6">
+            <div className="bg-cyx-card border border-gray-800 rounded-2xl p-6">
               <div className="text-4xl font-bold text-red-500 mb-2">$48B</div>
               <p className="text-gray-400">Lost to fees annually on $717B in global remittances</p>
             </div>
-            <div className="bg-[#1E2329] border border-gray-800 rounded-2xl p-6">
+            <div className="bg-cyx-card border border-gray-800 rounded-2xl p-6">
               <div className="text-4xl font-bold text-red-500 mb-2">10-15%</div>
               <p className="text-gray-400">Average fees on Africa corridors - the highest in the world</p>
             </div>
-            <div className="bg-[#1E2329] border border-gray-800 rounded-2xl p-6">
+            <div className="bg-cyx-card border border-gray-800 rounded-2xl p-6">
               <div className="text-4xl font-bold text-red-500 mb-2">1.4B</div>
               <p className="text-gray-400">Unbanked people excluded by KYC requirements</p>
             </div>
-            <div className="bg-[#1E2329] border border-gray-800 rounded-2xl p-6">
+            <div className="bg-cyx-card border border-gray-800 rounded-2xl p-6">
               <div className="text-4xl font-bold text-red-500 mb-2">3-5 days</div>
               <p className="text-gray-400">Average wait time for traditional remittance services</p>
             </div>
@@ -76,7 +76,7 @@ export default function About() {
       </section>
 
       {/* Our Solution */}
-      <section className="py-20 bg-[#1E2329]">
+      <section className="py-20 bg-cyx-card">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-white mb-8 text-center">Our Solution</h2>
           <div className="space-y-6">
@@ -121,7 +121,7 @@ export default function About() {
       </section>
 
       {/* Values */}
-      <section className="py-20 bg-[#0B0E11]">
+      <section className="py-20 bg-cyx-bg">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-white mb-8 text-center">Our Values</h2>
           <div className="grid md:grid-cols-3 gap-6">
@@ -157,7 +157,7 @@ export default function About() {
       </section>
 
       {/* CTA */}
-      <section className="py-20 bg-[#1E2329]">
+      <section className="py-20 bg-cyx-card">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold text-white mb-4">Ready to Start?</h2>
           <p className="text-gray-400 mb-8">Join thousands of users sending money home at fair rates.</p>
@@ -179,7 +179,7 @@ export default function About() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 bg-[#0B0E11] border-t border-gray-800">
+      <footer className="py-8 bg-cyx-bg border-t border-gray-800">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Link to="/about" className="inline-block mb-4">
             <img src="/logo.png" alt="CyxTrade" className="h-12 mx-auto" />

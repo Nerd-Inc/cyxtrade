@@ -1,5 +1,39 @@
 @import "tailwindcss";
 
+/* ============================================
+   CyxTrade Design Tokens
+   Colors matched to original design exactly
+   ============================================ */
+
+@theme {
+  /* Brand */
+  --color-cyx-gold: #F59E0B;
+  --color-cyx-gold-light: #FBBF24;
+  --color-cyx-orange: #F97316;
+  --color-cyx-teal: #0D9488;
+  --color-cyx-purple: #8B5CF6;
+
+  /* Surfaces — exact original hex values */
+  --color-cyx-bg: #0B0E11;
+  --color-cyx-card: #1E2329;
+  --color-cyx-card-hover: #2B3139;
+  --color-cyx-elevated: #3C4149;
+
+  /* Text — matches Tailwind gray scale */
+  --color-cyx-text: #FFFFFF;
+  --color-cyx-text-secondary: #9CA3AF;
+  --color-cyx-text-muted: #6B7280;
+
+  /* Borders — matches gray-800 */
+  --color-cyx-border: #1F2937;
+
+  /* Status */
+  --color-cyx-success: #22C55E;
+  --color-cyx-error: #EF4444;
+  --color-cyx-buy: #22C55E;
+  --color-cyx-sell: #F59E0B;
+}
+
 :root {
   --primary: #0D9488;
   --primary-dark: #0F766E;
@@ -12,6 +46,41 @@ html {
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Focus rings for keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--color-cyx-gold);
+  outline-offset: 2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0B0E11;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3C4149;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6B7280;
+}
