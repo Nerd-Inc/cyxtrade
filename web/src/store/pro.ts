@@ -377,7 +377,7 @@ export const useAdsStore = create<AdsState>((set, get) => ({
   fetchMyAds: async () => {
     set({ isLoading: true, error: null })
     try {
-      const res = await fetch(`${API_URL}/pro/ads/my`, {
+      const res = await fetch(`${API_URL}/pro/ads/my/list`, {
         headers: getAuthHeaders()
       })
       const data = await res.json()

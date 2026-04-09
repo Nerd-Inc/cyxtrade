@@ -27,6 +27,10 @@ tronweb-cli generate-address
 # SAVE THESE SECURELY!
 ```
 
+### Wallet addresses
+
+Tron addresses are generated once and retain the same format (`T…`) whether you later connect to mainnet or a testnet (Shasta/Nile). The choice of network happens when the backend sets `TRON_NETWORK` and calls a specific node; there’s no need to regenerate the address every time you switch networks.
+
 **Important:** This wallet will sign transactions on behalf of users. It CANNOT withdraw trader bonds (only smart contract logic controls bonds).
 
 ---

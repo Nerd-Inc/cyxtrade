@@ -117,14 +117,9 @@ function Header() {
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0B0E11]/95 backdrop-blur-md border-b border-gray-800/50' : 'bg-transparent'}`}>
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </div>
-            <span className="text-2xl font-bold text-white tracking-tight">CyxTrade</span>
-          </div>
+          <Link to="/about" className="flex items-center">
+            <img src="/logo.png" alt="CyxTrade" className="h-20" />
+          </Link>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
@@ -396,8 +391,8 @@ function Hero() {
           {/* Stats */}
           <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
             <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold text-green-400">2%</div>
-              <div className="text-gray-400 mt-2">Average Fees</div>
+              <div className="text-4xl md:text-5xl font-bold text-green-400">0%</div>
+              <div className="text-gray-400 mt-2">Sender Fees</div>
             </div>
             <div className="text-center">
               <div className="text-4xl md:text-5xl font-bold text-orange-400">15m</div>
@@ -949,16 +944,18 @@ function HowItWorks() {
 function Download() {
   return (
     <section id="download" className="py-20 relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-green-600 via-green-500 to-orange-500" />
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.1)_1px,transparent_1px)] bg-[size:32px_32px]" />
+      {/* Background Logo */}
+      <div className="absolute inset-0 bg-[#0B0E11]" />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <img src="/logo.png" alt="" className="h-full object-contain opacity-20" />
+      </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
-            Download CyxTrade
+            Download Now
           </h2>
-          <p className="text-xl text-orange-100 max-w-2xl mx-auto mb-10">
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-10">
             Available on iOS, Android, and Web. Start sending money in minutes.
           </p>
 
@@ -992,7 +989,7 @@ function Download() {
             </a>
           </div>
 
-          <p className="text-orange-200">
+          <p className="text-gray-400">
             Or use the{' '}
             <Link to="/login" className="text-white font-semibold underline hover:no-underline">
               web version
@@ -1016,7 +1013,7 @@ function FAQ() {
     },
     {
       question: 'How much does it cost?',
-      answer: "CyxTrade charges no platform fees. You only pay the trader's spread (difference between buy and sell rates), which is typically 2-3%. Compare this to 10-15% at traditional services like Western Union."
+      answer: "Sending money on CyxTrade is completely free — zero fees for senders. Traders pay a small trading fee similar to Binance's fee structure. Compare this to 10-15% that traditional services like Western Union charge senders."
     },
     {
       question: 'Is my money safe?',
@@ -1090,16 +1087,11 @@ function Footer() {
         <div className="grid md:grid-cols-4 gap-10 mb-12">
           {/* Brand */}
           <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-orange-500 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </div>
-              <span className="text-xl font-bold text-white">CyxTrade</span>
-            </div>
+            <Link to="/about" className="flex items-center mb-4">
+              <img src="/logo.png" alt="CyxTrade" className="h-14" />
+            </Link>
             <p className="text-gray-500">
-              P2P fiat exchange for trusted networks. Send money home without the fees.
+              P2P fiat exchange for trusted networks. Zero fees for senders.
             </p>
           </div>
 

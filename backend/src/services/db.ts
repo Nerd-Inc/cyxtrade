@@ -8,7 +8,10 @@ dotenv.config()
 // Create connection pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/cyxtrade',
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.NODE_ENV === 'production' ? {
+    rejectUnauthorized: true,
+    ...(process.env.DATABASE_CA_CERT ? { ca: fs.readFileSync(process.env.DATABASE_CA_CERT, 'utf-8') } : {})
+  } : false,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,

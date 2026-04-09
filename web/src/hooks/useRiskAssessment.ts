@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useAuthStore } from '../store/auth'
 import type { RiskAssessment, RiskWarning } from '../components/ScamWarningModal'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+const API_URL = import.meta.env.VITE_API_URL || '/api'
 
 interface UseRiskAssessmentReturn {
   assessment: RiskAssessment | null

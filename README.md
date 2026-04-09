@@ -467,6 +467,8 @@ cyxtrade exit
 | [BOND_ESCROW.md](docs/BOND_ESCROW.md) | Smart contract escrow design |
 | [UX_DESIGN.md](docs/UX_DESIGN.md) | Interface patterns, onboarding |
 | [EXPANSION_ROADMAP.md](docs/EXPANSION_ROADMAP.md) | Future corridors and growth plan |
+| [RUN_FRONTEND_BACKEND.md](docs/RUN_FRONTEND_BACKEND.md) | Local setup for web frontend + backend API |
+| [ECOSYSTEM_EXPANSION.md](docs/ECOSYSTEM_EXPANSION.md) | Long-term strategy to scale into enterprise ecosystem infrastructure |
 
 ---
 

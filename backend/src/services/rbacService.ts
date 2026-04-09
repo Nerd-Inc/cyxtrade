@@ -227,7 +227,7 @@ export async function assignRole(
   // Verify role exists
   const role = await getRole(roleId)
   if (!role) {
-    throw new AppError(ErrorCode.NOT_FOUND, 'Role not found')
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Role not found')
   }
 
   // Update user
@@ -240,7 +240,7 @@ export async function assignRole(
   )
 
   if (!result) {
-    throw new AppError(ErrorCode.NOT_FOUND, 'User not found')
+    throw new AppError(ErrorCode.USER_NOT_FOUND, 'User not found')
   }
 }
 

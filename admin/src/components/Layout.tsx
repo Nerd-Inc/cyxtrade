@@ -24,7 +24,7 @@ export function Layout() {
       <aside
         style={{
           width: '240px',
-          background: '#1a1a2e',
+          background: '#0B0E11',
           color: '#fff',
           padding: '20px 0',
           display: 'flex',
@@ -32,9 +32,12 @@ export function Layout() {
         }}
       >
         <div style={{ padding: '0 20px', marginBottom: '30px' }}>
-          <h1 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>
-            CyxTrade Admin
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <img src="/logo.png" alt="CyxTrade" style={{ width: '40px', height: '40px' }} />
+            <h1 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, color: '#00a78e' }}>
+              CyxTrade Admin
+            </h1>
+          </div>
         </div>
 
         <nav style={{ flex: 1 }}>
@@ -48,10 +51,10 @@ export function Layout() {
                   display: 'flex',
                   alignItems: 'center',
                   padding: '12px 20px',
-                  color: isActive ? '#fff' : '#aaa',
+                  color: isActive ? '#fff' : '#9CA3AF',
                   textDecoration: 'none',
-                  background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
-                  borderLeft: isActive ? '3px solid #4ade80' : '3px solid transparent',
+                  background: isActive ? 'rgba(0, 167, 142, 0.15)' : 'transparent',
+                  borderLeft: isActive ? '3px solid #00a78e' : '3px solid transparent',
                 }}
               >
                 <span style={{ marginRight: '10px' }}>{item.icon}</span>
@@ -62,7 +65,7 @@ export function Layout() {
         </nav>
 
         <div style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-          <div style={{ fontSize: '14px', color: '#aaa', marginBottom: '10px' }}>
+          <div style={{ fontSize: '14px', color: '#9CA3AF', marginBottom: '10px' }}>
             {user?.displayName || user?.phone}
           </div>
           <button
@@ -70,11 +73,12 @@ export function Layout() {
             style={{
               width: '100%',
               padding: '8px 16px',
-              background: 'rgba(255,255,255,0.1)',
+              background: '#f7941d',
               border: 'none',
               borderRadius: '4px',
               color: '#fff',
               cursor: 'pointer',
+              fontWeight: '600',
             }}
           >
             Logout
@@ -83,7 +87,7 @@ export function Layout() {
       </aside>
 
       {/* Main content */}
-      <main style={{ flex: 1, background: '#f5f5f5', padding: '24px' }}>
+      <main style={{ flex: 1, background: '#1E2329', padding: '24px' }}>
         <Outlet />
       </main>
     </div>

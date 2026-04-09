@@ -284,14 +284,21 @@ export async function requestWithdrawal(
   const fee = Number(assetInfo.withdrawal_fee);
   const totalDebit = amount + fee;
 
-  // Check balance
-  const balance = await getWalletBalance(userId, asset);
-  if (balance.available < totalDebit) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Insufficient balance');
-  }
-
-  // Create pending withdrawal (actual blockchain send happens separately)
+  // Check balance and lock inside same transaction to prevent race conditions
   return transaction(async (client) => {
+    // Lock wallet row to prevent concurrent modifications
+    const walletResult = await client.query(
+      `SELECT * FROM user_wallets WHERE user_id = $1 AND asset = $2 FOR UPDATE`,
+      [userId, asset]
+    );
+
+    const wallet = walletResult.rows[0];
+    const availableBalance = wallet ? Number(wallet.available_balance) : 0;
+
+    if (availableBalance < totalDebit) {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'Insufficient balance');
+    }
+
     // Lock balance
     await client.query(
       `UPDATE user_wallets
@@ -314,8 +321,8 @@ export async function requestWithdrawal(
         asset,
         amount,
         fee,
-        balance.available,
-        balance.available - totalDebit,
+        availableBalance,
+        availableBalance - totalDebit,
         toAddress,
         network,
         `Withdrawal ${amount} ${asset} to ${toAddress}`,
@@ -416,11 +423,8 @@ export async function lockEscrow(
     throw new AppError(ErrorCode.VALIDATION_ERROR, 'Amount must be positive');
   }
 
-  const balance = await getWalletBalance(userId, asset);
-  if (balance.available < amount) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Insufficient balance for escrow');
-  }
-
+  // Balance check is done inside updateBalance() with SELECT FOR UPDATE
+  // to prevent race conditions — no pre-check needed here
   return updateBalance(userId, asset, -amount, amount, 'escrow_lock', {
     referenceType: 'p2p_order',
     referenceId: orderId,

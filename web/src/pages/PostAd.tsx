@@ -15,15 +15,24 @@ const CRYPTO_ASSETS = [
 
 // Fiat currencies
 const FIAT_CURRENCIES = [
-  { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ', color: '#2E7D32' },
-  { code: 'USD', name: 'US Dollar', symbol: '$', color: '#1565C0' },
-  { code: 'EUR', name: 'Euro', symbol: '€', color: '#1565C0' },
-  { code: 'GBP', name: 'British Pound', symbol: '£', color: '#7B1FA2' },
-  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦', color: '#2E7D32' },
-  { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh', color: '#2E7D32' },
-  { code: 'XAF', name: 'CFA Franc', symbol: 'FCFA', color: '#1565C0' },
-  { code: 'INR', name: 'Indian Rupee', symbol: '₹', color: '#FF6F00' },
+  { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ', color: '#2E7D32', country: 'AE' },
+  { code: 'USD', name: 'US Dollar', symbol: '$', color: '#1565C0', country: 'US' },
+  { code: 'EUR', name: 'Euro', symbol: '€', color: '#1565C0', country: 'EU' },
+  { code: 'GBP', name: 'British Pound', symbol: '£', color: '#7B1FA2', country: 'GB' },
+  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦', color: '#2E7D32', country: 'NG' },
+  { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh', color: '#2E7D32', country: 'KE' },
+  { code: 'XAF', name: 'CFA Franc', symbol: 'FCFA', color: '#1565C0', country: 'CM' },
+  { code: 'INR', name: 'Indian Rupee', symbol: '₹', color: '#FF6F00', country: 'IN' },
 ]
+
+// Convert country code to flag emoji
+const getCountryFlag = (countryCode: string): string => {
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char => 127397 + char.charCodeAt(0))
+  return String.fromCodePoint(...codePoints)
+}
 
 // Payment methods
 const PAYMENT_METHODS = [
@@ -346,11 +355,8 @@ export default function PostAd() {
                     </select>
                     <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
                       {selectedFiatData && (
-                        <span
-                          className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                          style={{ backgroundColor: selectedFiatData.color }}
-                        >
-                          {selectedFiatData.symbol.charAt(0)}
+                        <span className="text-lg">
+                          {getCountryFlag(selectedFiatData.country)}
                         </span>
                       )}
                     </div>

@@ -141,12 +141,22 @@ router.get('/', asyncHandler(async (req: AuthRequest, res) => {
 // GET /api/trades/:id - Get trade/order details
 router.get('/:id', asyncHandler(async (req: AuthRequest, res) => {
   const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError(ErrorCode.NOT_AUTHENTICATED);
+  }
   const id = getParam(req.params.id);
 
   const order = await findOrderById(id);
 
   if (!order) {
     throw new AppError(ErrorCode.ORDER_NOT_FOUND);
+  }
+
+  // Authorization: verify user is a participant in this trade
+  const trader = await findTraderByUserId(userId);
+  const isParticipant = order.user_id === userId || (trader && order.trader_id === trader.id);
+  if (!isParticipant) {
+    throw new AppError(ErrorCode.UNAUTHORIZED, 'Not authorized to view this trade');
   }
 
   // Get trader payment methods
@@ -228,7 +238,7 @@ router.put('/:id/accept', traderMiddleware, asyncHandler(async (req: AuthRequest
 router.put('/:id/decline', traderMiddleware, asyncHandler(async (req: AuthRequest, res) => {
   const id = getParam(req.params.id);
   const userId = req.user?.id;
-  const { reason } = req.body;
+  const { reason, claimType } = req.body;
 
   const trader = await findTraderByUserId(userId!);
   if (!trader) {
@@ -308,7 +318,7 @@ router.put('/:id/complete', asyncHandler(async (req: AuthRequest, res) => {
 router.put('/:id/cancel', asyncHandler(async (req: AuthRequest, res) => {
   const id = getParam(req.params.id);
   const userId = req.user?.id;
-  const { reason } = req.body;
+  const { reason, claimType } = req.body;
 
   if (!userId) {
     throw new AppError(ErrorCode.NOT_AUTHENTICATED);
@@ -328,17 +338,21 @@ router.put('/:id/cancel', asyncHandler(async (req: AuthRequest, res) => {
 router.post('/:id/dispute', asyncHandler(async (req: AuthRequest, res) => {
   const id = getParam(req.params.id);
   const userId = req.user?.id;
-  const { reason } = req.body;
+  const { reason, claimType } = req.body;
 
   if (!userId) {
     throw new AppError(ErrorCode.NOT_AUTHENTICATED);
+  }
+
+  if (!claimType) {
+    throw new AppError(ErrorCode.MISSING_FIELD, 'Please provide a claim type', { field: 'claimType' });
   }
 
   if (!reason) {
     throw new AppError(ErrorCode.MISSING_FIELD, 'Please provide a reason for the dispute', { field: 'reason' });
   }
 
-  const order = await openDispute(id, userId, reason);
+  const order = await openDispute(id, userId, claimType, reason);
 
   sendSuccess(res, {
     orderId: order.id,

@@ -894,15 +894,54 @@ export async function openDispute(
  * Expire old pending orders
  */
 export async function expireOrders(): Promise<number> {
-  const result = await query<{ id: string }>(
+  // Get and mark expired orders, then refund any locked escrow
+  const expiredOrders = await query<{
+    id: string; mode: string; escrow_amount: string | null;
+    escrow_asset: string | null; trader_id: string;
+    escrow_released_at: string | null; type: string;
+    user_id: string;
+  }>(
     `UPDATE orders
      SET status = 'expired'
      WHERE status = 'pending'
        AND expires_at < NOW()
-     RETURNING id`
+     RETURNING id, mode, escrow_amount, escrow_asset, trader_id, escrow_released_at, type, user_id`
   )
 
-  return result.length
+  // Refund escrow for Pro orders that had crypto locked
+  for (const order of expiredOrders) {
+    const escrowAmount = order.escrow_amount ? Number(order.escrow_amount) : 0;
+    if (order.mode === 'pro' && escrowAmount > 0 && order.escrow_asset && !order.escrow_released_at) {
+      try {
+        // Determine who had escrow locked (seller)
+        const sellerId = order.type === 'sell' ? order.trader_id : order.user_id;
+        await transaction(async (client) => {
+          await client.query(
+            `UPDATE user_wallets
+             SET locked_balance = locked_balance - $1,
+                 available_balance = available_balance + $1,
+                 updated_at = NOW()
+             WHERE user_id = $2 AND asset = $3`,
+            [escrowAmount, sellerId, order.escrow_asset]
+          );
+
+          // Create refund transaction record
+          await client.query(
+            `INSERT INTO wallet_transactions (
+              user_id, asset, type, amount, fee, status,
+              reference_type, reference_id, notes
+            ) VALUES ($1, $2, 'escrow_release', $3, 0, 'completed', 'order', $4, $5)`,
+            [sellerId, order.escrow_asset, escrowAmount, order.id,
+             `Escrow refunded for expired order ${order.id}`]
+          );
+        });
+      } catch (err) {
+        console.error(`Failed to refund escrow for expired order ${order.id}:`, err);
+      }
+    }
+  }
+
+  return expiredOrders.length
 }
 
 // ============================================================================
@@ -919,7 +958,8 @@ export async function getUserOrderStats(userId: string, mode?: Mode): Promise<{
   disputed: number
   totalVolume: number
 }> {
-  const modeFilter = mode ? ` AND mode = '${mode}'` : ''
+  const params: (string)[] = [userId]
+  const modeFilter = mode ? ` AND mode = $${params.push(mode)}` : ''
 
   const stats = await queryOne<{
     total: string
@@ -936,7 +976,7 @@ export async function getUserOrderStats(userId: string, mode?: Mode): Promise<{
        COALESCE(SUM(send_amount) FILTER (WHERE status = 'completed'), 0) as total_volume
      FROM orders
      WHERE user_id = $1 ${modeFilter}`,
-    [userId]
+    params
   )
 
   return {
@@ -959,7 +999,8 @@ export async function getTraderOrderStats(traderId: string, mode?: Mode): Promis
   totalVolume: number
   avgCompletionTime: number | null
 }> {
-  const modeFilter = mode ? ` AND mode = '${mode}'` : ''
+  const params: (string)[] = [traderId]
+  const modeFilter = mode ? ` AND mode = $${params.push(mode)}` : ''
 
   const stats = await queryOne<{
     total: string
@@ -978,7 +1019,7 @@ export async function getTraderOrderStats(traderId: string, mode?: Mode): Promis
        AVG(EXTRACT(EPOCH FROM (completed_at - created_at)) / 60) FILTER (WHERE status = 'completed') as avg_completion_time
      FROM orders
      WHERE trader_id = $1 ${modeFilter}`,
-    [traderId]
+    params
   )
 
   return {

@@ -37,21 +37,58 @@ export function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#1a1a2e',
+        background: '#0B0E11',
+        position: 'relative',
+        overflow: 'hidden',
       }}
     >
+      {/* Watermark Logo */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          pointerEvents: 'none',
+        }}
+      >
+        <img
+          src="/logo.png"
+          alt=""
+          style={{
+            width: '500px',
+            height: '500px',
+            opacity: 0.03,
+            filter: 'grayscale(100%)',
+          }}
+        />
+      </div>
+
       <div
         style={{
           width: '100%',
           maxWidth: '400px',
           padding: '40px',
-          background: '#fff',
+          background: '#1E2329',
           borderRadius: '8px',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          border: '1px solid #374151',
+          position: 'relative',
+          zIndex: 10,
         }}
       >
-        <h1 style={{ textAlign: 'center', marginBottom: '8px' }}>CyxTrade Admin</h1>
-        <p style={{ textAlign: 'center', color: '#666', marginBottom: '32px' }}>
+        {/* Logo Header */}
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <img
+            src="/logo.png"
+            alt="CyxTrade"
+            style={{ width: '128px', height: '128px', margin: '0 auto 20px' }}
+          />
+        </div>
+        <h1 style={{ textAlign: 'center', marginBottom: '8px', color: '#00a78e' }}>
+          CyxTrade Admin
+        </h1>
+        <p style={{ textAlign: 'center', color: '#9CA3AF', marginBottom: '32px' }}>
           Sign in with your admin phone number
         </p>
 
@@ -59,11 +96,12 @@ export function LoginPage() {
           <div
             style={{
               padding: '12px',
-              background: '#fee',
-              border: '1px solid #fcc',
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
               borderRadius: '4px',
-              color: '#c00',
+              color: '#f87171',
               marginBottom: '16px',
+              cursor: 'pointer',
             }}
             onClick={clearError}
           >
@@ -73,7 +111,7 @@ export function LoginPage() {
 
         {step === 'phone' ? (
           <form onSubmit={handleSendOtp}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#D1D5DB' }}>
               Phone Number
             </label>
             <input
@@ -84,11 +122,13 @@ export function LoginPage() {
               style={{
                 width: '100%',
                 padding: '12px',
-                border: '1px solid #ddd',
+                border: '1px solid #374151',
                 borderRadius: '4px',
                 fontSize: '16px',
                 marginBottom: '16px',
                 boxSizing: 'border-box',
+                background: '#2B3139',
+                color: '#fff',
               }}
               required
             />
@@ -98,7 +138,7 @@ export function LoginPage() {
               style={{
                 width: '100%',
                 padding: '12px',
-                background: '#4ade80',
+                background: '#f7941d',
                 border: 'none',
                 borderRadius: '4px',
                 color: '#fff',
@@ -113,10 +153,10 @@ export function LoginPage() {
           </form>
         ) : (
           <form onSubmit={handleVerifyOtp}>
-            <p style={{ marginBottom: '16px', color: '#666' }}>
-              Enter the OTP sent to <strong>{phone}</strong>
+            <p style={{ marginBottom: '16px', color: '#9CA3AF' }}>
+              Enter the OTP sent to <strong style={{ color: '#00a78e' }}>{phone}</strong>
             </p>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#D1D5DB' }}>
               OTP Code
             </label>
             <input
@@ -128,13 +168,15 @@ export function LoginPage() {
               style={{
                 width: '100%',
                 padding: '12px',
-                border: '1px solid #ddd',
+                border: '1px solid #374151',
                 borderRadius: '4px',
                 fontSize: '24px',
                 textAlign: 'center',
                 letterSpacing: '8px',
                 marginBottom: '16px',
                 boxSizing: 'border-box',
+                background: '#2B3139',
+                color: '#fff',
               }}
               required
             />
@@ -144,7 +186,7 @@ export function LoginPage() {
               style={{
                 width: '100%',
                 padding: '12px',
-                background: '#4ade80',
+                background: '#f7941d',
                 border: 'none',
                 borderRadius: '4px',
                 color: '#fff',
@@ -164,7 +206,7 @@ export function LoginPage() {
                 padding: '12px',
                 background: 'transparent',
                 border: 'none',
-                color: '#666',
+                color: '#9CA3AF',
                 marginTop: '8px',
                 cursor: 'pointer',
               }}

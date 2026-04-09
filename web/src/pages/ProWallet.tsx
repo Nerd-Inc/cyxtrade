@@ -24,17 +24,13 @@ interface AssetData {
   color: string
 }
 
-// Mock asset data matching the design
-const mockAssets: AssetData[] = [
-  { symbol: 'KAITO', name: 'Kaito', icon: 'K', amount: 2465.50175915, usdValue: 878.70, price: 0.36, costPrice: 1.53, todayPnl: 5.42, color: 'bg-blue-500' },
-  { symbol: 'MUBARAK', name: 'Mubarak', icon: 'M', amount: 12010.67914494, usdValue: 170.07, price: 0.01, costPrice: 0.05, todayPnl: -7.21, color: 'bg-orange-500' },
-  { symbol: 'SHELL', name: 'MyShell', icon: 'S', amount: 3411.49256198, usdValue: 101.66, price: 0.03, costPrice: 0.22, todayPnl: -6.14, color: 'bg-green-500' },
-  { symbol: 'BTC', name: 'Bitcoin', icon: 'B', amount: 0.00138759, usdValue: 97.43, price: 70218.65, costPrice: 44490.66, todayPnl: -1.36, color: 'bg-orange-400' },
-  { symbol: 'USDT', name: 'TetherUS', icon: 'T', amount: 84.31185832, usdValue: 84.32, price: 1.00, costPrice: 0, todayPnl: 0, color: 'bg-emerald-500' },
-  { symbol: 'SOL', name: 'Solana', icon: 'S', amount: 0.68749148, usdValue: 60.99, price: 88.72, costPrice: 169.11, todayPnl: -0.89, color: 'bg-purple-500' },
-  { symbol: 'HUMA', name: 'Huma', icon: 'H', amount: 2870.38171439, usdValue: 50.52, price: 0.02, costPrice: 0.09, todayPnl: -0.92, color: 'bg-cyan-500' },
-  { symbol: 'ETH', name: 'Ethereum', icon: 'E', amount: 0.02352165, usdValue: 50.25, price: 2140.62, costPrice: 2869.17, todayPnl: -1.44, color: 'bg-indigo-500' },
-]
+const ASSET_COLORS: Record<string, string> = {
+  USDT: 'bg-emerald-500',
+  BTC: 'bg-orange-400',
+  ETH: 'bg-indigo-500',
+  TRX: 'bg-red-500',
+  SOL: 'bg-purple-500',
+}
 
 export default function ProWallet() {
   const { logout } = useAuthStore()
@@ -85,12 +81,28 @@ export default function ProWallet() {
     navigate('/login')
   }
 
-  // Calculate totals
-  const totalUsdValue = mockAssets.reduce((sum, a) => sum + a.usdValue, 0)
-  const totalBtcValue = totalUsdValue / 70218.65 // BTC price
-  const totalEthValue = totalUsdValue / 2140.62 // ETH price
-  const todayTotalPnl = mockAssets.reduce((sum, a) => sum + a.todayPnl, 0)
-  const todayPnlPercent = (todayTotalPnl / totalUsdValue) * 100
+  // Derive asset list from real wallet balances
+  const walletAssets: AssetData[] = balances.map(b => {
+    const assetInfo = assets.find(a => a.symbol === b.asset)
+    return {
+      symbol: b.asset,
+      name: assetInfo?.name || b.asset,
+      icon: b.asset[0],
+      amount: b.total,
+      usdValue: b.total, // Approximate: USDT≈1:1, others need price feed
+      price: b.asset === 'USDT' ? 1 : 0,
+      costPrice: 0,
+      todayPnl: 0,
+      color: ASSET_COLORS[b.asset] || 'bg-gray-500',
+    }
+  })
+
+  // Calculate totals from real balances
+  const totalUsdValue = walletAssets.reduce((sum, a) => sum + a.usdValue, 0)
+  const totalBtcValue = totalUsdValue > 0 ? totalUsdValue / 70000 : 0
+  const totalEthValue = totalUsdValue > 0 ? totalUsdValue / 2500 : 0
+  const todayTotalPnl = 0
+  const todayPnlPercent = 0
 
   const getBalanceDisplay = () => {
     if (balanceHidden) return '********'
@@ -107,7 +119,7 @@ export default function ProWallet() {
   }
 
   // Filter and sort assets
-  const filteredAssets = mockAssets
+  const filteredAssets = walletAssets
     .filter(a => {
       if (hideSmallAssets && a.usdValue < 1) return false
       if (searchQuery && !a.symbol.toLowerCase().includes(searchQuery.toLowerCase()) && !a.name.toLowerCase().includes(searchQuery.toLowerCase())) return false

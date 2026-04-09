@@ -1,6 +1,11 @@
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 
+const JWT_SECRET: string = process.env.JWT_SECRET || '';
+if (!JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable is required');
+}
+
 interface AuthenticatedSocket extends Socket {
   user?: {
     id: string;
@@ -19,7 +24,7 @@ export function setupSocketHandlers(io: Server) {
     }
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret') as {
+      const decoded = jwt.verify(token, JWT_SECRET) as {
         id: string;
         phone: string;
         isTrader: boolean;

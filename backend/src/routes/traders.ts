@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import crypto from 'crypto';
+import { queryOne } from '../services/db';
 import { AuthRequest, authMiddleware, traderMiddleware } from '../middleware/auth';
 import {
   findTraderById,
@@ -251,10 +252,6 @@ router.post('/register', authMiddleware, asyncHandler(async (req: AuthRequest, r
   // Check if already a trader
   const existing = await findTraderByUserId(userId);
   if (existing) {
-    if (existing.status !== 'active') {
-      await approveTrader(existing.id, userId);
-    }
-
     let addressForResponse = existing.wallet_address;
     if (!addressForResponse) {
       addressForResponse = generateTronAddress();
@@ -262,9 +259,10 @@ router.post('/register', authMiddleware, asyncHandler(async (req: AuthRequest, r
     }
 
     sendSuccess(res, {
-      message: 'Already registered',
+      message: existing.status === 'active' ? 'Already registered' : 'Application pending admin approval',
       traderId: existing.id,
       address: addressForResponse,
+      status: existing.status,
       isNew: false
     });
     return;
@@ -277,12 +275,12 @@ router.post('/register', authMiddleware, asyncHandler(async (req: AuthRequest, r
   const defaultCorridor: Corridor = { from: 'AED', to: 'XAF', buyRate: 162, sellRate: 159 };
   const createdTrader = await createTraderApplication(userId, [defaultCorridor]);
   await updateTraderWalletAddress(createdTrader.id, address);
-  await approveTrader(createdTrader.id, userId);
 
   sendSuccess(res, {
-    message: 'Registration successful',
+    message: 'Registration submitted, pending admin approval',
     traderId: createdTrader.id,
     address: address,
+    status: 'pending',
     isNew: true,
     instructions: {
       minDeposit: '100 USDT',
@@ -589,9 +587,26 @@ router.delete('/me/payment-methods/:id/verify', authMiddleware, traderMiddleware
   sendSuccess(res, { message: 'Verification cancelled' });
 }));
 
-// GET /api/traders/:id/payment-details - Get trader's payment details for a trade (public for trade parties)
+// GET /api/traders/:id/payment-details - Get trader's payment details for a trade (trade parties only)
 router.get('/:id/payment-details', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new AppError(ErrorCode.NOT_AUTHENTICATED);
+  }
   const traderId = getParam(req.params.id);
+
+  // Verify requester has an active trade with this trader
+  const activeTrade = await queryOne<{ id: string }>(
+    `SELECT id FROM orders
+     WHERE trader_id = $1
+       AND user_id = $2
+       AND status IN ('pending', 'accepted', 'paid', 'delivering', 'releasing', 'released')
+     LIMIT 1`,
+    [traderId, userId]
+  );
+  if (!activeTrade) {
+    throw new AppError(ErrorCode.UNAUTHORIZED, 'You must have an active trade with this trader to view payment details');
+  }
 
   // Get trader's primary payment method
   const method = await paymentMethodService.getPrimaryPaymentMethod(traderId);

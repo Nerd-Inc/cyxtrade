@@ -47,7 +47,7 @@ interface AuthState {
 
   // Other actions
   updateProfile: (data: { displayName?: string; avatarUrl?: string | null }) => Promise<boolean>
-  becomeTrader: () => Promise<{ address: string } | null>
+  becomeTrader: () => Promise<{ address: string; status?: string } | null>
   logout: () => Promise<void>
   forgetDeviceIdentity: () => Promise<void>
   clearError: () => void
@@ -408,7 +408,7 @@ export const useAuthStore = create<AuthState>()(
               traderAddress: result.data.address
             } : null)
           }))
-          return { address: result.data.address }
+          return { address: result.data.address, status: result.data.status }
         } catch (err) {
           set({ isLoading: false, error: (err as Error).message })
           return null

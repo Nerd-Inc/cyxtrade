@@ -59,6 +59,15 @@ const signatureRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Rate limiting for TOTP verification (5 attempts per 5 minutes per IP)
+const totpRateLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 5,
+  message: { error: 'Too many TOTP verification attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const CHALLENGE_EXPIRY_SECONDS = 300; // 5 minutes
 
 // Generate cryptographically secure OTP
@@ -96,7 +105,11 @@ router.post('/otp', otpRateLimiter, asyncHandler(async (req, res) => {
     console.log(`📱 OTP for ${phone}: ${otp}`);
   }
 
-  sendSuccess(res, { message: 'OTP sent', phone });
+  sendSuccess(res, {
+    message: 'OTP sent',
+    phone,
+    ...(process.env.NODE_ENV !== 'production' && { devOtp: otp })
+  });
 }));
 
 // POST /api/auth/verify - Verify OTP and get JWT
@@ -127,7 +140,7 @@ router.post('/verify', verifyRateLimiter, asyncHandler(async (req, res) => {
   }
 
   // Dev mode: accept "123456" as a bypass OTP
-  const isDevBypass = process.env.NODE_ENV !== 'production' && otp === '123456';
+  const isDevBypass = process.env.DEV_OTP_BYPASS === 'true' && otp === '123456';
 
   // Constant-time comparison to prevent timing attacks
   const isValid = isDevBypass || crypto.timingSafeEqual(
@@ -146,7 +159,8 @@ router.post('/verify', verifyRateLimiter, asyncHandler(async (req, res) => {
   await redisClient.del(otpKey);
   await redisClient.del(attemptsKey);
 
-  const isAdmin = (process.env.ADMIN_PHONE_NUMBERS || '').includes(phone);
+  const adminPhones = (process.env.ADMIN_PHONE_NUMBERS || '').split(',').map(p => p.trim()).filter(Boolean);
+  const isAdmin = adminPhones.includes(phone);
 
   let user: any;
   let trader: any = null;
@@ -240,15 +254,23 @@ router.post('/refresh', asyncHandler(async (req, res) => {
       }
     }
 
-    // Generate new token
+    // Re-fetch user from DB to get fresh claims (prevents stale privileges)
+    const user = await findUserById(decoded.id);
+    if (!user) {
+      throw new AppError(ErrorCode.UNAUTHORIZED, 'User account not found');
+    }
+    const trader = await findTraderByUserId(decoded.id);
+    const isTrader = trader?.status === 'active';
+
+    // Generate new token with fresh claims
     const newTokenId = crypto.randomUUID();
     const newToken = jwt.sign(
       {
         jti: newTokenId,
         id: decoded.id,
-        phone: decoded.phone,
-        isTrader: decoded.isTrader,
-        isAdmin: decoded.isAdmin
+        phone: user.phone || decoded.phone,
+        isTrader,
+        isAdmin: user.is_admin || false
       },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions
@@ -473,7 +495,7 @@ router.post('/verify-signature', signatureRateLimiter, asyncHandler(async (req, 
 }));
 
 // POST /api/auth/verify-totp - Complete login with TOTP verification
-router.post('/verify-totp', asyncHandler(async (req, res) => {
+router.post('/verify-totp', totpRateLimiter, asyncHandler(async (req, res) => {
   const { partialToken, code } = req.body;
 
   if (!partialToken) {

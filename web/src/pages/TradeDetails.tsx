@@ -77,8 +77,8 @@ export default function TradeDetails() {
 
   if (isLoading || !currentTrade) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-teal-600 border-t-transparent" />
+      <div className="min-h-screen bg-[#0B0E11] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-yellow-500 border-t-transparent" />
       </div>
     )
   }
@@ -89,18 +89,18 @@ export default function TradeDetails() {
   const isUser = trade.userId === user?.id
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-[#0B0E11]">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <header className="bg-[#1E2329] border-b border-gray-800 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
-            <Link to="/app/history" className="text-gray-500 hover:text-gray-700 dark:text-gray-400">
+            <Link to="/app/history" className="text-gray-400 hover:text-white transition">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </Link>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Trade Details</h1>
+              <h1 className="text-xl font-bold text-white">Trade Details</h1>
               <p className="text-sm text-gray-500">#{trade.id.substring(0, 8).toUpperCase()}</p>
             </div>
           </div>
@@ -109,38 +109,38 @@ export default function TradeDetails() {
 
       <main className="max-w-2xl mx-auto px-4 py-6">
         {error && (
-          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-            <p className="text-red-600 dark:text-red-400">{error}</p>
-            <button onClick={clearError} className="text-red-700 underline text-sm mt-1">Dismiss</button>
+          <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+            <p className="text-red-400">{error}</p>
+            <button onClick={clearError} className="text-red-500 hover:text-red-400 underline text-sm mt-1">Dismiss</button>
           </div>
         )}
 
         {/* Status Banner */}
-        <div className={`mb-6 p-4 rounded-xl border ${
-          statusInfo.color === 'green' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' :
-          statusInfo.color === 'blue' ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' :
-          statusInfo.color === 'purple' ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800' :
-          statusInfo.color === 'yellow' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800' :
-          statusInfo.color === 'red' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' :
-          'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+        <div className={`mb-6 p-4 rounded-lg border ${
+          statusInfo.color === 'green' ? 'bg-green-500/10 border-green-500/30' :
+          statusInfo.color === 'blue' ? 'bg-blue-500/10 border-blue-500/30' :
+          statusInfo.color === 'purple' ? 'bg-purple-500/10 border-purple-500/30' :
+          statusInfo.color === 'yellow' ? 'bg-yellow-500/10 border-yellow-500/30' :
+          statusInfo.color === 'red' ? 'bg-red-500/10 border-red-500/30' :
+          'bg-[#1E2329] border-gray-800'
         }`}>
           <h2 className={`font-semibold ${
-            statusInfo.color === 'green' ? 'text-green-700 dark:text-green-400' :
-            statusInfo.color === 'blue' ? 'text-blue-700 dark:text-blue-400' :
-            statusInfo.color === 'purple' ? 'text-purple-700 dark:text-purple-400' :
-            statusInfo.color === 'yellow' ? 'text-yellow-700 dark:text-yellow-400' :
-            statusInfo.color === 'red' ? 'text-red-700 dark:text-red-400' :
-            'text-gray-700 dark:text-gray-400'
+            statusInfo.color === 'green' ? 'text-green-400' :
+            statusInfo.color === 'blue' ? 'text-blue-400' :
+            statusInfo.color === 'purple' ? 'text-purple-400' :
+            statusInfo.color === 'yellow' ? 'text-yellow-400' :
+            statusInfo.color === 'red' ? 'text-red-400' :
+            'text-gray-400'
           }`}>
             {statusInfo.title}
           </h2>
           <p className={`text-sm ${
-            statusInfo.color === 'green' ? 'text-green-600 dark:text-green-300' :
-            statusInfo.color === 'blue' ? 'text-blue-600 dark:text-blue-300' :
-            statusInfo.color === 'purple' ? 'text-purple-600 dark:text-purple-300' :
-            statusInfo.color === 'yellow' ? 'text-yellow-600 dark:text-yellow-300' :
-            statusInfo.color === 'red' ? 'text-red-600 dark:text-red-300' :
-            'text-gray-600 dark:text-gray-400'
+            statusInfo.color === 'green' ? 'text-green-500/80' :
+            statusInfo.color === 'blue' ? 'text-blue-500/80' :
+            statusInfo.color === 'purple' ? 'text-purple-500/80' :
+            statusInfo.color === 'yellow' ? 'text-yellow-500/80' :
+            statusInfo.color === 'red' ? 'text-red-500/80' :
+            'text-gray-500'
           }`}>
             {statusInfo.description}
           </p>
@@ -148,14 +148,14 @@ export default function TradeDetails() {
 
         {/* Progress Steps */}
         {!['disputed', 'cancelled'].includes(trade.status) && (
-          <div className="mb-6">
+          <div className="mb-6 bg-[#1E2329] rounded-lg border border-gray-800 p-4">
             <div className="flex items-center justify-between">
               {STATUS_STEPS.map((step, i) => (
                 <div key={step} className="flex items-center flex-1">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     i <= currentStepIndex
-                      ? 'bg-teal-600 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
+                      ? 'bg-yellow-500 text-black'
+                      : 'bg-[#2B3139] text-gray-500'
                   }`}>
                     {i < currentStepIndex ? (
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -165,13 +165,13 @@ export default function TradeDetails() {
                   </div>
                   {i < STATUS_STEPS.length - 1 && (
                     <div className={`flex-1 h-1 mx-2 ${
-                      i < currentStepIndex ? 'bg-teal-600' : 'bg-gray-200 dark:bg-gray-700'
+                      i < currentStepIndex ? 'bg-yellow-500' : 'bg-[#2B3139]'
                     }`} />
                   )}
                 </div>
               ))}
             </div>
-            <div className="flex justify-between mt-2 text-xs text-gray-500">
+            <div className="flex justify-between mt-3 text-xs text-gray-500">
               <span>Pending</span>
               <span>Accepted</span>
               <span>Paid</span>
@@ -181,34 +181,34 @@ export default function TradeDetails() {
         )}
 
         {/* Trade Summary */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 mb-6 overflow-hidden">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-            <h3 className="font-semibold text-gray-900 dark:text-white">Transfer Summary</h3>
+        <div className="bg-[#1E2329] rounded-lg border border-gray-800 mb-6 overflow-hidden">
+          <div className="p-4 border-b border-gray-800 bg-[#2B3139]">
+            <h3 className="font-semibold text-white">Transfer Summary</h3>
           </div>
           <div className="p-4 space-y-4">
             <div className="flex justify-between">
               <span className="text-gray-500">You send</span>
-              <span className="font-medium text-gray-900 dark:text-white">
+              <span className="font-medium text-white">
                 {trade.sendAmount.toLocaleString()} {trade.sendCurrency}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Recipient gets</span>
-              <span className="font-medium text-teal-600">
+              <span className="font-medium text-yellow-500">
                 {trade.receiveAmount.toLocaleString()} {trade.receiveCurrency}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Exchange rate</span>
-              <span className="font-medium text-gray-900 dark:text-white">
+              <span className="font-medium text-white">
                 1 {trade.sendCurrency} = {trade.exchangeRate} {trade.receiveCurrency}
               </span>
             </div>
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <div className="border-t border-gray-800 pt-4">
               <div className="flex justify-between">
                 <span className="text-gray-500">Recipient</span>
                 <div className="text-right">
-                  <p className="font-medium text-gray-900 dark:text-white">{trade.recipientName}</p>
+                  <p className="font-medium text-white">{trade.recipientName}</p>
                   <p className="text-sm text-gray-500">{trade.recipientPhone}</p>
                 </div>
               </div>
@@ -216,7 +216,7 @@ export default function TradeDetails() {
             {trade.traderName && (
               <div className="flex justify-between">
                 <span className="text-gray-500">Trader</span>
-                <span className="font-medium text-gray-900 dark:text-white">{trade.traderName}</span>
+                <span className="font-medium text-white">{trade.traderName}</span>
               </div>
             )}
           </div>
@@ -224,17 +224,17 @@ export default function TradeDetails() {
 
         {/* Payment Details (show when accepted) */}
         {trade.status === 'accepted' && isUser && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 mb-6 p-4">
-            <h3 className="font-semibold text-blue-700 dark:text-blue-300 mb-3">Payment Instructions</h3>
+          <div className="bg-yellow-500/10 rounded-lg border border-yellow-500/30 mb-6 p-4">
+            <h3 className="font-semibold text-yellow-400 mb-3">Payment Instructions</h3>
             <div className="space-y-3 text-sm">
               <div>
-                <p className="text-blue-600 dark:text-blue-400">Bank Transfer</p>
-                <p className="font-medium text-blue-800 dark:text-blue-200">UBA Bank Cameroon</p>
-                <p className="font-mono text-blue-800 dark:text-blue-200">1234567890</p>
+                <p className="text-yellow-500/80">Bank Transfer</p>
+                <p className="font-medium text-white">UBA Bank Cameroon</p>
+                <p className="font-mono text-white">1234567890</p>
               </div>
-              <div className="pt-3 border-t border-blue-200 dark:border-blue-700">
-                <p className="text-blue-600 dark:text-blue-400">Amount to send</p>
-                <p className="text-xl font-bold text-blue-800 dark:text-blue-200">
+              <div className="pt-3 border-t border-yellow-500/20">
+                <p className="text-yellow-500/80">Amount to send</p>
+                <p className="text-xl font-bold text-yellow-400">
                   {trade.sendAmount.toLocaleString()} {trade.sendCurrency}
                 </p>
               </div>
@@ -247,7 +247,7 @@ export default function TradeDetails() {
           {trade.status === 'accepted' && isUser && (
             <button
               onClick={() => setShowPaymentModal(true)}
-              className="w-full py-3 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 transition"
+              className="w-full py-3 bg-yellow-500 text-black rounded-lg font-semibold hover:bg-yellow-400 transition"
             >
               I've Made the Payment
             </button>
@@ -257,7 +257,7 @@ export default function TradeDetails() {
             <button
               onClick={handleCancel}
               disabled={submitting}
-              className="w-full py-3 border border-red-300 text-red-600 rounded-xl font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 transition disabled:opacity-50"
+              className="w-full py-3 border border-red-500/50 text-red-400 rounded-lg font-semibold hover:bg-red-500/10 transition disabled:opacity-50"
             >
               {submitting ? 'Cancelling...' : 'Cancel Trade'}
             </button>
@@ -265,16 +265,16 @@ export default function TradeDetails() {
 
           {trade.status === 'completed' && (
             <Link
-              to="/app/send"
-              className="block w-full py-3 bg-teal-600 text-white rounded-xl font-semibold text-center hover:bg-teal-700 transition"
+              to="/app"
+              className="block w-full py-3 bg-green-500 text-white rounded-lg font-semibold text-center hover:bg-green-600 transition"
             >
-              Send Another Transfer
+              Start Another Trade
             </Link>
           )}
 
           <Link
             to={`/app/chat/${trade.id}`}
-            className="block w-full py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+            className="block w-full py-3 border border-gray-700 text-gray-300 rounded-lg font-semibold text-center hover:bg-[#2B3139] transition"
           >
             Chat with Trader
           </Link>
@@ -282,7 +282,7 @@ export default function TradeDetails() {
           {['paid', 'accepted'].includes(trade.status) && isUser && (
             <Link
               to={`/app/dispute/${trade.id}`}
-              className="block w-full py-3 text-red-600 text-center text-sm hover:underline"
+              className="block w-full py-3 text-red-400 text-center text-sm hover:text-red-300 transition"
             >
               Open Dispute
             </Link>
@@ -290,8 +290,8 @@ export default function TradeDetails() {
         </div>
 
         {/* Timeline */}
-        <div className="mt-8">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Activity</h3>
+        <div className="mt-8 bg-[#1E2329] rounded-lg border border-gray-800 p-4">
+          <h3 className="font-semibold text-white mb-4">Activity</h3>
           <div className="space-y-4">
             <TimelineItem
               time={trade.createdAt}
@@ -325,12 +325,12 @@ export default function TradeDetails() {
 
       {/* Payment Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-[#1E2329] rounded-lg border border-gray-800 max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-white mb-4">
               Confirm Payment
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-gray-400 mb-4">
               Enter your payment reference or transaction ID (optional)
             </p>
             <input
@@ -338,19 +338,19 @@ export default function TradeDetails() {
               value={paymentRef}
               onChange={(e) => setPaymentRef(e.target.value)}
               placeholder="e.g., TXN123456789"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent mb-4"
+              className="w-full px-4 py-3 border border-gray-700 rounded-lg bg-[#2B3139] text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 transition mb-4"
             />
             <div className="flex gap-3">
               <button
                 onClick={() => setShowPaymentModal(false)}
-                className="flex-1 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                className="flex-1 py-3 border border-gray-700 text-gray-300 rounded-lg hover:bg-[#2B3139] transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleMarkPaid}
                 disabled={submitting}
-                className="flex-1 py-3 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition disabled:opacity-50"
+                className="flex-1 py-3 bg-yellow-500 text-black font-medium rounded-lg hover:bg-yellow-400 transition disabled:opacity-50"
               >
                 {submitting ? 'Confirming...' : 'Confirm Payment'}
               </button>
@@ -370,13 +370,13 @@ function TimelineItem({ time, title, description }: { time: string; title: strin
   return (
     <div className="flex gap-4">
       <div className="flex flex-col items-center">
-        <div className="w-3 h-3 bg-teal-600 rounded-full" />
-        <div className="w-0.5 flex-1 bg-gray-200 dark:bg-gray-700" />
+        <div className="w-3 h-3 bg-yellow-500 rounded-full" />
+        <div className="w-0.5 flex-1 bg-gray-700" />
       </div>
       <div className="pb-4">
-        <p className="font-medium text-gray-900 dark:text-white">{title}</p>
+        <p className="font-medium text-white">{title}</p>
         <p className="text-sm text-gray-500">{description}</p>
-        <p className="text-xs text-gray-400 mt-1">{dateStr} at {timeStr}</p>
+        <p className="text-xs text-gray-600 mt-1">{dateStr} at {timeStr}</p>
       </div>
     </div>
   )

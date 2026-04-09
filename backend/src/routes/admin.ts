@@ -25,6 +25,9 @@ import {
 import { getAllRoles, getAdminUsers, assignRole, removeRole } from '../services/rbacService';
 
 const router = Router();
+// Helper to safely extract string params
+const getParam = (val: string | string[] | undefined): string =>
+  Array.isArray(val) ? val[0] : (val ?? "");
 
 // Apply admin middleware to all routes
 router.use(adminMiddleware);
@@ -176,7 +179,7 @@ router.put('/traders/:id/approve', roleMiddleware('traders', 'approve'), asyncHa
   }
 
   // Log the action
-  await logTraderApproval(adminId, id, reason, req.ip);
+  await logTraderApproval(adminId, id, reason, req.ip || 'unknown');
 
   sendSuccess(res, {
     id: trader.id,
@@ -198,7 +201,7 @@ router.put('/traders/:id/reject', roleMiddleware('traders', 'reject'), asyncHand
   }
 
   // Log the action
-  await logTraderRejection(adminId, id, reason || 'No reason provided', req.ip);
+  await logTraderRejection(adminId, id, reason || 'No reason provided', req.ip || 'unknown');
 
   sendSuccess(res, {
     id: trader.id,
@@ -209,7 +212,7 @@ router.put('/traders/:id/reject', roleMiddleware('traders', 'reject'), asyncHand
 
 // PUT /api/admin/traders/:id/suspend - Suspend trader
 router.put('/traders/:id/suspend', roleMiddleware('traders', 'suspend'), asyncHandler(async (req: AuthRequest, res) => {
-  const { id } = req.params;
+  const id = getParam(req.params.id);
   const { reason } = req.body as { reason?: string };
   const adminId = req.user!.id;
 
@@ -226,7 +229,7 @@ router.put('/traders/:id/suspend', roleMiddleware('traders', 'suspend'), asyncHa
   }
 
   // Log the action
-  await logTraderSuspension(adminId, id, reason || 'No reason provided', req.ip);
+  await logTraderSuspension(adminId, id, reason || 'No reason provided', req.ip || 'unknown');
 
   sendSuccess(res, {
     id: rows[0].id,
@@ -237,7 +240,7 @@ router.put('/traders/:id/suspend', roleMiddleware('traders', 'suspend'), asyncHa
 
 // PUT /api/admin/traders/:id/activate - Reactivate suspended trader
 router.put('/traders/:id/activate', roleMiddleware('traders', 'activate'), asyncHandler(async (req: AuthRequest, res) => {
-  const { id } = req.params;
+  const id = getParam(req.params.id);
   const { reason } = req.body as { reason?: string };
   const adminId = req.user!.id;
 
@@ -261,7 +264,7 @@ router.put('/traders/:id/activate', roleMiddleware('traders', 'activate'), async
     entityId: id,
     newValue: { status: 'active' },
     reason,
-    ipAddress: req.ip
+    ipAddress: req.ip || 'unknown'
   });
 
   sendSuccess(res, {
@@ -338,7 +341,7 @@ router.post('/traders/bulk', roleMiddleware('traders', 'bulk'), asyncHandler(asy
 
   // Log the bulk action
   const bulkAction = action === 'approve' ? 'bulk_approve' : action === 'reject' ? 'bulk_reject' : 'bulk_suspend';
-  await logBulkAction(adminId, bulkAction, traderIds, successCount, failCount, reason, req.ip);
+  await logBulkAction(adminId, bulkAction, traderIds, successCount, failCount, reason, req.ip || 'unknown');
 
   sendSuccess(res, {
     action,
@@ -397,7 +400,7 @@ router.get('/disputes', asyncHandler(async (req: AuthRequest, res) => {
 
 // GET /api/admin/disputes/:id - Get dispute details
 router.get('/disputes/:id', asyncHandler(async (req: AuthRequest, res) => {
-  const { id } = req.params;
+  const id = getParam(req.params.id);
 
   // Get dispute with trade info
   const dispute = await queryOne(
@@ -490,8 +493,8 @@ router.get('/disputes/:id', asyncHandler(async (req: AuthRequest, res) => {
 }));
 
 // PUT /api/admin/disputes/:id/resolve - Resolve dispute
-router.put('/disputes/:id/resolve', asyncHandler(async (req: AuthRequest, res) => {
-  const { id } = req.params;
+router.put('/disputes/:id/resolve', roleMiddleware('disputes', 'resolve'), asyncHandler(async (req: AuthRequest, res) => {
+  const id = getParam(req.params.id);
   const { resolution, notes } = req.body;
   const adminId = req.user!.id;
 
@@ -617,7 +620,7 @@ router.get('/bonds', asyncHandler(async (req: AuthRequest, res) => {
 
 // PUT /api/admin/traders/:id/tier - Change trader tier
 router.put('/traders/:id/tier', roleMiddleware('traders', 'tier'), asyncHandler(async (req: AuthRequest, res) => {
-  const { id } = req.params;
+  const id = getParam(req.params.id);
   const { tier, reason } = req.body as { tier: string; reason: string };
   const adminId = req.user!.id;
 
@@ -649,7 +652,7 @@ router.put('/traders/:id/tier', roleMiddleware('traders', 'tier'), asyncHandler(
   );
 
   // Log the action
-  await logTierChange(adminId, id, oldTier, tier, reason, req.ip);
+  await logTierChange(adminId, id, oldTier, tier, reason, req.ip || 'unknown');
 
   sendSuccess(res, {
     id,
@@ -661,7 +664,7 @@ router.put('/traders/:id/tier', roleMiddleware('traders', 'tier'), asyncHandler(
 
 // GET /api/admin/traders/:id/tier-history - Get trader tier history
 router.get('/traders/:id/tier-history', roleMiddleware('traders', 'read'), asyncHandler(async (req: AuthRequest, res) => {
-  const { id } = req.params;
+  const id = getParam(req.params.id);
 
   const history = await query(
     `SELECT th.*, u.display_name as changed_by_name
@@ -691,7 +694,7 @@ router.get('/traders/:id/tier-history', roleMiddleware('traders', 'read'), async
 
 // GET /api/admin/traders/:id/restrictions - Get trader restrictions
 router.get('/traders/:id/restrictions', roleMiddleware('traders', 'read'), asyncHandler(async (req: AuthRequest, res) => {
-  const { id } = req.params;
+  const id = getParam(req.params.id);
   const { includeInactive } = req.query;
 
   const whereClause = includeInactive === 'true' ? '' : 'AND r.is_active = true';
@@ -726,7 +729,7 @@ router.get('/traders/:id/restrictions', roleMiddleware('traders', 'read'), async
 
 // POST /api/admin/traders/:id/restrictions - Add restriction
 router.post('/traders/:id/restrictions', roleMiddleware('traders', 'restrict'), asyncHandler(async (req: AuthRequest, res) => {
-  const { id } = req.params;
+  const id = getParam(req.params.id);
   const { restrictionType, value, reason, expiresAt } = req.body as {
     restrictionType: string;
     value?: any;
@@ -764,7 +767,7 @@ router.post('/traders/:id/restrictions', roleMiddleware('traders', 'restrict'), 
     entityType: 'trader',
     entityId: id,
     newValue: { restrictionType, value, reason },
-    ipAddress: req.ip
+    ipAddress: req.ip || 'unknown'
   });
 
   sendSuccess(res, {
@@ -775,7 +778,8 @@ router.post('/traders/:id/restrictions', roleMiddleware('traders', 'restrict'), 
 
 // DELETE /api/admin/traders/:id/restrictions/:restrictionId - Remove restriction
 router.delete('/traders/:id/restrictions/:restrictionId', roleMiddleware('traders', 'restrict'), asyncHandler(async (req: AuthRequest, res) => {
-  const { id, restrictionId } = req.params;
+  const id = getParam(req.params.id);
+  const restrictionId = getParam(req.params.restrictionId);
   const adminId = req.user!.id;
 
   const result = await queryOne<{ id: string; restriction_type: string }>(
@@ -797,7 +801,7 @@ router.delete('/traders/:id/restrictions/:restrictionId', roleMiddleware('trader
     entityType: 'trader',
     entityId: id,
     oldValue: { restrictionId, restrictionType: result.restriction_type },
-    ipAddress: req.ip
+    ipAddress: req.ip || 'unknown'
   });
 
   sendSuccess(res, {
@@ -830,7 +834,8 @@ router.get('/audit', roleMiddleware('audit', 'read'), asyncHandler(async (req: A
 
 // GET /api/admin/audit/entity/:type/:id - Get entity history
 router.get('/audit/entity/:type/:id', roleMiddleware('audit', 'read'), asyncHandler(async (req: AuthRequest, res) => {
-  const { type, id } = req.params;
+  const type = getParam(req.params.type);
+  const id = getParam(req.params.id);
   const { limit = '50' } = req.query;
 
   const history = await getEntityHistory(type as any, id, parseInt(limit as string, 10));
@@ -942,7 +947,7 @@ router.get('/admins', roleMiddleware('roles', 'read'), asyncHandler(async (req: 
 
 // POST /api/admin/users/:id/role - Assign role to user
 router.post('/users/:id/role', roleMiddleware('roles', 'assign'), asyncHandler(async (req: AuthRequest, res) => {
-  const { id } = req.params;
+  const id = getParam(req.params.id);
   const { roleId } = req.body as { roleId: string };
   const adminId = req.user!.id;
 
@@ -959,7 +964,7 @@ router.post('/users/:id/role', roleMiddleware('roles', 'assign'), asyncHandler(a
     entityType: 'user',
     entityId: id,
     newValue: { role: roleId },
-    ipAddress: req.ip
+    ipAddress: req.ip || 'unknown'
   });
 
   sendSuccess(res, { message: 'Role assigned' });
@@ -967,7 +972,7 @@ router.post('/users/:id/role', roleMiddleware('roles', 'assign'), asyncHandler(a
 
 // DELETE /api/admin/users/:id/role - Remove role from user
 router.delete('/users/:id/role', roleMiddleware('roles', 'assign'), asyncHandler(async (req: AuthRequest, res) => {
-  const { id } = req.params;
+  const id = getParam(req.params.id);
   const adminId = req.user!.id;
 
   await removeRole(id, adminId);
@@ -980,7 +985,7 @@ router.delete('/users/:id/role', roleMiddleware('roles', 'assign'), asyncHandler
     entityId: id,
     newValue: { role: null },
     reason: 'Role removed',
-    ipAddress: req.ip
+    ipAddress: req.ip || 'unknown'
   });
 
   sendSuccess(res, { message: 'Role removed' });

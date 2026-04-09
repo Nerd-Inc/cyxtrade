@@ -1,87 +1,9 @@
 import { useEffect, useState, useContext } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
-import { useOrdersStore, type P2POrder } from '../store/pro'
+import { useOrdersStore } from '../store/pro'
 import { DarkModeContext } from '../App'
 
-// Mock orders data to supplement store data
-const MOCK_ORDERS = [
-  { id: '22866782052947959808', type: 'sell', asset: 'USDT', date: '2026-03-16 12:49', price: 590.7, priceCurrency: 'XAF', fiatAmount: 295314.55, fiatCurrency: 'XAF', cryptoAmount: 500, counterparty: 'YAS_VIP_EXCHANG...', status: 'completed' },
-  { id: '22866781329579311104', type: 'sell', asset: 'USDT', date: '2026-03-16 12:46', price: 590.79, priceCurrency: 'XAF', fiatAmount: 295359.55, fiatCurrency: 'XAF', cryptoAmount: 500, counterparty: 'VIP SERVICES 4L...', status: 'cancelled' },
-  { id: '22865718402385207296', type: 'sell', asset: 'USDT', date: '2026-03-13 14:22', price: 2620.16, priceCurrency: 'TZS', fiatAmount: 2082869.99, fiatCurrency: 'TZS', cryptoAmount: 795, counterparty: 'princat', status: 'completed' },
-  { id: '22865675058618859520', type: 'buy', asset: 'USDT', date: '2026-03-13 11:30', price: 3.67, priceCurrency: 'AED', fiatAmount: 263.946, fiatCurrency: 'AED', cryptoAmount: 71.92, counterparty: 'User-64aa1', status: 'completed' },
-  { id: '22865660283031146496', type: 'sell', asset: 'USDT', date: '2026-03-13 10:31', price: 2613.1, priceCurrency: 'TZS', fiatAmount: 339546.21, fiatCurrency: 'TZS', cryptoAmount: 130, counterparty: 'MATENGA-II', status: 'completed' },
-  { id: '22865628263056687104', type: 'buy', asset: 'USDT', date: '2026-03-13 08:24', price: 3.67, priceCurrency: 'AED', fiatAmount: 2664.126, fiatCurrency: 'AED', cryptoAmount: 725.91, counterparty: 'User-86fe7', status: 'completed' },
-  { id: '22865471908865695744', type: 'buy', asset: 'USDT', date: '2026-03-12 22:03', price: 3.67, priceCurrency: 'AED', fiatAmount: 500, fiatCurrency: 'AED', cryptoAmount: 136.23, counterparty: 'User-b4dd8', status: 'cancelled' },
-  { id: '22865467723793707008', type: 'buy', asset: 'USDT', date: '2026-03-12 21:45', price: 3.67, priceCurrency: 'AED', fiatAmount: 537.862, fiatCurrency: 'AED', cryptoAmount: 146.55, counterparty: 'Sunjei', status: 'completed' },
-]
-
-// Mock P&L data
-const MOCK_PNL_DATA = {
-  AED: {
-    cumulativePnl: -9382.101,
-    coins: [
-      {
-        coin: 'USDT',
-        icon: '₮',
-        color: '#26A17B',
-        buyOrders: 13,
-        buyAvgPrice: 3.664,
-        buyTotalCrypto: 3615.65,
-        buyTotalFiat: 13248.286,
-        sellOrders: 2,
-        sellAvgPrice: 3.667,
-        sellTotalCrypto: 1058.61,
-        sellTotalFiat: 3882.020,
-        totalTxnFee: 4.32,
-        totalTxnFeeEquiv: 15.835,
-        profitLoss: -9382.101,
-      }
-    ]
-  },
-  TZS: {
-    cumulativePnl: 245123.45,
-    coins: [
-      {
-        coin: 'USDT',
-        icon: '₮',
-        color: '#26A17B',
-        buyOrders: 5,
-        buyAvgPrice: 2615.00,
-        buyTotalCrypto: 1500.00,
-        buyTotalFiat: 3922500.00,
-        sellOrders: 8,
-        sellAvgPrice: 2620.16,
-        sellTotalCrypto: 2082.50,
-        sellTotalFiat: 5457683.40,
-        totalTxnFee: 2.15,
-        totalTxnFeeEquiv: 5632.34,
-        profitLoss: 245123.45,
-      }
-    ]
-  },
-  XAF: {
-    cumulativePnl: 125000.00,
-    coins: [
-      {
-        coin: 'USDT',
-        icon: '₮',
-        color: '#26A17B',
-        buyOrders: 3,
-        buyAvgPrice: 588.50,
-        buyTotalCrypto: 800.00,
-        buyTotalFiat: 470800.00,
-        sellOrders: 5,
-        sellAvgPrice: 590.75,
-        sellTotalCrypto: 1000.00,
-        sellTotalFiat: 590750.00,
-        totalTxnFee: 1.80,
-        totalTxnFeeEquiv: 1063.35,
-        profitLoss: 125000.00,
-      }
-    ]
-  }
-}
 
 type MainTab = 'processing' | 'all' | 'pnl'
 type ProcessingSubTab = 'all' | 'unpaid' | 'paid' | 'appeal'
@@ -97,7 +19,6 @@ export default function ProOrders() {
   const [mainTab, setMainTab] = useState<MainTab>('processing')
   const [processingSubTab, setProcessingSubTab] = useState<ProcessingSubTab>('all')
   const [allOrdersSubTab, setAllOrdersSubTab] = useState<AllOrdersSubTab>('all')
-  const [pnlCurrencyTab, setPnlCurrencyTab] = useState<'AED' | 'TZS' | 'XAF'>('AED')
   const [coinFilter, setCoinFilter] = useState('all')
   const [currencyFilter, setCurrencyFilter] = useState('all')
   const [orderTypeFilter, setOrderTypeFilter] = useState('all')
@@ -105,8 +26,20 @@ export default function ProOrders() {
   const [dateTo, setDateTo] = useState('2026-03-31')
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Use mock data for display
-  const orders = MOCK_ORDERS
+  // Map store orders to template shape
+  const orders = storeOrders.map(o => ({
+    id: o.id,
+    type: o.adType,
+    asset: o.asset,
+    date: o.createdAt ? new Date(o.createdAt).toLocaleString() : '--',
+    price: o.price,
+    priceCurrency: o.fiatCurrency,
+    fiatAmount: o.fiatAmount,
+    fiatCurrency: o.fiatCurrency,
+    cryptoAmount: o.cryptoAmount,
+    counterparty: o.buyerName || o.sellerName || 'Unknown',
+    status: o.status,
+  }))
 
   useEffect(() => {
     fetchOrders({})
@@ -165,7 +98,8 @@ export default function ProOrders() {
           <div className="flex justify-between items-center h-14">
             <div className="flex items-center space-x-6">
               <Link to="/pro" className="flex items-center space-x-2">
-                <span className="text-xl font-bold text-orange-500">CyxTrade</span>
+                <img src="/logo.png" alt="CyxTrade" className="h-8" />
+                <span className="text-xl font-bold bg-gradient-to-r from-[#00a78e] to-[#f7941d] bg-clip-text text-transparent">CyxTrade</span>
               </Link>
               <nav className="hidden md:flex items-center">
                 <Link to="/pro" className={`px-4 py-4 text-sm font-medium border-b-2 border-transparent ${dark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>
@@ -629,117 +563,14 @@ export default function ProOrders() {
 
         {/* Profit & Loss Statement Content */}
         {mainTab === 'pnl' && (
-          <div>
-            {/* Currency Tabs + Cumulative P&L */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-1">
-                {(['AED', 'TZS', 'XAF'] as const).map(currency => (
-                  <button
-                    key={currency}
-                    onClick={() => setPnlCurrencyTab(currency)}
-                    className={`px-4 py-2 rounded text-sm font-medium transition ${
-                      pnlCurrencyTab === currency
-                        ? 'bg-yellow-500 text-black'
-                        : `${dark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`
-                    }`}
-                  >
-                    {currency}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-500'}`}>Cumulative profit/loss:</span>
-                <span className={`text-lg font-semibold ${MOCK_PNL_DATA[pnlCurrencyTab].cumulativePnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {MOCK_PNL_DATA[pnlCurrencyTab].cumulativePnl >= 0 ? '' : ''}{MOCK_PNL_DATA[pnlCurrencyTab].cumulativePnl.toLocaleString()} {pnlCurrencyTab}
-                </span>
-              </div>
+          <div className="text-center py-16">
+            <div className={`mx-auto w-16 h-16 mb-4 ${dark ? 'text-gray-600' : 'text-gray-300'}`}>
+              <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
             </div>
-
-            {/* P&L Table */}
-            <div className={`rounded-xl overflow-hidden ${dark ? 'bg-gray-800' : 'bg-white'}`}>
-              {/* Table Header */}
-              <div className={`grid grid-cols-12 gap-4 px-4 py-3 text-xs font-medium tracking-wider ${dark ? 'text-gray-500 border-b border-gray-700' : 'text-gray-400 border-b border-gray-200'}`}>
-                <div className="col-span-1">Coin</div>
-                <div className="col-span-1">Type</div>
-                <div className="col-span-1">Orders</div>
-                <div className="col-span-2">Avg Price</div>
-                <div className="col-span-2">Total Crypto Amount</div>
-                <div className="col-span-2">Total Fiat Amount</div>
-                <div className="col-span-2 flex items-center gap-1">
-                  Total Txn Fee
-                  <svg className={`w-3.5 h-3.5 ${dark ? 'text-gray-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="col-span-1">Profit/Loss</div>
-              </div>
-
-              {/* P&L Rows */}
-              <div>
-                {MOCK_PNL_DATA[pnlCurrencyTab].coins.map((coin, idx) => (
-                  <div key={idx} className="px-4 py-4">
-                    {/* Buy Row */}
-                    <div className="grid grid-cols-12 gap-4 items-center">
-                      {/* Coin */}
-                      <div className="col-span-1 flex items-center gap-2">
-                        <div
-                          className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                          style={{ backgroundColor: coin.color }}
-                        >
-                          {coin.icon}
-                        </div>
-                        <span className={`text-sm font-medium ${dark ? 'text-white' : 'text-gray-900'}`}>{coin.coin}</span>
-                      </div>
-                      <div className="col-span-1">
-                        <span className="text-sm text-green-500">Buy</span>
-                      </div>
-                      <div className="col-span-1">
-                        <span className={`text-sm ${dark ? 'text-white' : 'text-gray-900'}`}>{coin.buyOrders}</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className={`text-sm ${dark ? 'text-white' : 'text-gray-900'}`}>{coin.buyAvgPrice} {pnlCurrencyTab}</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className={`text-sm ${dark ? 'text-white' : 'text-gray-900'}`}>{coin.buyTotalCrypto.toLocaleString()} {coin.coin}</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className={`text-sm ${dark ? 'text-white' : 'text-gray-900'}`}>{coin.buyTotalFiat.toLocaleString()} {pnlCurrencyTab}</span>
-                      </div>
-                      <div className="col-span-2 row-span-2">
-                        <p className={`text-sm ${dark ? 'text-white' : 'text-gray-900'}`}>{coin.totalTxnFee} {coin.coin}</p>
-                        <p className={`text-xs ${dark ? 'text-gray-500' : 'text-gray-400'}`}>≈ {coin.totalTxnFeeEquiv} {pnlCurrencyTab}</p>
-                      </div>
-                      <div className="col-span-1 row-span-2">
-                        <span className={`text-sm font-medium ${coin.profitLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {coin.profitLoss.toLocaleString()} {pnlCurrencyTab}
-                        </span>
-                      </div>
-                    </div>
-                    {/* Sell Row */}
-                    <div className="grid grid-cols-12 gap-4 items-center mt-2">
-                      <div className="col-span-1"></div>
-                      <div className="col-span-1">
-                        <span className="text-sm text-yellow-500">Sell</span>
-                      </div>
-                      <div className="col-span-1">
-                        <span className={`text-sm ${dark ? 'text-white' : 'text-gray-900'}`}>{coin.sellOrders}</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className={`text-sm ${dark ? 'text-white' : 'text-gray-900'}`}>{coin.sellAvgPrice} {pnlCurrencyTab}</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className={`text-sm ${dark ? 'text-white' : 'text-gray-900'}`}>{coin.sellTotalCrypto.toLocaleString()} {coin.coin}</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className={`text-sm ${dark ? 'text-white' : 'text-gray-900'}`}>{coin.sellTotalFiat.toLocaleString()} {pnlCurrencyTab}</span>
-                      </div>
-                      <div className="col-span-2"></div>
-                      <div className="col-span-1"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <p className={`text-lg font-medium ${dark ? 'text-gray-400' : 'text-gray-500'}`}>P&L Analytics</p>
+            <p className={`text-sm mt-2 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>Coming soon — trade P&L tracking is being built</p>
           </div>
         )}
       </main>

@@ -8,7 +8,7 @@ import {
 export interface PaymentMethod {
   id: string;
   trader_id: string;
-  method_type: 'bank' | 'mobile_money';
+  method_type: 'bank' | 'mobile_money' | 'cash';
   provider: string;
   account_holder_name: string;
   phone_number?: string;
@@ -25,7 +25,7 @@ export interface PaymentMethod {
 }
 
 export interface CreatePaymentMethodDTO {
-  method_type: 'bank' | 'mobile_money';
+  method_type: 'bank' | 'mobile_money' | 'cash';
   provider: string;
   account_holder_name: string;
   phone_number?: string;
@@ -152,7 +152,7 @@ class PaymentMethodService {
     const errors: string[] = [];
 
     // Common validations
-    if (!data.method_type || !['bank', 'mobile_money'].includes(data.method_type)) {
+    if (!data.method_type || !['bank', 'mobile_money', 'cash'].includes(data.method_type)) {
       errors.push('Invalid method type');
     }
 
@@ -198,6 +198,8 @@ class PaymentMethodService {
           errors.push(phoneResult.error!);
         }
       }
+    } else if (data.method_type === 'cash') {
+      // Cash pickup requires only common fields.
     }
 
     return { valid: errors.length === 0, errors };

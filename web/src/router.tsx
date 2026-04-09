@@ -6,13 +6,15 @@ import OtpVerify from './pages/OtpVerify'
 import CompleteProfile from './pages/CompleteProfile'
 import BecomeTrader from './pages/BecomeTrader'
 import Download from './pages/Download'
+import About from './pages/About'
 import AppHome from './pages/AppHome'
-import SendMoney from './pages/SendMoney'
+// SendMoney removed - marketplace flow is now in AppHome
 import History from './pages/History'
 import TradeDetails from './pages/TradeDetails'
 import Chat from './pages/Chat'
 import TraderDashboard from './pages/TraderDashboard'
 import PaymentMethods from './pages/PaymentMethods'
+import PostTraderAd from './pages/PostTraderAd'
 import Settings from './pages/Settings'
 // Pro pages
 import ProMarketplace from './pages/ProMarketplace'
@@ -23,6 +25,7 @@ import ProTrade from './pages/ProTrade'
 import PostAd from './pages/PostAd'
 import ProChat from './pages/ProChat'
 import ProUserCenter from './pages/ProUserCenter'
+import MyAds from './pages/MyAds'
 
 // Protected route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -93,6 +96,12 @@ export const router = createBrowserRouter([
     element: <Download />
   },
 
+  // About page
+  {
+    path: '/about',
+    element: <About />
+  },
+
   // App routes (protected)
   {
     path: '/app',
@@ -102,14 +111,7 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     )
   },
-  {
-    path: '/app/send',
-    element: (
-      <ProtectedRoute>
-        <SendMoney />
-      </ProtectedRoute>
-    )
-  },
+  // /app/send removed - marketplace flow is now in AppHome
   {
     path: '/app/history',
     element: (
@@ -152,8 +154,32 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     )
   },
+  {
+    path: '/app/post-ad',
+    element: (
+      <ProtectedRoute>
+        <PostTraderAd />
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: '/app/trader',
+    element: (
+      <ProtectedRoute>
+        <TraderDashboard />
+      </ProtectedRoute>
+    )
+  },
 
   // Placeholder routes
+  {
+    path: '/app/chat',
+    element: (
+      <ProtectedRoute>
+        <Chat />
+      </ProtectedRoute>
+    )
+  },
   {
     path: '/app/chat/:tradeId',
     element: (
@@ -239,7 +265,7 @@ export const router = createBrowserRouter([
     path: '/pro/my-ads',
     element: (
       <ProtectedRoute>
-        <ProMarketplace />
+        <MyAds />
       </ProtectedRoute>
     )
   },

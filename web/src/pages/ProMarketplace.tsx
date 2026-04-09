@@ -29,127 +29,136 @@ const CRYPTO_ASSETS = [
   { code: 'TON', name: 'Toncoin', symbol: '◇', color: '#0098EA', icon: '◇' },
 ]
 
-// Comprehensive currency list with symbols and names
+// Comprehensive currency list with symbols, names, and country codes for flags
 const CURRENCIES = [
-  { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ', color: '#2E7D32' },
-  { code: 'AFN', name: 'Afghan Afghani', symbol: '؋', color: '#D32F2F' },
-  { code: 'ALL', name: 'Albanian Lek', symbol: 'Lek', color: '#C62828' },
-  { code: 'AMD', name: 'Armenian Dram', symbol: '֏', color: '#F9A825' },
-  { code: 'AOA', name: 'Angolan Kwanza', symbol: 'Kz', color: '#EF6C00' },
-  { code: 'ARS', name: 'Argentine Peso', symbol: '$', color: '#1565C0' },
-  { code: 'AUD', name: 'Australian Dollar', symbol: '$', color: '#FFB300' },
-  { code: 'AZN', name: 'Azerbaijani Manat', symbol: '₼', color: '#E65100' },
-  { code: 'BAM', name: 'Bosnia-Herzegovina Mark', symbol: 'KM', color: '#C62828' },
-  { code: 'BDT', name: 'Bangladeshi Taka', symbol: '৳', color: '#2E7D32' },
-  { code: 'BGN', name: 'Bulgarian Lev', symbol: 'лв', color: '#388E3C' },
-  { code: 'BHD', name: 'Bahraini Dinar', symbol: '.د.ب', color: '#C62828' },
-  { code: 'BIF', name: 'Burundian Franc', symbol: 'FBu', color: '#D32F2F' },
-  { code: 'BND', name: 'Brunei Dollar', symbol: '$', color: '#FBC02D' },
-  { code: 'BOB', name: 'Bolivian Boliviano', symbol: 'Bs.', color: '#388E3C' },
-  { code: 'BRL', name: 'Brazilian Real', symbol: 'R$', color: '#2E7D32' },
-  { code: 'BWP', name: 'Botswanan Pula', symbol: 'P', color: '#1976D2' },
-  { code: 'BYN', name: 'Belarusian Ruble', symbol: 'Br', color: '#C62828' },
-  { code: 'CAD', name: 'Canadian Dollar', symbol: '$', color: '#D32F2F' },
-  { code: 'CDF', name: 'Congolese Franc', symbol: 'FC', color: '#1565C0' },
-  { code: 'CHF', name: 'Swiss Franc', symbol: 'CHF', color: '#D32F2F' },
-  { code: 'CLP', name: 'Chilean Peso', symbol: '$', color: '#1565C0' },
-  { code: 'CNY', name: 'Chinese Yuan', symbol: '¥', color: '#C62828' },
-  { code: 'COP', name: 'Colombian Peso', symbol: '$', color: '#FBC02D' },
-  { code: 'CRC', name: 'Costa Rican Colón', symbol: '₡', color: '#1565C0' },
-  { code: 'CZK', name: 'Czech Koruna', symbol: 'Kč', color: '#1565C0' },
-  { code: 'DKK', name: 'Danish Krone', symbol: 'kr', color: '#C62828' },
-  { code: 'DOP', name: 'Dominican Peso', symbol: 'RD$', color: '#1565C0' },
-  { code: 'DZD', name: 'Algerian Dinar', symbol: 'د.ج', color: '#2E7D32' },
-  { code: 'EGP', name: 'Egyptian Pound', symbol: '£', color: '#C62828' },
-  { code: 'ETB', name: 'Ethiopian Birr', symbol: 'Br', color: '#2E7D32' },
-  { code: 'EUR', name: 'Euro', symbol: '€', color: '#1565C0' },
-  { code: 'GBP', name: 'British Pound', symbol: '£', color: '#7B1FA2' },
-  { code: 'GEL', name: 'Georgian Lari', symbol: '₾', color: '#C62828' },
-  { code: 'GHS', name: 'Ghanaian Cedi', symbol: '₵', color: '#FBC02D' },
-  { code: 'GMD', name: 'Gambian Dalasi', symbol: 'D', color: '#2E7D32' },
-  { code: 'GNF', name: 'Guinean Franc', symbol: 'FG', color: '#C62828' },
-  { code: 'GTQ', name: 'Guatemalan Quetzal', symbol: 'Q', color: '#1976D2' },
-  { code: 'HKD', name: 'Hong Kong Dollar', symbol: '$', color: '#C62828' },
-  { code: 'HNL', name: 'Honduran Lempira', symbol: 'L', color: '#1565C0' },
-  { code: 'HRK', name: 'Croatian Kuna', symbol: 'kn', color: '#1565C0' },
-  { code: 'HUF', name: 'Hungarian Forint', symbol: 'Ft', color: '#388E3C' },
-  { code: 'IDR', name: 'Indonesian Rupiah', symbol: 'Rp', color: '#C62828' },
-  { code: 'ILS', name: 'Israeli Shekel', symbol: '₪', color: '#1565C0' },
-  { code: 'INR', name: 'Indian Rupee', symbol: '₹', color: '#FF6F00' },
-  { code: 'IQD', name: 'Iraqi Dinar', symbol: 'ع.د', color: '#C62828' },
-  { code: 'IRR', name: 'Iranian Rial', symbol: '﷼', color: '#2E7D32' },
-  { code: 'ISK', name: 'Icelandic Króna', symbol: 'kr', color: '#1565C0' },
-  { code: 'JMD', name: 'Jamaican Dollar', symbol: 'J$', color: '#2E7D32' },
-  { code: 'JOD', name: 'Jordanian Dinar', symbol: 'د.ا', color: '#2E7D32' },
-  { code: 'JPY', name: 'Japanese Yen', symbol: '¥', color: '#C62828' },
-  { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh', color: '#2E7D32' },
-  { code: 'KGS', name: 'Kyrgystani Som', symbol: 'лв', color: '#C62828' },
-  { code: 'KHR', name: 'Cambodian Riel', symbol: '៛', color: '#1565C0' },
-  { code: 'KRW', name: 'South Korean Won', symbol: '₩', color: '#1565C0' },
-  { code: 'KWD', name: 'Kuwaiti Dinar', symbol: 'د.ك', color: '#2E7D32' },
-  { code: 'KZT', name: 'Kazakhstani Tenge', symbol: '₸', color: '#1976D2' },
-  { code: 'LAK', name: 'Laotian Kip', symbol: '₭', color: '#C62828' },
-  { code: 'LBP', name: 'Lebanese Pound', symbol: 'ل.ل', color: '#C62828' },
-  { code: 'LKR', name: 'Sri Lankan Rupee', symbol: '₨', color: '#FF6F00' },
-  { code: 'MAD', name: 'Moroccan Dirham', symbol: 'د.م.', color: '#C62828' },
-  { code: 'MDL', name: 'Moldovan Leu', symbol: 'L', color: '#1565C0' },
-  { code: 'MGA', name: 'Malagasy Ariary', symbol: 'Ar', color: '#2E7D32' },
-  { code: 'MKD', name: 'Macedonian Denar', symbol: 'ден', color: '#C62828' },
-  { code: 'MMK', name: 'Myanmar Kyat', symbol: 'K', color: '#FBC02D' },
-  { code: 'MNT', name: 'Mongolian Tugrik', symbol: '₮', color: '#1565C0' },
-  { code: 'MOP', name: 'Macanese Pataca', symbol: 'MOP$', color: '#2E7D32' },
-  { code: 'MRU', name: 'Mauritanian Ouguiya', symbol: 'UM', color: '#2E7D32' },
-  { code: 'MUR', name: 'Mauritian Rupee', symbol: '₨', color: '#C62828' },
-  { code: 'MWK', name: 'Malawian Kwacha', symbol: 'MK', color: '#C62828' },
-  { code: 'MXN', name: 'Mexican Peso', symbol: '$', color: '#2E7D32' },
-  { code: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM', color: '#1565C0' },
-  { code: 'MZN', name: 'Mozambican Metical', symbol: 'MT', color: '#2E7D32' },
-  { code: 'NAD', name: 'Namibian Dollar', symbol: '$', color: '#1565C0' },
-  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦', color: '#2E7D32' },
-  { code: 'NIO', name: 'Nicaraguan Córdoba', symbol: 'C$', color: '#1565C0' },
-  { code: 'NOK', name: 'Norwegian Krone', symbol: 'kr', color: '#C62828' },
-  { code: 'NPR', name: 'Nepalese Rupee', symbol: '₨', color: '#1565C0' },
-  { code: 'NZD', name: 'New Zealand Dollar', symbol: '$', color: '#1565C0' },
-  { code: 'OMR', name: 'Omani Rial', symbol: 'ر.ع.', color: '#C62828' },
-  { code: 'PAB', name: 'Panamanian Balboa', symbol: 'B/.', color: '#1565C0' },
-  { code: 'PEN', name: 'Peruvian Sol', symbol: 'S/', color: '#C62828' },
-  { code: 'PHP', name: 'Philippine Peso', symbol: '₱', color: '#1565C0' },
-  { code: 'PKR', name: 'Pakistani Rupee', symbol: '₨', color: '#2E7D32' },
-  { code: 'PLN', name: 'Polish Zloty', symbol: 'zł', color: '#C62828' },
-  { code: 'PYG', name: 'Paraguayan Guarani', symbol: '₲', color: '#C62828' },
-  { code: 'QAR', name: 'Qatari Riyal', symbol: 'ر.ق', color: '#7B1FA2' },
-  { code: 'RON', name: 'Romanian Leu', symbol: 'lei', color: '#1565C0' },
-  { code: 'RSD', name: 'Serbian Dinar', symbol: 'дин.', color: '#C62828' },
-  { code: 'RUB', name: 'Russian Ruble', symbol: '₽', color: '#1565C0' },
-  { code: 'RWF', name: 'Rwandan Franc', symbol: 'FRw', color: '#1565C0' },
-  { code: 'SAR', name: 'Saudi Riyal', symbol: 'ر.س', color: '#2E7D32' },
-  { code: 'SDG', name: 'Sudanese Pound', symbol: 'ج.س.', color: '#C62828' },
-  { code: 'SEK', name: 'Swedish Krona', symbol: 'kr', color: '#1565C0' },
-  { code: 'SGD', name: 'Singapore Dollar', symbol: '$', color: '#C62828' },
-  { code: 'SLL', name: 'Sierra Leonean Leone', symbol: 'Le', color: '#2E7D32' },
-  { code: 'SOS', name: 'Somali Shilling', symbol: 'S', color: '#1976D2' },
-  { code: 'SYP', name: 'Syrian Pound', symbol: '£', color: '#C62828' },
-  { code: 'THB', name: 'Thai Baht', symbol: '฿', color: '#1565C0' },
-  { code: 'TJS', name: 'Tajikistani Somoni', symbol: 'SM', color: '#C62828' },
-  { code: 'TMT', name: 'Turkmenistani Manat', symbol: 'T', color: '#2E7D32' },
-  { code: 'TND', name: 'Tunisian Dinar', symbol: 'د.ت', color: '#C62828' },
-  { code: 'TRY', name: 'Turkish Lira', symbol: '₺', color: '#C62828' },
-  { code: 'TWD', name: 'New Taiwan Dollar', symbol: 'NT$', color: '#C62828' },
-  { code: 'TZS', name: 'Tanzanian Shilling', symbol: 'TSh', color: '#2E7D32' },
-  { code: 'UAH', name: 'Ukrainian Hryvnia', symbol: '₴', color: '#1565C0' },
-  { code: 'UGX', name: 'Ugandan Shilling', symbol: 'USh', color: '#FBC02D' },
-  { code: 'USD', name: 'US Dollar', symbol: '$', color: '#2E7D32' },
-  { code: 'UYU', name: 'Uruguayan Peso', symbol: '$U', color: '#1565C0' },
-  { code: 'UZS', name: 'Uzbekistan Som', symbol: 'лв', color: '#1976D2' },
-  { code: 'VES', name: 'Venezuelan Bolívar', symbol: 'Bs', color: '#FBC02D' },
-  { code: 'VND', name: 'Vietnamese Dong', symbol: '₫', color: '#C62828' },
-  { code: 'XAF', name: 'CFA Franc BEAC', symbol: 'FCFA', color: '#2E7D32' },
-  { code: 'XOF', name: 'CFA Franc BCEAO', symbol: 'CFA', color: '#2E7D32' },
-  { code: 'YER', name: 'Yemeni Rial', symbol: '﷼', color: '#C62828' },
-  { code: 'ZAR', name: 'South African Rand', symbol: 'R', color: '#2E7D32' },
-  { code: 'ZMW', name: 'Zambian Kwacha', symbol: 'ZK', color: '#2E7D32' },
-  { code: 'ZWL', name: 'Zimbabwean Dollar', symbol: '$', color: '#FBC02D' },
+  { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ', color: '#2E7D32', country: 'AE' },
+  { code: 'AFN', name: 'Afghan Afghani', symbol: '؋', color: '#D32F2F', country: 'AF' },
+  { code: 'ALL', name: 'Albanian Lek', symbol: 'Lek', color: '#C62828', country: 'AL' },
+  { code: 'AMD', name: 'Armenian Dram', symbol: '֏', color: '#F9A825', country: 'AM' },
+  { code: 'AOA', name: 'Angolan Kwanza', symbol: 'Kz', color: '#EF6C00', country: 'AO' },
+  { code: 'ARS', name: 'Argentine Peso', symbol: '$', color: '#1565C0', country: 'AR' },
+  { code: 'AUD', name: 'Australian Dollar', symbol: '$', color: '#FFB300', country: 'AU' },
+  { code: 'AZN', name: 'Azerbaijani Manat', symbol: '₼', color: '#E65100', country: 'AZ' },
+  { code: 'BAM', name: 'Bosnia-Herzegovina Mark', symbol: 'KM', color: '#C62828', country: 'BA' },
+  { code: 'BDT', name: 'Bangladeshi Taka', symbol: '৳', color: '#2E7D32', country: 'BD' },
+  { code: 'BGN', name: 'Bulgarian Lev', symbol: 'лв', color: '#388E3C', country: 'BG' },
+  { code: 'BHD', name: 'Bahraini Dinar', symbol: '.د.ب', color: '#C62828', country: 'BH' },
+  { code: 'BIF', name: 'Burundian Franc', symbol: 'FBu', color: '#D32F2F', country: 'BI' },
+  { code: 'BND', name: 'Brunei Dollar', symbol: '$', color: '#FBC02D', country: 'BN' },
+  { code: 'BOB', name: 'Bolivian Boliviano', symbol: 'Bs.', color: '#388E3C', country: 'BO' },
+  { code: 'BRL', name: 'Brazilian Real', symbol: 'R$', color: '#2E7D32', country: 'BR' },
+  { code: 'BWP', name: 'Botswanan Pula', symbol: 'P', color: '#1976D2', country: 'BW' },
+  { code: 'BYN', name: 'Belarusian Ruble', symbol: 'Br', color: '#C62828', country: 'BY' },
+  { code: 'CAD', name: 'Canadian Dollar', symbol: '$', color: '#D32F2F', country: 'CA' },
+  { code: 'CDF', name: 'Congolese Franc', symbol: 'FC', color: '#1565C0', country: 'CD' },
+  { code: 'CHF', name: 'Swiss Franc', symbol: 'CHF', color: '#D32F2F', country: 'CH' },
+  { code: 'CLP', name: 'Chilean Peso', symbol: '$', color: '#1565C0', country: 'CL' },
+  { code: 'CNY', name: 'Chinese Yuan', symbol: '¥', color: '#C62828', country: 'CN' },
+  { code: 'COP', name: 'Colombian Peso', symbol: '$', color: '#FBC02D', country: 'CO' },
+  { code: 'CRC', name: 'Costa Rican Colón', symbol: '₡', color: '#1565C0', country: 'CR' },
+  { code: 'CZK', name: 'Czech Koruna', symbol: 'Kč', color: '#1565C0', country: 'CZ' },
+  { code: 'DKK', name: 'Danish Krone', symbol: 'kr', color: '#C62828', country: 'DK' },
+  { code: 'DOP', name: 'Dominican Peso', symbol: 'RD$', color: '#1565C0', country: 'DO' },
+  { code: 'DZD', name: 'Algerian Dinar', symbol: 'د.ج', color: '#2E7D32', country: 'DZ' },
+  { code: 'EGP', name: 'Egyptian Pound', symbol: '£', color: '#C62828', country: 'EG' },
+  { code: 'ETB', name: 'Ethiopian Birr', symbol: 'Br', color: '#2E7D32', country: 'ET' },
+  { code: 'EUR', name: 'Euro', symbol: '€', color: '#1565C0', country: 'EU' },
+  { code: 'GBP', name: 'British Pound', symbol: '£', color: '#7B1FA2', country: 'GB' },
+  { code: 'GEL', name: 'Georgian Lari', symbol: '₾', color: '#C62828', country: 'GE' },
+  { code: 'GHS', name: 'Ghanaian Cedi', symbol: '₵', color: '#FBC02D', country: 'GH' },
+  { code: 'GMD', name: 'Gambian Dalasi', symbol: 'D', color: '#2E7D32', country: 'GM' },
+  { code: 'GNF', name: 'Guinean Franc', symbol: 'FG', color: '#C62828', country: 'GN' },
+  { code: 'GTQ', name: 'Guatemalan Quetzal', symbol: 'Q', color: '#1976D2', country: 'GT' },
+  { code: 'HKD', name: 'Hong Kong Dollar', symbol: '$', color: '#C62828', country: 'HK' },
+  { code: 'HNL', name: 'Honduran Lempira', symbol: 'L', color: '#1565C0', country: 'HN' },
+  { code: 'HRK', name: 'Croatian Kuna', symbol: 'kn', color: '#1565C0', country: 'HR' },
+  { code: 'HUF', name: 'Hungarian Forint', symbol: 'Ft', color: '#388E3C', country: 'HU' },
+  { code: 'IDR', name: 'Indonesian Rupiah', symbol: 'Rp', color: '#C62828', country: 'ID' },
+  { code: 'ILS', name: 'Israeli Shekel', symbol: '₪', color: '#1565C0', country: 'IL' },
+  { code: 'INR', name: 'Indian Rupee', symbol: '₹', color: '#FF6F00', country: 'IN' },
+  { code: 'IQD', name: 'Iraqi Dinar', symbol: 'ع.د', color: '#C62828', country: 'IQ' },
+  { code: 'IRR', name: 'Iranian Rial', symbol: '﷼', color: '#2E7D32', country: 'IR' },
+  { code: 'ISK', name: 'Icelandic Króna', symbol: 'kr', color: '#1565C0', country: 'IS' },
+  { code: 'JMD', name: 'Jamaican Dollar', symbol: 'J$', color: '#2E7D32', country: 'JM' },
+  { code: 'JOD', name: 'Jordanian Dinar', symbol: 'د.ا', color: '#2E7D32', country: 'JO' },
+  { code: 'JPY', name: 'Japanese Yen', symbol: '¥', color: '#C62828', country: 'JP' },
+  { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh', color: '#2E7D32', country: 'KE' },
+  { code: 'KGS', name: 'Kyrgystani Som', symbol: 'лв', color: '#C62828', country: 'KG' },
+  { code: 'KHR', name: 'Cambodian Riel', symbol: '៛', color: '#1565C0', country: 'KH' },
+  { code: 'KRW', name: 'South Korean Won', symbol: '₩', color: '#1565C0', country: 'KR' },
+  { code: 'KWD', name: 'Kuwaiti Dinar', symbol: 'د.ك', color: '#2E7D32', country: 'KW' },
+  { code: 'KZT', name: 'Kazakhstani Tenge', symbol: '₸', color: '#1976D2', country: 'KZ' },
+  { code: 'LAK', name: 'Laotian Kip', symbol: '₭', color: '#C62828', country: 'LA' },
+  { code: 'LBP', name: 'Lebanese Pound', symbol: 'ل.ل', color: '#C62828', country: 'LB' },
+  { code: 'LKR', name: 'Sri Lankan Rupee', symbol: '₨', color: '#FF6F00', country: 'LK' },
+  { code: 'MAD', name: 'Moroccan Dirham', symbol: 'د.م.', color: '#C62828', country: 'MA' },
+  { code: 'MDL', name: 'Moldovan Leu', symbol: 'L', color: '#1565C0', country: 'MD' },
+  { code: 'MGA', name: 'Malagasy Ariary', symbol: 'Ar', color: '#2E7D32', country: 'MG' },
+  { code: 'MKD', name: 'Macedonian Denar', symbol: 'ден', color: '#C62828', country: 'MK' },
+  { code: 'MMK', name: 'Myanmar Kyat', symbol: 'K', color: '#FBC02D', country: 'MM' },
+  { code: 'MNT', name: 'Mongolian Tugrik', symbol: '₮', color: '#1565C0', country: 'MN' },
+  { code: 'MOP', name: 'Macanese Pataca', symbol: 'MOP$', color: '#2E7D32', country: 'MO' },
+  { code: 'MRU', name: 'Mauritanian Ouguiya', symbol: 'UM', color: '#2E7D32', country: 'MR' },
+  { code: 'MUR', name: 'Mauritian Rupee', symbol: '₨', color: '#C62828', country: 'MU' },
+  { code: 'MWK', name: 'Malawian Kwacha', symbol: 'MK', color: '#C62828', country: 'MW' },
+  { code: 'MXN', name: 'Mexican Peso', symbol: '$', color: '#2E7D32', country: 'MX' },
+  { code: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM', color: '#1565C0', country: 'MY' },
+  { code: 'MZN', name: 'Mozambican Metical', symbol: 'MT', color: '#2E7D32', country: 'MZ' },
+  { code: 'NAD', name: 'Namibian Dollar', symbol: '$', color: '#1565C0', country: 'NA' },
+  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦', color: '#2E7D32', country: 'NG' },
+  { code: 'NIO', name: 'Nicaraguan Córdoba', symbol: 'C$', color: '#1565C0', country: 'NI' },
+  { code: 'NOK', name: 'Norwegian Krone', symbol: 'kr', color: '#C62828', country: 'NO' },
+  { code: 'NPR', name: 'Nepalese Rupee', symbol: '₨', color: '#1565C0', country: 'NP' },
+  { code: 'NZD', name: 'New Zealand Dollar', symbol: '$', color: '#1565C0', country: 'NZ' },
+  { code: 'OMR', name: 'Omani Rial', symbol: 'ر.ع.', color: '#C62828', country: 'OM' },
+  { code: 'PAB', name: 'Panamanian Balboa', symbol: 'B/.', color: '#1565C0', country: 'PA' },
+  { code: 'PEN', name: 'Peruvian Sol', symbol: 'S/', color: '#C62828', country: 'PE' },
+  { code: 'PHP', name: 'Philippine Peso', symbol: '₱', color: '#1565C0', country: 'PH' },
+  { code: 'PKR', name: 'Pakistani Rupee', symbol: '₨', color: '#2E7D32', country: 'PK' },
+  { code: 'PLN', name: 'Polish Zloty', symbol: 'zł', color: '#C62828', country: 'PL' },
+  { code: 'PYG', name: 'Paraguayan Guarani', symbol: '₲', color: '#C62828', country: 'PY' },
+  { code: 'QAR', name: 'Qatari Riyal', symbol: 'ر.ق', color: '#7B1FA2', country: 'QA' },
+  { code: 'RON', name: 'Romanian Leu', symbol: 'lei', color: '#1565C0', country: 'RO' },
+  { code: 'RSD', name: 'Serbian Dinar', symbol: 'дин.', color: '#C62828', country: 'RS' },
+  { code: 'RUB', name: 'Russian Ruble', symbol: '₽', color: '#1565C0', country: 'RU' },
+  { code: 'RWF', name: 'Rwandan Franc', symbol: 'FRw', color: '#1565C0', country: 'RW' },
+  { code: 'SAR', name: 'Saudi Riyal', symbol: 'ر.س', color: '#2E7D32', country: 'SA' },
+  { code: 'SDG', name: 'Sudanese Pound', symbol: 'ج.س.', color: '#C62828', country: 'SD' },
+  { code: 'SEK', name: 'Swedish Krona', symbol: 'kr', color: '#1565C0', country: 'SE' },
+  { code: 'SGD', name: 'Singapore Dollar', symbol: '$', color: '#C62828', country: 'SG' },
+  { code: 'SLL', name: 'Sierra Leonean Leone', symbol: 'Le', color: '#2E7D32', country: 'SL' },
+  { code: 'SOS', name: 'Somali Shilling', symbol: 'S', color: '#1976D2', country: 'SO' },
+  { code: 'SYP', name: 'Syrian Pound', symbol: '£', color: '#C62828', country: 'SY' },
+  { code: 'THB', name: 'Thai Baht', symbol: '฿', color: '#1565C0', country: 'TH' },
+  { code: 'TJS', name: 'Tajikistani Somoni', symbol: 'SM', color: '#C62828', country: 'TJ' },
+  { code: 'TMT', name: 'Turkmenistani Manat', symbol: 'T', color: '#2E7D32', country: 'TM' },
+  { code: 'TND', name: 'Tunisian Dinar', symbol: 'د.ت', color: '#C62828', country: 'TN' },
+  { code: 'TRY', name: 'Turkish Lira', symbol: '₺', color: '#C62828', country: 'TR' },
+  { code: 'TWD', name: 'New Taiwan Dollar', symbol: 'NT$', color: '#C62828', country: 'TW' },
+  { code: 'TZS', name: 'Tanzanian Shilling', symbol: 'TSh', color: '#2E7D32', country: 'TZ' },
+  { code: 'UAH', name: 'Ukrainian Hryvnia', symbol: '₴', color: '#1565C0', country: 'UA' },
+  { code: 'UGX', name: 'Ugandan Shilling', symbol: 'USh', color: '#FBC02D', country: 'UG' },
+  { code: 'USD', name: 'US Dollar', symbol: '$', color: '#2E7D32', country: 'US' },
+  { code: 'UYU', name: 'Uruguayan Peso', symbol: '$U', color: '#1565C0', country: 'UY' },
+  { code: 'UZS', name: 'Uzbekistan Som', symbol: 'лв', color: '#1976D2', country: 'UZ' },
+  { code: 'VES', name: 'Venezuelan Bolívar', symbol: 'Bs', color: '#FBC02D', country: 'VE' },
+  { code: 'VND', name: 'Vietnamese Dong', symbol: '₫', color: '#C62828', country: 'VN' },
+  { code: 'XAF', name: 'CFA Franc BEAC', symbol: 'FCFA', color: '#2E7D32', country: 'CM' },
+  { code: 'XOF', name: 'CFA Franc BCEAO', symbol: 'CFA', color: '#2E7D32', country: 'SN' },
+  { code: 'YER', name: 'Yemeni Rial', symbol: '﷼', color: '#C62828', country: 'YE' },
+  { code: 'ZAR', name: 'South African Rand', symbol: 'R', color: '#2E7D32', country: 'ZA' },
+  { code: 'ZMW', name: 'Zambian Kwacha', symbol: 'ZK', color: '#2E7D32', country: 'ZM' },
+  { code: 'ZWL', name: 'Zimbabwean Dollar', symbol: '$', color: '#FBC02D', country: 'ZW' },
 ]
+
+// Convert country code to flag emoji
+const getCountryFlag = (countryCode: string): string => {
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char => 127397 + char.charCodeAt(0))
+  return String.fromCodePoint(...codePoints)
+}
 
 // Payment methods by currency/region
 const PAYMENT_METHODS_BY_CURRENCY: Record<string, string[]> = {
@@ -571,7 +580,8 @@ export default function ProMarketplace() {
           <div className="flex justify-between items-center h-14">
             <div className="flex items-center space-x-6">
               <Link to="/app" className="flex items-center space-x-2">
-                <span className="text-xl font-bold text-orange-500">CyxTrade</span>
+                <img src="/logo.png" alt="CyxTrade" className="h-8" />
+                <span className="text-xl font-bold bg-gradient-to-r from-[#00a78e] to-[#f7941d] bg-clip-text text-transparent">CyxTrade</span>
               </Link>
 
               {/* Main Navigation Tabs */}
@@ -634,6 +644,11 @@ export default function ProMarketplace() {
                   dark ? 'border-gray-600 text-white' : 'border-gray-300 text-gray-700'
                 }`}
               >
+                {selectedCurrencyData && (
+                  <span className="text-base">
+                    {getCountryFlag(selectedCurrencyData.country)}
+                  </span>
+                )}
                 <span className="font-medium">{selectedFiat}</span>
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -891,15 +906,21 @@ export default function ProMarketplace() {
                         </button>
                       )}
                       <button
-                        onClick={() => setShowCryptoModal(true)}
+                        onClick={() => expressMode === 'buy' ? setShowCurrencyModal(true) : setShowCryptoModal(true)}
                         className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-700/50 hover:bg-gray-700 transition"
                       >
-                        <span
-                          className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                          style={{ backgroundColor: selectedCryptoData?.color || '#26A17B' }}
-                        >
-                          {selectedCryptoData?.icon || '₮'}
-                        </span>
+                        {expressMode === 'buy' ? (
+                          <span className="text-lg">
+                            {selectedCurrencyData ? getCountryFlag(selectedCurrencyData.country) : '🌐'}
+                          </span>
+                        ) : (
+                          <span
+                            className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                            style={{ backgroundColor: selectedCryptoData?.color || '#26A17B' }}
+                          >
+                            {selectedCryptoData?.icon || '₮'}
+                          </span>
+                        )}
                         <span className="text-white font-medium">{expressMode === 'buy' ? selectedFiat : selectedAsset}</span>
                         <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -926,12 +947,18 @@ export default function ProMarketplace() {
                         onClick={() => setShowCurrencyModal(true)}
                         className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-700/50 hover:bg-gray-700 transition"
                       >
-                        <span
-                          className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                          style={{ backgroundColor: expressMode === 'buy' ? (selectedCryptoData?.color || '#26A17B') : (selectedCurrencyData?.color || '#2E7D32') }}
-                        >
-                          {expressMode === 'buy' ? (selectedCryptoData?.icon || '₮') : (selectedCurrencyData?.symbol.slice(0, 1) || '$')}
-                        </span>
+                        {expressMode === 'buy' ? (
+                          <span
+                            className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                            style={{ backgroundColor: selectedCryptoData?.color || '#26A17B' }}
+                          >
+                            {selectedCryptoData?.icon || '₮'}
+                          </span>
+                        ) : (
+                          <span className="text-lg">
+                            {selectedCurrencyData ? getCountryFlag(selectedCurrencyData.country) : '🌐'}
+                          </span>
+                        )}
                         <span className="text-white font-medium">{expressMode === 'buy' ? selectedAsset : selectedFiat}</span>
                         <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -1304,11 +1331,8 @@ export default function ProMarketplace() {
                 }`}
               >
                 {selectedCurrencyData && (
-                  <span
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
-                    style={{ backgroundColor: selectedCurrencyData.color }}
-                  >
-                    {selectedCurrencyData.symbol.slice(0, 1)}
+                  <span className="text-lg">
+                    {getCountryFlag(selectedCurrencyData.country)}
                   </span>
                 )}
                 <span className="font-medium">{selectedFiat}</span>
@@ -2171,11 +2195,8 @@ export default function ProMarketplace() {
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm hover:bg-gray-700 transition"
                     >
                       {curr && (
-                        <span
-                          className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
-                          style={{ backgroundColor: curr.color }}
-                        >
-                          {curr.symbol.slice(0, 1)}
+                        <span className="text-base">
+                          {getCountryFlag(curr.country)}
                         </span>
                       )}
                       {code}
@@ -2197,11 +2218,8 @@ export default function ProMarketplace() {
                       onClick={() => handleSelectCurrency(currency.code)}
                       className="w-full flex items-center gap-3 py-3 hover:bg-gray-800 rounded-lg transition"
                     >
-                      <span
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                        style={{ backgroundColor: currency.color }}
-                      >
-                        {currency.symbol.slice(0, 2)}
+                      <span className="text-3xl">
+                        {getCountryFlag(currency.country)}
                       </span>
                       <div className="flex-1 text-left">
                         <p className="text-white font-medium">{currency.code}</p>
@@ -2233,11 +2251,8 @@ export default function ProMarketplace() {
                           onClick={() => handleSelectCurrency(currency.code)}
                           className="w-full flex items-center gap-3 py-3 hover:bg-gray-800 rounded-lg transition"
                         >
-                          <span
-                            className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                            style={{ backgroundColor: currency.color }}
-                          >
-                            {currency.symbol.slice(0, 2)}
+                          <span className="text-3xl">
+                            {getCountryFlag(currency.country)}
                           </span>
                           <div className="flex-1 text-left">
                             <p className="text-white font-medium">{currency.code}</p>

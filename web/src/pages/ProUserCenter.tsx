@@ -154,7 +154,8 @@ export default function ProUserCenter() {
           <div className="flex justify-between items-center h-14">
             <div className="flex items-center space-x-6">
               <Link to="/pro" className="flex items-center space-x-2">
-                <span className="text-xl font-bold text-orange-500">CyxTrade</span>
+                <img src="/logo.png" alt="CyxTrade" className="h-8" />
+                <span className="text-xl font-bold bg-gradient-to-r from-[#00a78e] to-[#f7941d] bg-clip-text text-transparent">CyxTrade</span>
               </Link>
               <nav className="hidden md:flex items-center">
                 <Link to="/pro" className={`px-4 py-4 text-sm font-medium border-b-2 border-transparent ${dark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>

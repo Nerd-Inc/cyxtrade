@@ -113,7 +113,7 @@ export async function getEvidenceChecklist(
   const claimTypeInfo = await getClaimTypeInfo(claimType)
 
   if (!claimTypeInfo) {
-    throw new AppError(ErrorCode.NOT_FOUND, 'Claim type not found')
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Claim type not found')
   }
 
   return {
@@ -162,7 +162,7 @@ export async function validateClaimTypeForRole(
   const claimTypeInfo = await getClaimTypeInfo(claimType)
 
   if (!claimTypeInfo) {
-    throw new AppError(ErrorCode.NOT_FOUND, 'Claim type not found')
+    throw new AppError(ErrorCode.VALIDATION_ERROR, 'Claim type not found')
   }
 
   if (isBuyer && !claimTypeInfo.available_for_buyer) {

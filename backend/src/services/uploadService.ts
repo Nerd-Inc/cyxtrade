@@ -127,7 +127,14 @@ class UploadService {
     try {
       // Extract filepath from URL
       const urlPath = new URL(url).pathname;
-      const filepath = path.join('.', urlPath);
+      const filepath = path.resolve('.', urlPath);
+      const uploadRoot = path.resolve(UPLOAD_DIR);
+
+      // Validate path stays within upload directory to prevent path traversal
+      if (!filepath.startsWith(uploadRoot + path.sep) && filepath !== uploadRoot) {
+        console.warn(`Path traversal attempt blocked: ${url}`);
+        return;
+      }
 
       await fs.unlink(filepath);
     } catch (error) {
